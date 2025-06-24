@@ -3,7 +3,7 @@ import { WebhookMessage, WebhookMessageStatus, WebhookPayload } from './types';
 import { logWebhookEvent, logSuccess, logError, logWarning, logInfo, extractMessageInfo, extractStatusInfo } from './utils';
 import { DatabaseService } from '@/lib/database-service';
 import { MediaUploadService } from '@/lib/media-upload-service';
-import { mastra } from '@/app/mastra';
+import { mastra } from '@/mastra';
 
 /**
  * WhatsApp Webhook Service

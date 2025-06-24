@@ -3,31 +3,31 @@ import { Memory } from '@mastra/memory';
 import { UpstashStore, UpstashVector } from '@mastra/upstash';
 import { google } from '@ai-sdk/google';
 import { fastembed } from '@mastra/fastembed';
-import { GEMINI_MODEL, WHATSAPP_AGENT_NAME, WHATSAPP_AGENT_INSTRUCTIONS, ENV_VARS } from '../../../constant';
+import { WHATSAPP_AGENT_NAME, WHATSAPP_AGENT_INSTRUCTIONS, GEMINI_MODEL } from './agent-instructions';
 
 // Validate required environment variables
-if (!ENV_VARS.GOOGLE_GENERATIVE_AI_API_KEY) {
+if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
     throw new Error('GOOGLE_GENERATIVE_AI_API_KEY environment variable is required');
 }
 
-if (!ENV_VARS.UPSTASH_REDIS_REST_URL || !ENV_VARS.UPSTASH_REDIS_REST_TOKEN) {
+if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
     throw new Error('UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN environment variables are required');
 }
 
-if (!ENV_VARS.UPSTASH_VECTOR_REST_URL || !ENV_VARS.UPSTASH_VECTOR_REST_TOKEN) {
+if (!process.env.UPSTASH_VECTOR_REST_URL || !process.env.UPSTASH_VECTOR_REST_TOKEN) {
     throw new Error('UPSTASH_VECTOR_REST_URL and UPSTASH_VECTOR_REST_TOKEN environment variables are required');
 }
 
 // Configure Upstash Redis storage for general memory storage
 const upstashStorage = new UpstashStore({
-    url: ENV_VARS.UPSTASH_REDIS_REST_URL!,
-    token: ENV_VARS.UPSTASH_REDIS_REST_TOKEN!,
+    url: process.env.UPSTASH_REDIS_REST_URL!,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 });
 
 // Configure Upstash Vector database for embeddings and semantic search
 const upstashVector = new UpstashVector({
-    url: ENV_VARS.UPSTASH_VECTOR_REST_URL!,
-    token: ENV_VARS.UPSTASH_VECTOR_REST_TOKEN!,
+    url: process.env.UPSTASH_VECTOR_REST_URL!,
+    token: process.env.UPSTASH_VECTOR_REST_TOKEN!,
 });
 
 // Configure memory with separate Upstash Redis storage and Vector database
