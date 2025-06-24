@@ -1,7 +1,7 @@
 import { WhatsAppCloudApiClient } from '@/whatsapp/whatsapp-client';
 import { UTApi } from "uploadthing/server";
 import crypto from 'crypto';
-import { WHATSAPP_API_VERSION } from '@/constant';
+import { WHATSAPP_API_VERSION } from '@/lib/env-config';
 
 /**
  * Media Upload Service with UploadThing Integration

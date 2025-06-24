@@ -1,5 +1,5 @@
 import { Api, HttpClient } from './api/Api';
-import { PHONE_NUMBER_ID, WABA_ID, WHATSAPP_API_VERSION } from '../constant';
+import { PHONE_NUMBER_ID, WABA_ID, WHATSAPP_API_VERSION } from '../lib/env-config';
 
 /**
  * WhatsApp Cloud API Client
@@ -11,7 +11,7 @@ import { PHONE_NUMBER_ID, WABA_ID, WHATSAPP_API_VERSION } from '../constant';
 interface WhatsAppConfig {
     accessToken?: string;
     baseUrl?: string;
-    
+
     phoneNumberId?: string;
     wabaId?: string;
 }
@@ -164,8 +164,8 @@ class WebhookEndpoint {
         private api: Api<SecurityData>,
         private wabaId: string
     ) {
-        this.version =  WHATSAPP_API_VERSION
-     }
+        this.version = WHATSAPP_API_VERSION
+    }
 
     /**
      * Subscribe to webhooks for a WhatsApp Business Account
@@ -589,7 +589,7 @@ class MessagesEndpoint {
         private phoneNumberId: string,
     ) {
         this.version = WHATSAPP_API_VERSION;
-     }
+    }
 
     /**
      * Send a text message
@@ -645,7 +645,7 @@ class MessagesEndpoint {
      * Send an image message by ID
      */
     async sendImageById(params: {
-        
+
         to: string;
         mediaId: string;
         caption?: string;
@@ -669,7 +669,7 @@ class MessagesEndpoint {
      * Send an image message by URL
      */
     async sendImageByUrl(params: {
-        
+
         to: string;
         imageUrl: string;
         caption?: string;
@@ -693,7 +693,7 @@ class MessagesEndpoint {
      * Send an audio message by ID
      */
     async sendAudioById(params: {
-        
+
         to: string;
         mediaId: string;
     }) {
@@ -736,7 +736,7 @@ class MessagesEndpoint {
      * Send a document message by ID
      */
     async sendDocumentById(params: {
-        
+
         to: string;
         mediaId: string;
         filename?: string;
@@ -762,7 +762,7 @@ class MessagesEndpoint {
      * Send a document message by URL
      */
     async sendDocumentByUrl(params: {
-        
+
         to: string;
         documentUrl: string;
         filename?: string;
@@ -788,7 +788,7 @@ class MessagesEndpoint {
      * Send a sticker message by ID
      */
     async sendStickerById(params: {
-        
+
         to: string;
         mediaId: string;
     }) {
@@ -810,7 +810,7 @@ class MessagesEndpoint {
      * Send a sticker message by URL
      */
     async sendStickerByUrl(params: {
-        
+
         to: string;
         stickerUrl: string;
     }) {
@@ -832,7 +832,7 @@ class MessagesEndpoint {
      * Send a template message
      */
     async sendTemplate(params: {
-        
+
         to: string;
         templateName: string;
         languageCode: string;
@@ -871,7 +871,7 @@ class MessagesEndpoint {
      * Send an interactive button message
      */
     async sendInteractiveButtons(params: {
-        
+
         to: string;
         bodyText: string;
         buttons: Array<{
@@ -932,7 +932,7 @@ class MessagesEndpoint {
      * Send an interactive list message
      */
     async sendInteractiveList(params: {
-        
+
         to: string;
         bodyText: string;
         buttonText: string;
@@ -1003,7 +1003,7 @@ class MessagesEndpoint {
      * Send a location message
      */
     async sendLocation(params: {
-        
+
         to: string;
         latitude: number;
         longitude: number;
@@ -1031,7 +1031,7 @@ class MessagesEndpoint {
      * Send a contact message
      */
     async sendContact(params: {
-        
+
         to: string;
         contacts: Array<{
             name: {
@@ -1065,7 +1065,7 @@ class MessagesEndpoint {
      * Mark a message as read
      */
     async markAsRead(params: {
-        
+
         messageId: string;
     }) {
         return this.api.phoneNumberId.messagesUpdate(
@@ -1083,7 +1083,7 @@ class MessagesEndpoint {
      * Send a reaction to a message
      */
     async sendReaction(params: {
-        
+
         to: string;
         messageId: string;
         emoji: string;
@@ -1107,7 +1107,7 @@ class MessagesEndpoint {
      * Remove a reaction from a message
      */
     async removeReaction(params: {
-        
+
         to: string;
         messageId: string;
     }) {
@@ -1130,7 +1130,7 @@ class MessagesEndpoint {
      * Send a reply to an image message by ID
      */
     async sendReplyToImageById(params: {
-        
+
         to: string;
         mediaId: string;
         caption?: string;
@@ -1158,7 +1158,7 @@ class MessagesEndpoint {
      * Send a reply to an image message by URL
      */
     async sendReplyToImageByUrl(params: {
-        
+
         to: string;
         imageUrl: string;
         caption?: string;
@@ -1186,7 +1186,7 @@ class MessagesEndpoint {
      * Send a reply to an audio message by ID
      */
     async sendReplyToAudioById(params: {
-        
+
         to: string;
         mediaId: string;
         replyToMessageId: string;
@@ -1212,7 +1212,7 @@ class MessagesEndpoint {
      * Send a reply to an audio message by URL
      */
     async sendReplyToAudioByUrl(params: {
-        
+
         to: string;
         audioUrl: string;
         replyToMessageId: string;
@@ -1482,7 +1482,7 @@ class MessagesEndpoint {
     /**
      * Send a reply to a location message
      */
-    async sendReplyToLocation(params: { 
+    async sendReplyToLocation(params: {
         to: string;
         latitude: number;
         longitude: number;
@@ -1854,7 +1854,7 @@ class MessagesEndpoint {
      * Send a single product message
      */
     async sendSingleProductMessage(params: {
-        
+
         to: string;
         bodyText?: string;
         footerText?: string;
@@ -1889,7 +1889,7 @@ class MessagesEndpoint {
      * Send a multi-product message
      */
     async sendMultiProductMessage(params: {
-        
+
         to: string;
         headerText: string;
         bodyText: string;
@@ -1934,7 +1934,7 @@ class MessagesEndpoint {
      * Send a catalog message
      */
     async sendCatalogMessage(params: {
-        
+
         to: string;
         bodyText: string;
         footerText?: string;
@@ -1971,7 +1971,7 @@ class MessagesEndpoint {
      * Send a catalog template message
      */
     async sendCatalogTemplateMessage(params: {
-        
+
         to: string;
         templateName: string;
         languageCode: string;
@@ -2084,7 +2084,7 @@ export class WhatsAppCloudApiClient {
 
         // Initialize endpoint classifications
         this.messages = new MessagesEndpoint(this.api, this.config.phoneNumberId);
-        this.webhook = new WebhookEndpoint(this.api,  this.config.wabaId);
+        this.webhook = new WebhookEndpoint(this.api, this.config.wabaId);
     }
 
     /**

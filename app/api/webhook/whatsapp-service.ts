@@ -3,6 +3,7 @@ import { WebhookMessage, WebhookMessageStatus, WebhookPayload } from './types';
 import { logWebhookEvent, logSuccess, logError, logWarning, logInfo, extractMessageInfo, extractStatusInfo } from './utils';
 import { DatabaseService } from '@/lib/database-service';
 import { MediaUploadService } from '@/lib/media-upload-service';
+import { WHATSAPP_CONFIG } from '@/lib/env-config';
 
 /**
  * WhatsApp Webhook Service
@@ -17,23 +18,34 @@ export class WhatsAppWebhookService {
     private mediaUploadService: MediaUploadService;
 
     constructor(accessToken?: string, phoneNumberId?: string) {
-        this.whatsappClient = new WhatsAppCloudApiClient({
-            accessToken: accessToken || process.env.WHATSAPP_ACCESS_TOKEN
-        });
+        try {
+            // Use provided parameters or fall back to environment configuration
+            const finalAccessToken = accessToken || WHATSAPP_CONFIG.ACCESS_TOKEN;
+            const finalPhoneNumberId = phoneNumberId || WHATSAPP_CONFIG.PHONE_NUMBER_ID;
 
-        this.phoneNumberId = phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID || '';
-        this.databaseService = new DatabaseService();
+            this.whatsappClient = new WhatsAppCloudApiClient({
+                accessToken: finalAccessToken
+            });
 
-        // Initialize MediaUploadService with UploadThing integration
-        this.mediaUploadService = new MediaUploadService(
-            accessToken || process.env.WHATSAPP_ACCESS_TOKEN
-        );
+            this.phoneNumberId = finalPhoneNumberId;
+            this.databaseService = new DatabaseService();
 
-        if (!this.phoneNumberId) {
-            logWarning('Phone number ID not configured', {
-                accessTokenProvided: !!(accessToken || process.env.WHATSAPP_ACCESS_TOKEN),
+            // Initialize MediaUploadService with UploadThing integration
+            this.mediaUploadService = new MediaUploadService(finalAccessToken);
+
+            logInfo('WhatsApp Webhook Service initialized successfully', {
+                phoneNumberIdConfigured: !!this.phoneNumberId,
+                accessTokenConfigured: !!finalAccessToken,
                 serviceInitialized: true
             });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown initialization error';
+            logError('Failed to initialize WhatsApp Webhook Service', error as Error, {
+                operation: 'constructor',
+                providedAccessToken: !!accessToken,
+                providedPhoneNumberId: !!phoneNumberId
+            });
+            throw new Error(`WhatsApp Webhook Service initialization failed: ${errorMessage}`);
         }
     }
 

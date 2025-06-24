@@ -3,7 +3,7 @@ import WhatsAppCloudApiClient, {
     WebhookMessageStatus,
     WebhookError
 } from './whatsapp-client';
-import { PHONE_NUMBER_ID, TEST_WHATSAPP_NUMBER, WABA_ID } from '../constant';
+import { PHONE_NUMBER_ID, TEST_WHATSAPP_NUMBER, WABA_ID } from '../lib/env-config';
 
 /**
  * Example usage of the WhatsApp Cloud API Client
@@ -87,7 +87,7 @@ export async function sendImageMessageExample() {
 export async function sendTemplateMessageExample() {
     try {
         const response = await client1.messages.sendTemplate({
-            
+
             to: recipientNumber,
             templateName: 'hello_world',
             languageCode: 'en_US',
@@ -115,7 +115,7 @@ export async function sendTemplateMessageExample() {
 export async function sendDocumentMessageExample() {
     try {
         const response = await client1.messages.sendDocumentByUrl({
-            
+
             to: recipientNumber,
             documentUrl: 'https://example.com/document.pdf',
             filename: 'important-document.pdf',
@@ -133,7 +133,7 @@ export async function sendDocumentMessageExample() {
 export async function sendLocationMessageExample() {
     try {
         const response = await client1.messages.sendLocation({
-            
+
             to: recipientNumber,
             latitude: 37.7749,
             longitude: -122.4194,
@@ -152,7 +152,7 @@ export async function sendLocationMessageExample() {
 export async function sendContactMessageExample() {
     try {
         const response = await client1.messages.sendContact({
-            
+
             to: recipientNumber,
             contacts: [
                 {
@@ -189,7 +189,7 @@ export async function sendReactionExample() {
     try {
         // Send a reaction
         const response1 = await client1.messages.sendReaction({
-            
+
             to: recipientNumber,
             messageId: 'MESSAGE_ID_TO_REACT_TO',
             emoji: '👍',
@@ -197,7 +197,7 @@ export async function sendReactionExample() {
 
         // Remove a reaction
         const response2 = await client1.messages.removeReaction({
-            
+
             to: recipientNumber,
             messageId: 'MESSAGE_ID_TO_REMOVE_REACTION_FROM',
         });
@@ -213,7 +213,7 @@ export async function sendReactionExample() {
 export async function markMessageAsReadExample() {
     try {
         const response = await client1.messages.markAsRead({
-            
+
             messageId: 'MESSAGE_ID_TO_MARK_AS_READ',
         });
 
@@ -229,7 +229,7 @@ export async function sendVideoMessageExample() {
     try {
         // Send video by URL
         const response1 = await client1.messages.sendVideoByUrl({
-            
+
             to: recipientNumber,
             videoUrl: 'https://example.com/video.mp4',
             caption: 'Check out this video!',
@@ -237,7 +237,7 @@ export async function sendVideoMessageExample() {
 
         // Send video by media ID
         const response2 = await client1.messages.sendVideoById({
-            
+
             to: recipientNumber,
             mediaId: 'UPLOADED_VIDEO_MEDIA_ID',
             caption: 'Video from uploaded media',
@@ -255,7 +255,7 @@ export async function sendReplyMessagesExample() {
     try {
         // Reply to text with image
         const response1 = await client1.messages.sendReplyToImageByUrl({
-            
+
             to: recipientNumber,
             imageUrl: 'https://example.com/reply-image.jpg',
             caption: 'This is a reply with an image',
@@ -264,7 +264,7 @@ export async function sendReplyMessagesExample() {
 
         // Reply to message with video
         const response2 = await client1.messages.sendReplyToVideoById({
-            
+
             to: recipientNumber,
             mediaId: 'VIDEO_MEDIA_ID',
             caption: 'Video reply',
@@ -273,7 +273,7 @@ export async function sendReplyMessagesExample() {
 
         // Reply with location
         const response3 = await client1.messages.sendReplyToLocation({
-            
+
             to: recipientNumber,
             latitude: 40.7128,
             longitude: -74.0060,
@@ -298,7 +298,7 @@ export async function sendTemplateMessagesExample() {
     try {
         // Send text template
         const response1 = await client1.messages.sendMessageTemplateText({
-            
+
             to: recipientNumber,
             templateName: 'welcome_message',
             languageCode: 'en_US',
@@ -313,7 +313,7 @@ export async function sendTemplateMessagesExample() {
 
         // Send media template
         const response2 = await client1.messages.sendMessageTemplateMedia({
-            
+
             to: recipientNumber,
             templateName: 'product_showcase',
             languageCode: 'en_US',
@@ -327,7 +327,7 @@ export async function sendTemplateMessagesExample() {
 
         // Send interactive template
         const response3 = await client1.messages.sendMessageTemplateInteractive({
-            
+
             to: recipientNumber,
             templateName: 'quick_survey',
             languageCode: 'en_US',
@@ -356,7 +356,7 @@ export async function sendInteractiveMessagesExample() {
     try {
         // Send reply button (can be used as reply or standalone)
         const response1 = await client1.messages.sendReplyButton({
-            
+
             to: recipientNumber,
             bodyText: 'Please choose your preferred option:',
             headerText: 'Quick Selection',
@@ -371,7 +371,7 @@ export async function sendInteractiveMessagesExample() {
 
         // Send reply to list
         const response2 = await client1.messages.sendReplyToList({
-            
+
             to: recipientNumber,
             bodyText: 'Here are your options:',
             buttonText: 'View Options',
@@ -410,7 +410,7 @@ export async function sendInteractiveMessagesExample() {
 export async function sendProductMessageExample() {
     try {
         const response = await client1.messages.sendSingleProductMessage({
-            
+
             to: recipientNumber,
             bodyText: 'Check out this amazing product!',
             footerText: 'Limited time offer',

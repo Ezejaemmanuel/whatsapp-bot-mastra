@@ -19,10 +19,23 @@ import {
     createSuccessResponse
 } from './utils';
 import { WhatsAppWebhookService } from './whatsapp-service';
+import { validateWhatsAppConfig } from '@/lib/env-config';
 
 // Environment variables for webhook configuration
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || 'your-verify-token-here';
 const WEBHOOK_SECRET = process.env.WHATSAPP_WEBHOOK_SECRET || '';
+
+// Validate WhatsApp configuration on module load
+try {
+    validateWhatsAppConfig();
+    logWebhookEvent('INFO', 'WhatsApp environment configuration validated successfully');
+} catch (error) {
+    logWebhookEvent('ERROR', 'WhatsApp environment configuration validation failed', {
+        error: error instanceof Error ? error.message : 'Unknown error'
+    });
+    // Don't throw here as it would prevent the module from loading
+    // The error will be caught when the service is actually used
+}
 
 // Initialize WhatsApp service
 const whatsappService = new WhatsAppWebhookService();

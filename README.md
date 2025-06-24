@@ -123,9 +123,41 @@ The generated TypeScript client provides type-safe access to all WhatsApp Cloud 
 | `pnpm build:mastra` | Build Mastra components |
 | `pnpm convert:postman` | Convert Postman collection to OpenAPI |
 | `pnpm generate:api` | Generate TypeScript API client |
+| `pnpm validate-env` | Validate environment configuration |
+| `pnpm validate-env:extended` | Extended validation (includes DB, UploadThing) |
 | `pnpm lint` | Run ESLint |
 
 ## 🔧 Configuration
+
+### Environment Setup
+
+1. **Copy environment template**
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Configure required variables**
+   Edit `.env` and fill in your WhatsApp configuration:
+   ```env
+   # Required WhatsApp Configuration
+   WHATSAPP_ACCESS_TOKEN=your_access_token_here
+   WHATSAPP_PHONE_NUMBER_ID=your_phone_number_id_here
+   WHATSAPP_BUSINESS_ACCOUNT_ID=your_waba_id_here
+   WHATSAPP_TEST_NUMBER=+1234567890
+   
+   # Optional Configuration
+   WHATSAPP_API_VERSION=v23.0
+   WHATSAPP_BASE_URL=https://graph.facebook.com
+   ```
+
+3. **Validate configuration**
+   ```bash
+   # Basic validation
+   pnpm run validate-env
+   
+   # Extended validation (includes database and UploadThing)
+   pnpm run validate-env:extended
+   ```
 
 ### WhatsApp Cloud API Setup
 
@@ -137,20 +169,30 @@ The generated TypeScript client provides type-safe access to all WhatsApp Cloud 
    - Navigate to WhatsApp > Getting Started
    - Copy your temporary access token (24h) or create a permanent system user token
 
-3. **Configure Webhook** (Optional)
+3. **Get Phone Number ID**
+   - In WhatsApp > Getting Started
+   - Copy the Phone Number ID from the "From" field
+
+4. **Get Business Account ID (WABA ID)**
+   - Go to WhatsApp > Configuration
+   - Copy the WhatsApp Business Account ID
+
+5. **Configure Webhook** (Optional)
    - Set up webhook URL for receiving messages
    - Configure webhook fields and verification
 
-### Environment Variables
+### Environment Variables Reference
 
-Create a `.env.local` file:
-
-```env
-WHATSAPP_ACCESS_TOKEN=your_access_token_here
-WHATSAPP_PHONE_NUMBER_ID=your_phone_number_id_here
-WHATSAPP_WABA_ID=your_waba_id_here
-WHATSAPP_WEBHOOK_VERIFY_TOKEN=your_webhook_verify_token_here
-```
+| Variable | Required | Description | Example |
+|----------|----------|-------------|---------|
+| `WHATSAPP_ACCESS_TOKEN` | ✅ | WhatsApp Business API access token | `EAAxxxxx...` |
+| `WHATSAPP_PHONE_NUMBER_ID` | ✅ | Phone number ID from Meta Business | `123456789012345` |
+| `WHATSAPP_BUSINESS_ACCOUNT_ID` | ✅ | WhatsApp Business Account ID (WABA) | `987654321098765` |
+| `WHATSAPP_TEST_NUMBER` | ✅ | Test phone number with country code | `+1234567890` |
+| `WHATSAPP_API_VERSION` | ❌ | WhatsApp API version (default: v23.0) | `v23.0` |
+| `WHATSAPP_BASE_URL` | ❌ | API base URL (default: Graph API) | `https://graph.facebook.com` |
+| `DATABASE_URL` | ❌ | Database connection string | `postgresql://...` |
+| `UPLOADTHING_TOKEN` | ❌ | UploadThing token for media storage | `sk_live_...` |
 
 ## 🤖 Mastra Integration
 
