@@ -24,27 +24,62 @@ import { WhatsAppWebhookService } from './whatsapp-service';
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || 'your-verify-token-here';
 const WEBHOOK_SECRET = process.env.WHATSAPP_WEBHOOK_SECRET || '';
 
-// Validate WhatsApp configuration on module load
+// Validate WhatsApp configuration on module load with detailed error reporting
 try {
     // Basic validation - check if required environment variables are present
     const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
     const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
     const businessAccountId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID;
 
+    const missingVars: string[] = [];
+
     if (!accessToken) {
-        throw new Error('Missing required environment variable: WHATSAPP_ACCESS_TOKEN');
+        missingVars.push('WHATSAPP_ACCESS_TOKEN');
     }
     if (!phoneNumberId) {
-        throw new Error('Missing required environment variable: WHATSAPP_PHONE_NUMBER_ID');
+        missingVars.push('WHATSAPP_PHONE_NUMBER_ID');
     }
     if (!businessAccountId) {
-        throw new Error('Missing required environment variable: WHATSAPP_BUSINESS_ACCOUNT_ID');
+        missingVars.push('WHATSAPP_BUSINESS_ACCOUNT_ID');
     }
 
-    logWebhookEvent('INFO', 'WhatsApp environment configuration validated successfully');
+    if (missingVars.length > 0) {
+        const errorMessage = `Missing required environment variables: ${missingVars.join(', ')}`;
+        logWebhookEvent('ERROR', 'WhatsApp environment configuration validation failed', {
+            missingVariables: missingVars,
+            configurationStatus: 'incomplete',
+            requiredVariables: ['WHATSAPP_ACCESS_TOKEN', 'WHATSAPP_PHONE_NUMBER_ID', 'WHATSAPP_BUSINESS_ACCOUNT_ID'],
+            setupInstructions: 'Please check your .env.local file and ensure all required WhatsApp API credentials are configured'
+        });
+        throw new Error(errorMessage);
+    }
+
+    // Validate token format (basic check)
+    if (accessToken && !accessToken.startsWith('EAA')) {
+        logWebhookEvent('WARN', 'WhatsApp access token format warning', {
+            tokenPrefix: accessToken.substring(0, 3),
+            expectedPrefix: 'EAA',
+            message: 'WhatsApp access tokens typically start with "EAA"'
+        });
+    }
+
+    logWebhookEvent('INFO', 'WhatsApp environment configuration validated successfully', {
+        configurationStatus: 'complete',
+        accessTokenConfigured: true,
+        phoneNumberIdConfigured: true,
+        businessAccountIdConfigured: true,
+        tokenPrefix: accessToken ? accessToken.substring(0, 3) : 'N/A'
+    });
 } catch (error) {
     logWebhookEvent('ERROR', 'WhatsApp environment configuration validation failed', {
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
+        configurationStatus: 'failed',
+        troubleshooting: {
+            step1: 'Check if .env.local file exists in project root',
+            step2: 'Verify all required environment variables are set',
+            step3: 'Ensure WhatsApp Business API credentials are valid',
+            step4: 'Restart the development server after configuration changes'
+        }
     });
     // Don't throw here as it would prevent the module from loading
     // The error will be caught when the service is actually used

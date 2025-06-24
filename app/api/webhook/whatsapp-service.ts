@@ -313,20 +313,44 @@ export class WhatsAppWebhookService {
     }
 
     /**
-     * Mark a message as read
+     * Mark message as read with proper error handling
      */
     async markMessageAsRead(messageId: string): Promise<void> {
         try {
+            // Add phone number ID parameter to the request
             await this.whatsappClient.messages.markAsRead({
                 messageId
             });
+
+            logSuccess('Message marked as read successfully', {
+                messageId,
+                operation: 'markMessageAsRead'
+            });
         } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            const errorDetails = error instanceof Error ? error.stack : undefined;
+
             logWarning('Failed to mark message as read', {
                 messageId,
                 operation: 'markMessageAsRead',
-                error: error instanceof Error ? error.message : 'Unknown error',
-                critical: false
+                error: errorMessage,
+                errorDetails,
+                critical: false,
+                // Add more context for debugging
+                phoneNumberId: this.phoneNumberId,
+                clientConfigured: !!this.whatsappClient
             });
+
+            // Log to database for tracking
+            await this.databaseService.logWebhookEvent(
+                'WARN',
+                'Failed to mark message as read',
+                { messageId, error: errorMessage },
+                'WhatsAppWebhookService',
+                undefined,
+                errorMessage
+            );
+
             // Don't throw error for read receipts as it's not critical
         }
     }
@@ -588,7 +612,7 @@ export class WhatsAppWebhookService {
     }
 
     /**
-     * Process and store media files using UploadThing
+     * Process and store media files using UploadThing with enhanced error handling
      * Downloads media from WhatsApp and uploads to UploadThing CDN
      */
     private async processAndStoreMedia(message: WebhookMessage, messageId: string): Promise<void> {
@@ -598,10 +622,20 @@ export class WhatsAppWebhookService {
                 logWarning('No media ID found in message', {
                     messageId,
                     operation: 'processAndStoreMedia',
-                    issue: 'missing_media_id'
+                    issue: 'missing_media_id',
+                    messageType: message.type,
+                    hasMediaInfo: !!mediaInfo
                 });
                 return;
             }
+
+            logInfo('Starting media processing', {
+                messageId,
+                mediaId: mediaInfo.id,
+                mimeType: mediaInfo.mime_type,
+                fileName: mediaInfo.filename,
+                operation: 'processAndStoreMedia'
+            });
 
             // Download from WhatsApp and upload to UploadThing CDN
             const uploadResult = await this.mediaUploadService.processMediaMessage(
@@ -626,6 +660,7 @@ export class WhatsAppWebhookService {
 
                 logSuccess('Media file processed and uploaded to UploadThing CDN', {
                     messageId,
+                    mediaId: mediaInfo.id,
                     fileName: uploadResult.fileName,
                     fileSize: uploadResult.fileSize,
                     storedUrl: uploadResult.storedUrl,
@@ -633,19 +668,56 @@ export class WhatsAppWebhookService {
                     operation: 'processAndStoreMedia'
                 });
             } else {
-                logError('Failed to process media file', uploadResult.error || 'Unknown upload error', {
+                const errorMessage = uploadResult.error || 'Unknown upload error';
+                logError('Failed to process media file', errorMessage, {
                     messageId,
                     mediaId: mediaInfo.id,
                     mimeType: mediaInfo.mime_type,
+                    fileName: mediaInfo.filename,
+                    uploadResult: uploadResult,
                     operation: 'processAndStoreMedia'
                 });
+
+                // Log to database for tracking
+                await this.databaseService.logWebhookEvent(
+                    'ERROR',
+                    'Failed to process media file',
+                    {
+                        messageId,
+                        mediaId: mediaInfo.id,
+                        error: errorMessage,
+                        uploadResult: uploadResult
+                    },
+                    'WhatsAppWebhookService',
+                    undefined,
+                    errorMessage
+                );
             }
         } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            const errorStack = error instanceof Error ? error.stack : undefined;
+
             logError('Error processing media file', error as Error, {
                 messageId,
                 operation: 'processAndStoreMedia',
-                mediaType: message.type
+                mediaType: message.type,
+                errorMessage,
+                errorStack
             });
+
+            // Log to database for tracking
+            await this.databaseService.logWebhookEvent(
+                'ERROR',
+                'Error processing media file',
+                {
+                    messageId,
+                    mediaType: message.type,
+                    error: errorMessage
+                },
+                'WhatsAppWebhookService',
+                undefined,
+                errorMessage
+            );
         }
     }
 

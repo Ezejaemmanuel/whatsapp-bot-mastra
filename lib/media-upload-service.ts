@@ -34,7 +34,7 @@ export class MediaUploadService {
     }
 
     /**
-     * Download and store media file from WhatsApp using UploadThing
+     * Download and store media file from WhatsApp using UploadThing with enhanced error handling
      */
     async downloadAndStoreMedia(
         mediaId: string,
@@ -49,20 +49,45 @@ export class MediaUploadService {
         error?: string;
     }> {
         try {
+            console.log('Starting media download process', {
+                mediaId,
+                fileName,
+                mimeType,
+                version: this.version,
+                hasAccessToken: !!this.accessToken
+            });
+
             // Get media URL from WhatsApp using the correct API method
             const mediaUrlResponse = await this.whatsappClient.getRawApi().mediaId.mediaIdList({
                 version: this.version,
                 mediaId
             });
 
+            console.log('WhatsApp API response received', {
+                mediaId,
+                hasData: !!mediaUrlResponse.data,
+                responseStatus: mediaUrlResponse.status || 'unknown'
+            });
+
             if (!mediaUrlResponse.data || !(mediaUrlResponse.data as any).url) {
+                const errorMsg = 'Failed to get media URL from WhatsApp API';
+                console.error(errorMsg, {
+                    mediaId,
+                    responseData: mediaUrlResponse.data,
+                    responseStatus: mediaUrlResponse.status
+                });
+
                 return {
                     success: false,
-                    error: 'Failed to get media URL from WhatsApp'
+                    error: `${errorMsg} - Response: ${JSON.stringify(mediaUrlResponse.data)}`
                 };
             }
 
             const mediaUrl = (mediaUrlResponse.data as any).url;
+            console.log('Media URL obtained successfully', {
+                mediaId,
+                hasUrl: !!mediaUrl
+            });
 
             // Download the media file
             const downloadResult = await this.downloadMediaFile(
@@ -73,11 +98,23 @@ export class MediaUploadService {
             );
 
             if (!downloadResult.success || !downloadResult.buffer) {
+                console.error('Media file download failed', {
+                    mediaId,
+                    error: downloadResult.error,
+                    hasBuffer: !!downloadResult.buffer
+                });
+
                 return {
                     success: false,
                     error: downloadResult.error || 'Failed to download media'
                 };
             }
+
+            console.log('Media file downloaded successfully', {
+                mediaId,
+                fileName: downloadResult.fileName,
+                bufferSize: downloadResult.buffer.length
+            });
 
             // Upload to UploadThing
             const uploadResult = await this.uploadToUploadThing(
@@ -86,12 +123,24 @@ export class MediaUploadService {
                 mimeType
             );
 
+            console.log('Upload process completed', {
+                mediaId,
+                uploadSuccess: uploadResult.success,
+                error: uploadResult.error
+            });
+
             return uploadResult;
         } catch (error) {
-            console.error('Error in downloadAndStoreMedia:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            console.error('Error in downloadAndStoreMedia:', {
+                mediaId,
+                error: errorMessage,
+                stack: error instanceof Error ? error.stack : undefined
+            });
+
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown error occurred'
+                error: `Media download failed: ${errorMessage}`
             };
         }
     }

@@ -16,7 +16,11 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:setup": "tsx scripts/setup-database.ts"
+    "db:setup": "tsx scripts/setup-database.ts",
+    "config:validate": "tsx scripts/validate-config.ts",
+    "config:check": "tsx scripts/validate-config.ts",
+    "diagnose": "tsx scripts/diagnose-api.ts",
+    "debug:api": "tsx scripts/diagnose-api.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^1.2.19",

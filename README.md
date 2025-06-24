@@ -299,3 +299,101 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - **@scalar/postman-to-openapi** for the conversion library
 - **swagger-typescript-api** for TypeScript generation
 - **Mastra** for the AI framework
+
+## 🐛 Troubleshooting
+
+### Common Webhook Errors
+
+#### "Failed to mark message as read"
+This warning indicates that the bot cannot mark incoming messages as read. This is usually non-critical but can be fixed:
+
+**Causes:**
+- Invalid or expired WhatsApp access token
+- Missing phone number ID configuration
+- Insufficient API permissions
+
+**Solutions:**
+1. Verify your environment configuration:
+   ```bash
+   pnpm config:validate
+   ```
+2. Check your WhatsApp Business API token permissions
+3. Ensure `WHATSAPP_ACCESS_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID` are correct
+4. Run diagnostic tests:
+   ```bash
+   pnpm diagnose
+   ```
+
+#### "Failed to process media file"
+This error occurs when the bot cannot download and store media files (images, documents, etc.).
+
+**Causes:**
+- Missing UploadThing configuration
+- Invalid WhatsApp API credentials
+- Network connectivity issues
+
+**Solutions:**
+1. Configure UploadThing for media storage:
+   - Sign up at [UploadThing](https://uploadthing.com)
+   - Get your API token
+   - Add `UPLOADTHING_TOKEN=your_token` to `.env.local`
+2. Verify WhatsApp API permissions include media access
+3. Run diagnostic tests:
+   ```bash
+   pnpm diagnose
+   ```
+
+### Configuration Validation
+
+Before running the bot, validate your configuration:
+
+```bash
+# Check if all required environment variables are set
+pnpm config:validate
+
+# Test API connectivity and permissions
+pnpm diagnose
+
+# Initialize database
+pnpm db:setup
+```
+
+### Environment Setup
+
+If you're missing environment variables, see the comprehensive setup guide:
+- Read `ENVIRONMENT_SETUP.md` for detailed instructions
+- Use the provided environment template
+- Ensure your `.env.local` file is in the project root
+
+### Getting Help
+
+1. **Check logs**: Look at the console output for detailed error messages
+2. **Validate config**: Run `pnpm config:validate` to check your setup
+3. **Test API**: Run `pnpm diagnose` to test WhatsApp API connectivity
+4. **Review setup**: Follow `ENVIRONMENT_SETUP.md` step by step
+
+## 🔧 Development Tools
+
+### Configuration Management
+```bash
+# Validate environment configuration
+pnpm config:validate
+
+# Test WhatsApp API connectivity
+pnpm diagnose
+```
+
+### Database Management
+```bash
+# Setup database and run migrations
+pnpm db:setup
+
+# Generate new migrations
+pnpm db:generate
+
+# Run migrations
+pnpm db:migrate
+
+# Open database studio
+pnpm db:studio
+```
