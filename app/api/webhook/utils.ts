@@ -14,15 +14,18 @@ import {
 } from './types';
 
 /**
- * Detailed logging utility for webhook events
+ * Enhanced logging utility for webhook events with flexible data logging
+ * Supports logging any additional properties and provides success/failure indicators
  */
 export function logWebhookEvent(
-    level: 'INFO' | 'ERROR' | 'WARN',
+    level: 'INFO' | 'ERROR' | 'WARN' | 'SUCCESS',
     message: string,
-    data?: WebhookLogData
+    data?: Partial<WebhookLogData> & Record<string, any>
 ): void {
     const timestamp = new Date().toISOString();
-    const logEntry: WebhookLogData = {
+
+    // Create the log entry with flexible data structure
+    const logEntry = {
         timestamp,
         level,
         source: 'WhatsApp Webhook',
@@ -30,10 +33,63 @@ export function logWebhookEvent(
         ...data
     };
 
-    console.log(`[${timestamp}] [${level}] WhatsApp Webhook: ${message}`);
-    if (data) {
-        console.log('Data:', JSON.stringify(data, null, 2));
+    // Enhanced console output with better formatting
+    const levelEmoji = {
+        'INFO': '📋',
+        'ERROR': '❌',
+        'WARN': '⚠️',
+        'SUCCESS': '✅'
+    };
+
+    console.log(`[${timestamp}] ${levelEmoji[level] || '📋'} [${level}] WhatsApp Webhook: ${message}`);
+
+    if (data && Object.keys(data).length > 0) {
+        console.log('📊 Event Data:', JSON.stringify(data, null, 2));
     }
+
+    // Log to file or external service in production (placeholder for future enhancement)
+    if (process.env.NODE_ENV === 'production') {
+        // TODO: Implement file logging or external logging service
+        // logToFile(logEntry);
+        // logToExternalService(logEntry);
+    }
+}
+
+/**
+ * Specialized logging function for successful operations
+ */
+export function logSuccess(message: string, data?: Record<string, any>): void {
+    logWebhookEvent('SUCCESS', message, data);
+}
+
+/**
+ * Specialized logging function for errors with stack trace
+ */
+export function logError(message: string, error?: Error | string, data?: Record<string, any>): void {
+    const errorData = {
+        ...data,
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined
+    };
+    logWebhookEvent('ERROR', message, errorData);
+}
+
+/**
+ * Specialized logging function for warnings
+ */
+export function logWarning(message: string, data?: Record<string, any>): void {
+    logWebhookEvent('WARN', message, data);
+}
+
+/**
+ * Specialized logging function for info with processing time
+ */
+export function logInfo(message: string, data?: Record<string, any>, startTime?: number): void {
+    const infoData = {
+        ...data,
+        processingTimeMs: startTime ? Date.now() - startTime : undefined
+    };
+    logWebhookEvent('INFO', message, infoData);
 }
 
 /**

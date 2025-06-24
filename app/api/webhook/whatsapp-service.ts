@@ -1,6 +1,6 @@
 import { WhatsAppCloudApiClient } from '@/whatsapp/whatsapp-client';
 import { WebhookMessage, WebhookMessageStatus, WebhookPayload } from './types';
-import { logWebhookEvent, extractMessageInfo, extractStatusInfo } from './utils';
+import { logWebhookEvent, logSuccess, logError, logWarning, logInfo, extractMessageInfo, extractStatusInfo } from './utils';
 import { DatabaseService } from '@/lib/database-service';
 import { MediaUploadService } from '@/lib/media-upload-service';
 
@@ -30,7 +30,10 @@ export class WhatsAppWebhookService {
         );
 
         if (!this.phoneNumberId) {
-            logWebhookEvent('WARN', 'Phone number ID not configured');
+            logWarning('Phone number ID not configured', {
+                accessTokenProvided: !!(accessToken || process.env.WHATSAPP_ACCESS_TOKEN),
+                serviceInitialized: true
+            });
         }
     }
 
@@ -41,11 +44,16 @@ export class WhatsAppWebhookService {
         try {
             const messageInfo = extractMessageInfo(message);
 
-            logWebhookEvent('INFO', 'Processing incoming message', {
+            logInfo('Processing incoming message', {
                 messageId: messageInfo.id,
                 from: messageInfo.from,
-                type: messageInfo.type,
-                text: messageInfo.text
+                messageType: messageInfo.type,
+                text: messageInfo.text,
+                timestamp: messageInfo.timestamp,
+                contactName,
+                hasMediaInfo: !!messageInfo.mediaInfo,
+                isReply: messageInfo.isReply,
+                isForwarded: messageInfo.isForwarded
             });
 
             // Get or create user and conversation
@@ -71,8 +79,17 @@ export class WhatsAppWebhookService {
             // Mark message as read
             await this.markMessageAsRead(messageInfo.id);
 
+            logInfo('Processing message type', {
+                messageType: messageInfo.type,
+                messageId: messageInfo.id,
+                from: messageInfo.from,
+                text: messageInfo.text,
+                timestamp: messageInfo.timestamp
+            });
+
             // Process different message types
             switch (messageInfo.type) {
+
                 case 'text':
                     await this.handleTextMessage(messageInfo, conversation.id);
                     break;
@@ -92,16 +109,25 @@ export class WhatsAppWebhookService {
                     await this.handleContactMessage(messageInfo, conversation.id);
                     break;
                 default:
-                    logWebhookEvent('INFO', `Unhandled message type: ${messageInfo.type}`);
+                    logWarning('Unhandled message type received', {
+                        messageType: messageInfo.type,
+                        messageId: messageInfo.id,
+                        from: messageInfo.from,
+                        needsImplementation: true
+                    });
             }
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            logWebhookEvent('ERROR', 'Error processing incoming message', {
-                error: errorMessage,
-                messageId: message.id
+            logError('Error processing incoming message', error as Error, {
+                messageId: message.id,
+                messageType: message.type,
+                from: message.from,
+                timestamp: message.timestamp,
+                contactName,
+                operation: 'processIncomingMessage'
             });
 
             // Log error to database
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             await this.databaseService.logWebhookEvent(
                 'ERROR',
                 'Error processing incoming message',
@@ -120,10 +146,13 @@ export class WhatsAppWebhookService {
         try {
             const statusInfo = extractStatusInfo(status);
 
-            logWebhookEvent('INFO', 'Processing status update', {
+            logInfo('Processing status update', {
                 messageId: statusInfo.messageId,
                 status: statusInfo.status,
-                recipientId: statusInfo.recipientId
+                recipientId: statusInfo.recipientId,
+                timestamp: statusInfo.timestamp,
+                conversationInfo: statusInfo.conversationInfo,
+                pricingInfo: statusInfo.pricingInfo
             });
 
             // Handle different status types
@@ -142,10 +171,10 @@ export class WhatsAppWebhookService {
                     break;
             }
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            logWebhookEvent('ERROR', 'Error processing status update', {
-                error: errorMessage,
-                statusId: status.id
+            logError('Error processing status update', error as Error, {
+                statusId: status.id,
+                recipientId: status.recipient_id,
+                operation: 'processStatusUpdate'
             });
         }
     }
@@ -169,17 +198,20 @@ export class WhatsAppWebhookService {
                 });
             }
 
-            logWebhookEvent('INFO', 'Text message sent successfully', {
+            logSuccess('Text message sent successfully', {
                 to,
                 textPreview: text.substring(0, 50),
-                isReply: !!replyToMessageId
+                isReply: !!replyToMessageId,
+                messageLength: text.length,
+                operation: 'sendTextReply'
             });
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            logWebhookEvent('ERROR', 'Failed to send text message', {
-                error: errorMessage,
+            logError('Failed to send text message', error as Error, {
                 to,
-                textPreview: text.substring(0, 50)
+                textPreview: text.substring(0, 50),
+                messageLength: text.length,
+                isReply: !!replyToMessageId,
+                operation: 'sendTextReply'
             });
             throw error;
         }
@@ -204,16 +236,19 @@ export class WhatsAppWebhookService {
                 footerText
             });
 
-            logWebhookEvent('INFO', 'Button message sent successfully', {
+            logSuccess('Button message sent successfully', {
                 to,
                 bodyText: bodyText.substring(0, 50),
-                buttonCount: buttons.length
+                buttonCount: buttons.length,
+                hasHeader: !!headerText,
+                hasFooter: !!footerText,
+                operation: 'sendButtonMessage'
             });
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            logWebhookEvent('ERROR', 'Failed to send button message', {
-                error: errorMessage,
-                to
+            logError('Failed to send button message', error as Error, {
+                to,
+                buttonCount: buttons.length,
+                operation: 'sendButtonMessage'
             });
             throw error;
         }
@@ -236,17 +271,20 @@ export class WhatsAppWebhookService {
                 components
             });
 
-            logWebhookEvent('INFO', 'Template message sent successfully', {
+            logSuccess('Template message sent successfully', {
                 to,
                 templateName,
-                languageCode
+                languageCode,
+                hasComponents: !!components && components.length > 0,
+                componentCount: components?.length || 0,
+                operation: 'sendTemplateMessage'
             });
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            logWebhookEvent('ERROR', 'Failed to send template message', {
-                error: errorMessage,
+            logError('Failed to send template message', error as Error, {
                 to,
-                templateName
+                templateName,
+                languageCode,
+                operation: 'sendTemplateMessage'
             });
             throw error;
         }
@@ -261,10 +299,11 @@ export class WhatsAppWebhookService {
                 messageId
             });
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            logWebhookEvent('WARN', 'Failed to mark message as read', {
-                error: errorMessage,
-                messageId
+            logWarning('Failed to mark message as read', {
+                messageId,
+                operation: 'markMessageAsRead',
+                error: error instanceof Error ? error.message : 'Unknown error',
+                critical: false
             });
             // Don't throw error for read receipts as it's not critical
         }
@@ -298,9 +337,13 @@ export class WhatsAppWebhookService {
      * Handle media messages
      */
     private async handleMediaMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: string): Promise<void> {
-        logWebhookEvent('INFO', 'Media message received', {
-            type: messageInfo.type,
-            mediaInfo: messageInfo.mediaInfo
+        logInfo('Media message received', {
+            messageType: messageInfo.type,
+            messageId: messageInfo.id,
+            from: messageInfo.from,
+            mediaInfo: messageInfo.mediaInfo,
+            hasCaption: !!messageInfo.mediaInfo?.caption,
+            operation: 'handleMediaMessage'
         });
 
         // Example response to media
@@ -327,8 +370,12 @@ export class WhatsAppWebhookService {
      * Handle interactive messages (button/list replies)
      */
     private async handleInteractiveMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: string): Promise<void> {
-        logWebhookEvent('INFO', 'Interactive message received', {
-            text: messageInfo.text
+        logInfo('Interactive message received', {
+            messageId: messageInfo.id,
+            from: messageInfo.from,
+            text: messageInfo.text,
+            messageType: messageInfo.type,
+            operation: 'handleInteractiveMessage'
         });
 
         // Handle button/list responses
@@ -401,8 +448,11 @@ export class WhatsAppWebhookService {
      * Handle message sent status
      */
     private async handleMessageSent(statusInfo: ReturnType<typeof extractStatusInfo>): Promise<void> {
-        logWebhookEvent('INFO', 'Message sent successfully', {
-            messageId: statusInfo.messageId
+        logSuccess('Message sent successfully', {
+            messageId: statusInfo.messageId,
+            recipientId: statusInfo.recipientId,
+            timestamp: statusInfo.timestamp,
+            operation: 'handleMessageSent'
         });
     }
 
@@ -410,8 +460,11 @@ export class WhatsAppWebhookService {
      * Handle message delivered status
      */
     private async handleMessageDelivered(statusInfo: ReturnType<typeof extractStatusInfo>): Promise<void> {
-        logWebhookEvent('INFO', 'Message delivered', {
-            messageId: statusInfo.messageId
+        logSuccess('Message delivered', {
+            messageId: statusInfo.messageId,
+            recipientId: statusInfo.recipientId,
+            timestamp: statusInfo.timestamp,
+            operation: 'handleMessageDelivered'
         });
     }
 
@@ -419,8 +472,11 @@ export class WhatsAppWebhookService {
      * Handle message read status
      */
     private async handleMessageRead(statusInfo: ReturnType<typeof extractStatusInfo>): Promise<void> {
-        logWebhookEvent('INFO', 'Message read by recipient', {
-            messageId: statusInfo.messageId
+        logSuccess('Message read by recipient', {
+            messageId: statusInfo.messageId,
+            recipientId: statusInfo.recipientId,
+            timestamp: statusInfo.timestamp,
+            operation: 'handleMessageRead'
         });
     }
 
@@ -428,9 +484,12 @@ export class WhatsAppWebhookService {
      * Handle message failed status
      */
     private async handleMessageFailed(statusInfo: ReturnType<typeof extractStatusInfo>): Promise<void> {
-        logWebhookEvent('ERROR', 'Message delivery failed', {
+        logError('Message delivery failed', 'Message failed to deliver', {
             messageId: statusInfo.messageId,
-            recipientId: statusInfo.recipientId
+            recipientId: statusInfo.recipientId,
+            timestamp: statusInfo.timestamp,
+            operation: 'handleMessageFailed',
+            requiresAttention: true
         });
     }
 
@@ -458,19 +517,23 @@ export class WhatsAppWebhookService {
                     // Log errors
                     if (change.value.errors) {
                         for (const error of change.value.errors) {
-                            logWebhookEvent('ERROR', 'WhatsApp API error', {
+                            logError('WhatsApp API error', error.message || 'API Error', {
                                 errorCode: error.code,
                                 errorTitle: error.title,
-                                errorMessage: error.message
+                                errorMessage: error.message,
+                                errorDetails: error.error_data?.details,
+                                operation: 'processWebhookPayload',
+                                source: 'WhatsApp API'
                             });
                         }
                     }
                 }
             }
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            logWebhookEvent('ERROR', 'Error processing webhook payload', {
-                error: errorMessage
+            logError('Error processing webhook payload', error as Error, {
+                operation: 'processWebhookPayload',
+                payloadObject: payload.object,
+                entryCount: payload.entry?.length || 0
             });
             throw error;
         }
@@ -510,7 +573,11 @@ export class WhatsAppWebhookService {
         try {
             const mediaInfo = this.getMediaInfo(message);
             if (!mediaInfo || !mediaInfo.id) {
-                logWebhookEvent('WARN', 'No media ID found in message', { messageId });
+                logWarning('No media ID found in message', {
+                    messageId,
+                    operation: 'processAndStoreMedia',
+                    issue: 'missing_media_id'
+                });
                 return;
             }
 
@@ -535,20 +602,27 @@ export class WhatsAppWebhookService {
                     mediaInfo.sha256
                 );
 
-                logWebhookEvent('INFO', 'Media file processed and uploaded to UploadThing CDN', {
-                    messageId
+                logSuccess('Media file processed and uploaded to UploadThing CDN', {
+                    messageId,
+                    fileName: uploadResult.fileName,
+                    fileSize: uploadResult.fileSize,
+                    storedUrl: uploadResult.storedUrl,
+                    mimeType: mediaInfo.mime_type,
+                    operation: 'processAndStoreMedia'
                 });
             } else {
-                logWebhookEvent('ERROR', 'Failed to process media file', {
+                logError('Failed to process media file', uploadResult.error || 'Unknown upload error', {
                     messageId,
-                    error: uploadResult.error
+                    mediaId: mediaInfo.id,
+                    mimeType: mediaInfo.mime_type,
+                    operation: 'processAndStoreMedia'
                 });
             }
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            logWebhookEvent('ERROR', 'Error processing media file', {
+            logError('Error processing media file', error as Error, {
                 messageId,
-                error: errorMessage
+                operation: 'processAndStoreMedia',
+                mediaType: message.type
             });
         }
     }
