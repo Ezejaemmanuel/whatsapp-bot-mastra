@@ -18,7 +18,6 @@ const client1 = new WhatsAppCloudApiClient();
 // Example 2: Initialize client with custom configuration
 const client2 = new WhatsAppCloudApiClient({
     accessToken: 'your-access-token-here',
-    version: 'v21.0', // Optional, defaults to v21.0
     baseUrl: 'https://graph.facebook.com', // Optional, defaults to Meta's Graph API
 });
 

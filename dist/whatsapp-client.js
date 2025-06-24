@@ -9,8 +9,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
-    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    var _ = { label: 0, sent: function () { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function () { return this; }), g;
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
@@ -279,109 +279,111 @@ var WebhookEndpoint = /** @class */ (function () {
      */
     WebhookEndpoint.prototype.createWebhookHandler = function (params) {
         var _this = this;
-        return function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-            var mode, token, challenge, verificationResponse, body, signature, isValid, parsed, _i, _a, message, _b, _c, status_1, _d, _e, error, error_1;
-            return __generator(this, function (_f) {
-                switch (_f.label) {
-                    case 0:
-                        _f.trys.push([0, 14, , 15]);
-                        // Handle webhook verification
-                        if (req.method === 'GET') {
-                            mode = req.query['hub.mode'];
-                            token = req.query['hub.verify_token'];
-                            challenge = req.query['hub.challenge'];
-                            verificationResponse = this.createVerificationResponse({
-                                mode: mode,
-                                token: token,
-                                challenge: challenge,
-                                verifyToken: params.verifyToken,
-                            });
-                            if (verificationResponse) {
-                                res.status(200).send(verificationResponse);
+        return function (req, res) {
+            return __awaiter(_this, void 0, void 0, function () {
+                var mode, token, challenge, verificationResponse, body, signature, isValid, parsed, _i, _a, message, _b, _c, status_1, _d, _e, error, error_1;
+                return __generator(this, function (_f) {
+                    switch (_f.label) {
+                        case 0:
+                            _f.trys.push([0, 14, , 15]);
+                            // Handle webhook verification
+                            if (req.method === 'GET') {
+                                mode = req.query['hub.mode'];
+                                token = req.query['hub.verify_token'];
+                                challenge = req.query['hub.challenge'];
+                                verificationResponse = this.createVerificationResponse({
+                                    mode: mode,
+                                    token: token,
+                                    challenge: challenge,
+                                    verifyToken: params.verifyToken,
+                                });
+                                if (verificationResponse) {
+                                    res.status(200).send(verificationResponse);
+                                    return [2 /*return*/];
+                                }
+                                else {
+                                    res.status(403).send('Forbidden');
+                                    return [2 /*return*/];
+                                }
+                            }
+                            if (!(req.method === 'POST')) return [3 /*break*/, 13];
+                            body = req.body;
+                            // Verify signature if app secret is provided
+                            if (params.appSecret) {
+                                signature = req.headers['x-hub-signature-256'];
+                                isValid = this.verifyWebhookSignature({
+                                    payload: JSON.stringify(body),
+                                    signature: signature,
+                                    appSecret: params.appSecret,
+                                });
+                                if (!isValid) {
+                                    res.status(403).send('Invalid signature');
+                                    return [2 /*return*/];
+                                }
+                            }
+                            // Validate and parse payload
+                            if (!this.isValidWebhookPayload(body)) {
+                                res.status(400).send('Invalid payload');
                                 return [2 /*return*/];
                             }
-                            else {
-                                res.status(403).send('Forbidden');
-                                return [2 /*return*/];
-                            }
-                        }
-                        if (!(req.method === 'POST')) return [3 /*break*/, 13];
-                        body = req.body;
-                        // Verify signature if app secret is provided
-                        if (params.appSecret) {
-                            signature = req.headers['x-hub-signature-256'];
-                            isValid = this.verifyWebhookSignature({
-                                payload: JSON.stringify(body),
-                                signature: signature,
-                                appSecret: params.appSecret,
-                            });
-                            if (!isValid) {
-                                res.status(403).send('Invalid signature');
-                                return [2 /*return*/];
-                            }
-                        }
-                        // Validate and parse payload
-                        if (!this.isValidWebhookPayload(body)) {
-                            res.status(400).send('Invalid payload');
+                            parsed = this.parseWebhookPayload(body);
+                            if (!(params.onMessage && parsed.messages.length > 0)) return [3 /*break*/, 4];
+                            _i = 0, _a = parsed.messages;
+                            _f.label = 1;
+                        case 1:
+                            if (!(_i < _a.length)) return [3 /*break*/, 4];
+                            message = _a[_i];
+                            return [4 /*yield*/, params.onMessage(message, parsed.phoneNumberId)];
+                        case 2:
+                            _f.sent();
+                            _f.label = 3;
+                        case 3:
+                            _i++;
+                            return [3 /*break*/, 1];
+                        case 4:
+                            if (!(params.onStatus && parsed.statuses.length > 0)) return [3 /*break*/, 8];
+                            _b = 0, _c = parsed.statuses;
+                            _f.label = 5;
+                        case 5:
+                            if (!(_b < _c.length)) return [3 /*break*/, 8];
+                            status_1 = _c[_b];
+                            return [4 /*yield*/, params.onStatus(status_1, parsed.phoneNumberId)];
+                        case 6:
+                            _f.sent();
+                            _f.label = 7;
+                        case 7:
+                            _b++;
+                            return [3 /*break*/, 5];
+                        case 8:
+                            if (!(params.onError && parsed.errors.length > 0)) return [3 /*break*/, 12];
+                            _d = 0, _e = parsed.errors;
+                            _f.label = 9;
+                        case 9:
+                            if (!(_d < _e.length)) return [3 /*break*/, 12];
+                            error = _e[_d];
+                            return [4 /*yield*/, params.onError(error, parsed.phoneNumberId)];
+                        case 10:
+                            _f.sent();
+                            _f.label = 11;
+                        case 11:
+                            _d++;
+                            return [3 /*break*/, 9];
+                        case 12:
+                            res.status(200).send('OK');
                             return [2 /*return*/];
-                        }
-                        parsed = this.parseWebhookPayload(body);
-                        if (!(params.onMessage && parsed.messages.length > 0)) return [3 /*break*/, 4];
-                        _i = 0, _a = parsed.messages;
-                        _f.label = 1;
-                    case 1:
-                        if (!(_i < _a.length)) return [3 /*break*/, 4];
-                        message = _a[_i];
-                        return [4 /*yield*/, params.onMessage(message, parsed.phoneNumberId)];
-                    case 2:
-                        _f.sent();
-                        _f.label = 3;
-                    case 3:
-                        _i++;
-                        return [3 /*break*/, 1];
-                    case 4:
-                        if (!(params.onStatus && parsed.statuses.length > 0)) return [3 /*break*/, 8];
-                        _b = 0, _c = parsed.statuses;
-                        _f.label = 5;
-                    case 5:
-                        if (!(_b < _c.length)) return [3 /*break*/, 8];
-                        status_1 = _c[_b];
-                        return [4 /*yield*/, params.onStatus(status_1, parsed.phoneNumberId)];
-                    case 6:
-                        _f.sent();
-                        _f.label = 7;
-                    case 7:
-                        _b++;
-                        return [3 /*break*/, 5];
-                    case 8:
-                        if (!(params.onError && parsed.errors.length > 0)) return [3 /*break*/, 12];
-                        _d = 0, _e = parsed.errors;
-                        _f.label = 9;
-                    case 9:
-                        if (!(_d < _e.length)) return [3 /*break*/, 12];
-                        error = _e[_d];
-                        return [4 /*yield*/, params.onError(error, parsed.phoneNumberId)];
-                    case 10:
-                        _f.sent();
-                        _f.label = 11;
-                    case 11:
-                        _d++;
-                        return [3 /*break*/, 9];
-                    case 12:
-                        res.status(200).send('OK');
-                        return [2 /*return*/];
-                    case 13:
-                        res.status(405).send('Method not allowed');
-                        return [3 /*break*/, 15];
-                    case 14:
-                        error_1 = _f.sent();
-                        console.error('Webhook handler error:', error_1);
-                        res.status(500).send('Internal server error');
-                        return [3 /*break*/, 15];
-                    case 15: return [2 /*return*/];
-                }
+                        case 13:
+                            res.status(405).send('Method not allowed');
+                            return [3 /*break*/, 15];
+                        case 14:
+                            error_1 = _f.sent();
+                            console.error('Webhook handler error:', error_1);
+                            res.status(500).send('Internal server error');
+                            return [3 /*break*/, 15];
+                        case 15: return [2 /*return*/];
+                    }
+                });
             });
-        }); };
+        };
     };
     return WebhookEndpoint;
 }());
@@ -400,14 +402,14 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'text',
-                        text: {
-                            body: params.text,
-                            preview_url: params.previewUrl || false,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'text',
+                    text: {
+                        body: params.text,
+                        preview_url: params.previewUrl || false,
+                    },
+                })];
             });
         });
     };
@@ -418,17 +420,17 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'text',
-                        text: {
-                            body: params.text,
-                            preview_url: params.previewUrl || false,
-                        },
-                        context: {
-                            message_id: params.replyToMessageId,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'text',
+                    text: {
+                        body: params.text,
+                        preview_url: params.previewUrl || false,
+                    },
+                    context: {
+                        message_id: params.replyToMessageId,
+                    },
+                })];
             });
         });
     };
@@ -439,14 +441,14 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'image',
-                        image: {
-                            id: params.mediaId,
-                            caption: params.caption,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'image',
+                    image: {
+                        id: params.mediaId,
+                        caption: params.caption,
+                    },
+                })];
             });
         });
     };
@@ -457,14 +459,14 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'image',
-                        image: {
-                            link: params.imageUrl,
-                            caption: params.caption,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'image',
+                    image: {
+                        link: params.imageUrl,
+                        caption: params.caption,
+                    },
+                })];
             });
         });
     };
@@ -475,13 +477,13 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'audio',
-                        audio: {
-                            id: params.mediaId,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'audio',
+                    audio: {
+                        id: params.mediaId,
+                    },
+                })];
             });
         });
     };
@@ -492,13 +494,13 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'audio',
-                        audio: {
-                            link: params.audioUrl,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'audio',
+                    audio: {
+                        link: params.audioUrl,
+                    },
+                })];
             });
         });
     };
@@ -509,15 +511,15 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'document',
-                        document: {
-                            id: params.mediaId,
-                            filename: params.filename,
-                            caption: params.caption,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'document',
+                    document: {
+                        id: params.mediaId,
+                        filename: params.filename,
+                        caption: params.caption,
+                    },
+                })];
             });
         });
     };
@@ -528,15 +530,15 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'document',
-                        document: {
-                            link: params.documentUrl,
-                            filename: params.filename,
-                            caption: params.caption,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'document',
+                    document: {
+                        link: params.documentUrl,
+                        filename: params.filename,
+                        caption: params.caption,
+                    },
+                })];
             });
         });
     };
@@ -547,13 +549,13 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'sticker',
-                        sticker: {
-                            id: params.mediaId,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'sticker',
+                    sticker: {
+                        id: params.mediaId,
+                    },
+                })];
             });
         });
     };
@@ -564,13 +566,13 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'sticker',
-                        sticker: {
-                            link: params.stickerUrl,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'sticker',
+                    sticker: {
+                        link: params.stickerUrl,
+                    },
+                })];
             });
         });
     };
@@ -581,17 +583,17 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'template',
-                        template: {
-                            name: params.templateName,
-                            language: {
-                                code: params.languageCode,
-                            },
-                            components: params.components || [],
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'template',
+                    template: {
+                        name: params.templateName,
+                        language: {
+                            code: params.languageCode,
                         },
-                    })];
+                        components: params.components || [],
+                    },
+                })];
             });
         });
     };
@@ -608,13 +610,15 @@ var MessagesEndpoint = /** @class */ (function () {
                         text: params.bodyText,
                     },
                     action: {
-                        buttons: params.buttons.map(function (button) { return ({
-                            type: 'reply',
-                            reply: {
-                                id: button.id,
-                                title: button.title,
-                            },
-                        }); }),
+                        buttons: params.buttons.map(function (button) {
+                            return ({
+                                type: 'reply',
+                                reply: {
+                                    id: button.id,
+                                    title: button.title,
+                                },
+                            });
+                        }),
                     },
                 };
                 if (params.headerText) {
@@ -629,11 +633,11 @@ var MessagesEndpoint = /** @class */ (function () {
                     };
                 }
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'interactive',
-                        interactive: interactive,
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'interactive',
+                    interactive: interactive,
+                })];
             });
         });
     };
@@ -666,11 +670,11 @@ var MessagesEndpoint = /** @class */ (function () {
                     };
                 }
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'interactive',
-                        interactive: interactive,
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'interactive',
+                    interactive: interactive,
+                })];
             });
         });
     };
@@ -681,16 +685,16 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'location',
-                        location: {
-                            latitude: params.latitude,
-                            longitude: params.longitude,
-                            name: params.name,
-                            address: params.address,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'location',
+                    location: {
+                        latitude: params.latitude,
+                        longitude: params.longitude,
+                        name: params.name,
+                        address: params.address,
+                    },
+                })];
             });
         });
     };
@@ -701,11 +705,11 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'contacts',
-                        contacts: params.contacts,
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'contacts',
+                    contacts: params.contacts,
+                })];
             });
         });
     };
@@ -716,10 +720,10 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesUpdate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        status: 'read',
-                        message_id: params.messageId,
-                    })];
+                    messaging_product: 'whatsapp',
+                    status: 'read',
+                    message_id: params.messageId,
+                })];
             });
         });
     };
@@ -730,14 +734,14 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'reaction',
-                        reaction: {
-                            message_id: params.messageId,
-                            emoji: params.emoji,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'reaction',
+                    reaction: {
+                        message_id: params.messageId,
+                        emoji: params.emoji,
+                    },
+                })];
             });
         });
     };
@@ -748,14 +752,14 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'reaction',
-                        reaction: {
-                            message_id: params.messageId,
-                            emoji: '', // Empty emoji removes the reaction
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'reaction',
+                    reaction: {
+                        message_id: params.messageId,
+                        emoji: '', // Empty emoji removes the reaction
+                    },
+                })];
             });
         });
     };
@@ -766,17 +770,17 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'image',
-                        image: {
-                            id: params.mediaId,
-                            caption: params.caption,
-                        },
-                        context: {
-                            message_id: params.replyToMessageId,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'image',
+                    image: {
+                        id: params.mediaId,
+                        caption: params.caption,
+                    },
+                    context: {
+                        message_id: params.replyToMessageId,
+                    },
+                })];
             });
         });
     };
@@ -787,17 +791,17 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'image',
-                        image: {
-                            link: params.imageUrl,
-                            caption: params.caption,
-                        },
-                        context: {
-                            message_id: params.replyToMessageId,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'image',
+                    image: {
+                        link: params.imageUrl,
+                        caption: params.caption,
+                    },
+                    context: {
+                        message_id: params.replyToMessageId,
+                    },
+                })];
             });
         });
     };
@@ -808,16 +812,16 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'audio',
-                        audio: {
-                            id: params.mediaId,
-                        },
-                        context: {
-                            message_id: params.replyToMessageId,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'audio',
+                    audio: {
+                        id: params.mediaId,
+                    },
+                    context: {
+                        message_id: params.replyToMessageId,
+                    },
+                })];
             });
         });
     };
@@ -828,16 +832,16 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'audio',
-                        audio: {
-                            link: params.audioUrl,
-                        },
-                        context: {
-                            message_id: params.replyToMessageId,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'audio',
+                    audio: {
+                        link: params.audioUrl,
+                    },
+                    context: {
+                        message_id: params.replyToMessageId,
+                    },
+                })];
             });
         });
     };
@@ -848,18 +852,18 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'document',
-                        document: {
-                            id: params.mediaId,
-                            filename: params.filename,
-                            caption: params.caption,
-                        },
-                        context: {
-                            message_id: params.replyToMessageId,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'document',
+                    document: {
+                        id: params.mediaId,
+                        filename: params.filename,
+                        caption: params.caption,
+                    },
+                    context: {
+                        message_id: params.replyToMessageId,
+                    },
+                })];
             });
         });
     };
@@ -870,18 +874,18 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'document',
-                        document: {
-                            link: params.documentUrl,
-                            filename: params.filename,
-                            caption: params.caption,
-                        },
-                        context: {
-                            message_id: params.replyToMessageId,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'document',
+                    document: {
+                        link: params.documentUrl,
+                        filename: params.filename,
+                        caption: params.caption,
+                    },
+                    context: {
+                        message_id: params.replyToMessageId,
+                    },
+                })];
             });
         });
     };
@@ -892,16 +896,16 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'sticker',
-                        sticker: {
-                            id: params.mediaId,
-                        },
-                        context: {
-                            message_id: params.replyToMessageId,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'sticker',
+                    sticker: {
+                        id: params.mediaId,
+                    },
+                    context: {
+                        message_id: params.replyToMessageId,
+                    },
+                })];
             });
         });
     };
@@ -912,16 +916,16 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'sticker',
-                        sticker: {
-                            link: params.stickerUrl,
-                        },
-                        context: {
-                            message_id: params.replyToMessageId,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'sticker',
+                    sticker: {
+                        link: params.stickerUrl,
+                    },
+                    context: {
+                        message_id: params.replyToMessageId,
+                    },
+                })];
             });
         });
     };
@@ -932,14 +936,14 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'video',
-                        video: {
-                            id: params.mediaId,
-                            caption: params.caption,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'video',
+                    video: {
+                        id: params.mediaId,
+                        caption: params.caption,
+                    },
+                })];
             });
         });
     };
@@ -950,14 +954,14 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'video',
-                        video: {
-                            link: params.videoUrl,
-                            caption: params.caption,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'video',
+                    video: {
+                        link: params.videoUrl,
+                        caption: params.caption,
+                    },
+                })];
             });
         });
     };
@@ -968,17 +972,17 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'video',
-                        video: {
-                            id: params.mediaId,
-                            caption: params.caption,
-                        },
-                        context: {
-                            message_id: params.replyToMessageId,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'video',
+                    video: {
+                        id: params.mediaId,
+                        caption: params.caption,
+                    },
+                    context: {
+                        message_id: params.replyToMessageId,
+                    },
+                })];
             });
         });
     };
@@ -989,17 +993,17 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'video',
-                        video: {
-                            link: params.videoUrl,
-                            caption: params.caption,
-                        },
-                        context: {
-                            message_id: params.replyToMessageId,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'video',
+                    video: {
+                        link: params.videoUrl,
+                        caption: params.caption,
+                    },
+                    context: {
+                        message_id: params.replyToMessageId,
+                    },
+                })];
             });
         });
     };
@@ -1010,14 +1014,14 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'contacts',
-                        contacts: params.contacts,
-                        context: {
-                            message_id: params.replyToMessageId,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'contacts',
+                    contacts: params.contacts,
+                    context: {
+                        message_id: params.replyToMessageId,
+                    },
+                })];
             });
         });
     };
@@ -1028,19 +1032,19 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'location',
-                        location: {
-                            latitude: params.latitude,
-                            longitude: params.longitude,
-                            name: params.name,
-                            address: params.address,
-                        },
-                        context: {
-                            message_id: params.replyToMessageId,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'location',
+                    location: {
+                        latitude: params.latitude,
+                        longitude: params.longitude,
+                        name: params.name,
+                        address: params.address,
+                    },
+                    context: {
+                        message_id: params.replyToMessageId,
+                    },
+                })];
             });
         });
     };
@@ -1065,17 +1069,17 @@ var MessagesEndpoint = /** @class */ (function () {
                     });
                 }
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'template',
-                        template: {
-                            name: params.templateName,
-                            language: {
-                                code: params.languageCode,
-                            },
-                            components: components.length > 0 ? components : undefined,
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'template',
+                    template: {
+                        name: params.templateName,
+                        language: {
+                            code: params.languageCode,
                         },
-                    })];
+                        components: components.length > 0 ? components : undefined,
+                    },
+                })];
             });
         });
     };
@@ -1107,17 +1111,17 @@ var MessagesEndpoint = /** @class */ (function () {
                     });
                 }
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'template',
-                        template: {
-                            name: params.templateName,
-                            language: {
-                                code: params.languageCode,
-                            },
-                            components: components,
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'template',
+                    template: {
+                        name: params.templateName,
+                        language: {
+                            code: params.languageCode,
                         },
-                    })];
+                        components: components,
+                    },
+                })];
             });
         });
     };
@@ -1146,17 +1150,17 @@ var MessagesEndpoint = /** @class */ (function () {
                     });
                 }
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'template',
-                        template: {
-                            name: params.templateName,
-                            language: {
-                                code: params.languageCode,
-                            },
-                            components: components.length > 0 ? components : undefined,
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'template',
+                    template: {
+                        name: params.templateName,
+                        language: {
+                            code: params.languageCode,
                         },
-                    })];
+                        components: components.length > 0 ? components : undefined,
+                    },
+                })];
             });
         });
     };
@@ -1189,14 +1193,14 @@ var MessagesEndpoint = /** @class */ (function () {
                     };
                 }
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'interactive',
-                        interactive: interactive,
-                        context: {
-                            message_id: params.replyToMessageId,
-                        },
-                    })];
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'interactive',
+                    interactive: interactive,
+                    context: {
+                        message_id: params.replyToMessageId,
+                    },
+                })];
             });
         });
     };
@@ -1213,13 +1217,15 @@ var MessagesEndpoint = /** @class */ (function () {
                         text: params.bodyText,
                     },
                     action: {
-                        buttons: params.buttons.map(function (button) { return ({
-                            type: 'reply',
-                            reply: {
-                                id: button.id,
-                                title: button.title,
-                            },
-                        }); }),
+                        buttons: params.buttons.map(function (button) {
+                            return ({
+                                type: 'reply',
+                                reply: {
+                                    id: button.id,
+                                    title: button.title,
+                                },
+                            });
+                        }),
                     },
                 };
                 if (params.headerText) {
@@ -1255,23 +1261,23 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'interactive',
-                        interactive: {
-                            type: 'product',
-                            body: params.bodyText ? {
-                                text: params.bodyText,
-                            } : undefined,
-                            footer: params.footerText ? {
-                                text: params.footerText,
-                            } : undefined,
-                            action: {
-                                catalog_id: params.catalogId,
-                                product_retailer_id: params.productRetailerId,
-                            },
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'interactive',
+                    interactive: {
+                        type: 'product',
+                        body: params.bodyText ? {
+                            text: params.bodyText,
+                        } : undefined,
+                        footer: params.footerText ? {
+                            text: params.footerText,
+                        } : undefined,
+                        action: {
+                            catalog_id: params.catalogId,
+                            product_retailer_id: params.productRetailerId,
                         },
-                    })];
+                    },
+                })];
             });
         });
     };
@@ -1282,27 +1288,27 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'interactive',
-                        interactive: {
-                            type: 'product_list',
-                            header: {
-                                type: 'text',
-                                text: params.headerText,
-                            },
-                            body: {
-                                text: params.bodyText,
-                            },
-                            footer: params.footerText ? {
-                                text: params.footerText,
-                            } : undefined,
-                            action: {
-                                catalog_id: params.catalogId,
-                                sections: params.sections,
-                            },
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'interactive',
+                    interactive: {
+                        type: 'product_list',
+                        header: {
+                            type: 'text',
+                            text: params.headerText,
                         },
-                    })];
+                        body: {
+                            text: params.bodyText,
+                        },
+                        footer: params.footerText ? {
+                            text: params.footerText,
+                        } : undefined,
+                        action: {
+                            catalog_id: params.catalogId,
+                            sections: params.sections,
+                        },
+                    },
+                })];
             });
         });
     };
@@ -1313,25 +1319,25 @@ var MessagesEndpoint = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'interactive',
-                        interactive: {
-                            type: 'catalog_message',
-                            body: {
-                                text: params.bodyText,
-                            },
-                            footer: params.footerText ? {
-                                text: params.footerText,
-                            } : undefined,
-                            action: {
-                                name: 'catalog_message',
-                                parameters: {
-                                    thumbnail_product_retailer_id: params.thumbnailProductRetailerId,
-                                },
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'interactive',
+                    interactive: {
+                        type: 'catalog_message',
+                        body: {
+                            text: params.bodyText,
+                        },
+                        footer: params.footerText ? {
+                            text: params.footerText,
+                        } : undefined,
+                        action: {
+                            name: 'catalog_message',
+                            parameters: {
+                                thumbnail_product_retailer_id: params.thumbnailProductRetailerId,
                             },
                         },
-                    })];
+                    },
+                })];
             });
         });
     };
@@ -1363,17 +1369,17 @@ var MessagesEndpoint = /** @class */ (function () {
                     ],
                 });
                 return [2 /*return*/, this.api.phoneNumberId.messagesCreate(this.version, params.phoneNumberId, {
-                        messaging_product: 'whatsapp',
-                        to: params.to,
-                        type: 'template',
-                        template: {
-                            name: params.templateName,
-                            language: {
-                                code: params.languageCode,
-                            },
-                            components: components,
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'template',
+                    template: {
+                        name: params.templateName,
+                        language: {
+                            code: params.languageCode,
                         },
-                    })];
+                        components: components,
+                    },
+                })];
             });
         });
     };
@@ -1395,7 +1401,7 @@ var WhatsAppCloudApiClient = /** @class */ (function () {
         }
         this.config = {
             accessToken: accessToken,
-            version: config.version || 'v21.0',
+            version: config.version || 'v23.0',
             baseUrl: config.baseUrl || 'https://graph.facebook.com',
         };
         // Initialize the HTTP client with authentication

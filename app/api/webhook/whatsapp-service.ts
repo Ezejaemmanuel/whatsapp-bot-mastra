@@ -1,6 +1,8 @@
 import { WhatsAppCloudApiClient } from '@/whatsapp/whatsapp-client';
 import { WebhookMessage, WebhookMessageStatus, WebhookPayload } from './types';
 import { logWebhookEvent, extractMessageInfo, extractStatusInfo } from './utils';
+import { DatabaseService } from '@/lib/database-service';
+import { MediaUploadService } from '@/lib/media-upload-service';
 
 /**
  * WhatsApp Webhook Service
@@ -11,14 +13,21 @@ import { logWebhookEvent, extractMessageInfo, extractStatusInfo } from './utils'
 export class WhatsAppWebhookService {
     private whatsappClient: WhatsAppCloudApiClient;
     private phoneNumberId: string;
+    private databaseService: DatabaseService;
+    private mediaUploadService: MediaUploadService;
 
     constructor(accessToken?: string, phoneNumberId?: string) {
         this.whatsappClient = new WhatsAppCloudApiClient({
-            accessToken: accessToken || process.env.WHATSAPP_ACCESS_TOKEN,
-            version: 'v21.0'
+            accessToken: accessToken || process.env.WHATSAPP_ACCESS_TOKEN
         });
 
         this.phoneNumberId = phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID || '';
+        this.databaseService = new DatabaseService();
+
+        // Initialize MediaUploadService with UploadThing integration
+        this.mediaUploadService = new MediaUploadService(
+            accessToken || process.env.WHATSAPP_ACCESS_TOKEN
+        );
 
         if (!this.phoneNumberId) {
             logWebhookEvent('WARN', 'Phone number ID not configured');
@@ -28,7 +37,7 @@ export class WhatsAppWebhookService {
     /**
      * Process incoming webhook message
      */
-    async processIncomingMessage(message: WebhookMessage): Promise<void> {
+    async processIncomingMessage(message: WebhookMessage, contactName?: string): Promise<void> {
         try {
             const messageInfo = extractMessageInfo(message);
 
@@ -39,28 +48,48 @@ export class WhatsAppWebhookService {
                 text: messageInfo.text
             });
 
+            // Get or create user and conversation
+            const user = await this.databaseService.getOrCreateUser(
+                messageInfo.from,
+                contactName
+            );
+
+            const conversation = await this.databaseService.getOrCreateConversation(user.id);
+
+            // Store the incoming message in database
+            const storedMessage = await this.databaseService.storeIncomingMessage(
+                message,
+                conversation.id,
+                contactName
+            );
+
+            // Handle media messages - download and store files
+            if (this.isMediaMessage(message)) {
+                await this.processAndStoreMedia(message, storedMessage.id);
+            }
+
             // Mark message as read
             await this.markMessageAsRead(messageInfo.id);
 
             // Process different message types
             switch (messageInfo.type) {
                 case 'text':
-                    await this.handleTextMessage(messageInfo);
+                    await this.handleTextMessage(messageInfo, conversation.id);
                     break;
                 case 'image':
                 case 'audio':
                 case 'video':
                 case 'document':
-                    await this.handleMediaMessage(messageInfo);
+                    await this.handleMediaMessage(messageInfo, conversation.id);
                     break;
                 case 'interactive':
-                    await this.handleInteractiveMessage(messageInfo);
+                    await this.handleInteractiveMessage(messageInfo, conversation.id);
                     break;
                 case 'location':
-                    await this.handleLocationMessage(messageInfo);
+                    await this.handleLocationMessage(messageInfo, conversation.id);
                     break;
                 case 'contacts':
-                    await this.handleContactMessage(messageInfo);
+                    await this.handleContactMessage(messageInfo, conversation.id);
                     break;
                 default:
                     logWebhookEvent('INFO', `Unhandled message type: ${messageInfo.type}`);
@@ -71,6 +100,16 @@ export class WhatsAppWebhookService {
                 error: errorMessage,
                 messageId: message.id
             });
+
+            // Log error to database
+            await this.databaseService.logWebhookEvent(
+                'ERROR',
+                'Error processing incoming message',
+                { messageId: message.id },
+                'WhatsAppWebhookService',
+                undefined,
+                errorMessage
+            );
         }
     }
 
@@ -124,7 +163,7 @@ export class WhatsAppWebhookService {
                 });
             } else {
                 await this.whatsappClient.messages.sendText({
-                    
+
                     to,
                     text
                 });
@@ -234,12 +273,24 @@ export class WhatsAppWebhookService {
     /**
      * Handle text messages
      */
-    private async handleTextMessage(messageInfo: ReturnType<typeof extractMessageInfo>): Promise<void> {
+    private async handleTextMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: string): Promise<void> {
         // Example auto-response logic - customize as needed
         if (messageInfo.text?.toLowerCase().includes('hello')) {
+            const response = 'Hello! Thank you for your message. How can I help you today?';
+
             await this.sendTextReply(
                 messageInfo.from,
-                'Hello! Thank you for your message. How can I help you today?',
+                response,
+                messageInfo.id
+            );
+
+            // Store outgoing message in database
+            await this.databaseService.storeOutgoingMessage(
+                messageInfo.from,
+                'text',
+                response,
+                conversationId,
+                undefined,
                 messageInfo.id
             );
         }
@@ -248,16 +299,28 @@ export class WhatsAppWebhookService {
     /**
      * Handle media messages
      */
-    private async handleMediaMessage(messageInfo: ReturnType<typeof extractMessageInfo>): Promise<void> {
+    private async handleMediaMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: string): Promise<void> {
         logWebhookEvent('INFO', 'Media message received', {
             type: messageInfo.type,
             mediaInfo: messageInfo.mediaInfo
         });
 
         // Example response to media
+        const response = `Thank you for sharing the ${messageInfo.type}!`;
+
         await this.sendTextReply(
             messageInfo.from,
-            `Thank you for sharing the ${messageInfo.type}!`,
+            response,
+            messageInfo.id
+        );
+
+        // Store outgoing message in database
+        await this.databaseService.storeOutgoingMessage(
+            messageInfo.from,
+            'text',
+            response,
+            conversationId,
+            undefined,
             messageInfo.id
         );
     }
@@ -265,15 +328,27 @@ export class WhatsAppWebhookService {
     /**
      * Handle interactive messages (button/list replies)
      */
-    private async handleInteractiveMessage(messageInfo: ReturnType<typeof extractMessageInfo>): Promise<void> {
+    private async handleInteractiveMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: string): Promise<void> {
         logWebhookEvent('INFO', 'Interactive message received', {
             text: messageInfo.text
         });
 
         // Handle button/list responses
+        const response = `You selected: ${messageInfo.text}`;
+
         await this.sendTextReply(
             messageInfo.from,
-            `You selected: ${messageInfo.text}`,
+            response,
+            messageInfo.id
+        );
+
+        // Store outgoing message in database
+        await this.databaseService.storeOutgoingMessage(
+            messageInfo.from,
+            'text',
+            response,
+            conversationId,
+            undefined,
             messageInfo.id
         );
     }
@@ -281,10 +356,22 @@ export class WhatsAppWebhookService {
     /**
      * Handle location messages
      */
-    private async handleLocationMessage(messageInfo: ReturnType<typeof extractMessageInfo>): Promise<void> {
+    private async handleLocationMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: string): Promise<void> {
+        const response = 'Thank you for sharing your location!';
+
         await this.sendTextReply(
             messageInfo.from,
-            'Thank you for sharing your location!',
+            response,
+            messageInfo.id
+        );
+
+        // Store outgoing message in database
+        await this.databaseService.storeOutgoingMessage(
+            messageInfo.from,
+            'text',
+            response,
+            conversationId,
+            undefined,
             messageInfo.id
         );
     }
@@ -292,10 +379,22 @@ export class WhatsAppWebhookService {
     /**
      * Handle contact messages
      */
-    private async handleContactMessage(messageInfo: ReturnType<typeof extractMessageInfo>): Promise<void> {
+    private async handleContactMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: string): Promise<void> {
+        const response = 'Thank you for sharing the contact!';
+
         await this.sendTextReply(
             messageInfo.from,
-            'Thank you for sharing the contact!',
+            response,
+            messageInfo.id
+        );
+
+        // Store outgoing message in database
+        await this.databaseService.storeOutgoingMessage(
+            messageInfo.from,
+            'text',
+            response,
+            conversationId,
+            undefined,
             messageInfo.id
         );
     }
@@ -395,6 +494,78 @@ export class WhatsAppWebhookService {
         }
         if (phoneNumberId) {
             this.phoneNumberId = phoneNumberId;
+        }
+    }
+
+    /**
+     * Check if message is a media message
+     */
+    private isMediaMessage(message: WebhookMessage): boolean {
+        return ['image', 'audio', 'video', 'document', 'sticker'].includes(message.type);
+    }
+
+    /**
+     * Process and store media files using UploadThing
+     * Downloads media from WhatsApp and uploads to UploadThing CDN
+     */
+    private async processAndStoreMedia(message: WebhookMessage, messageId: string): Promise<void> {
+        try {
+            const mediaInfo = this.getMediaInfo(message);
+            if (!mediaInfo || !mediaInfo.id) {
+                logWebhookEvent('WARN', 'No media ID found in message', { messageId });
+                return;
+            }
+
+            // Download from WhatsApp and upload to UploadThing CDN
+            const uploadResult = await this.mediaUploadService.processMediaMessage(
+                mediaInfo.id,
+                mediaInfo.filename,
+                mediaInfo.mime_type,
+                mediaInfo.sha256
+            );
+
+            if (uploadResult.success && uploadResult.storedUrl) {
+                // Store media file information in database with UploadThing CDN URL
+                await this.databaseService.storeMediaFile(
+                    messageId,
+                    mediaInfo.id,
+                    '', // originalUrl - we don't store the temporary WhatsApp URL
+                    uploadResult.storedUrl, // This is now a permanent UploadThing CDN URL
+                    uploadResult.fileName || mediaInfo.filename || 'unknown',
+                    mediaInfo.mime_type,
+                    uploadResult.fileSize,
+                    mediaInfo.sha256
+                );
+
+                logWebhookEvent('INFO', 'Media file processed and uploaded to UploadThing CDN', {
+                    messageId
+                });
+            } else {
+                logWebhookEvent('ERROR', 'Failed to process media file', {
+                    messageId,
+                    error: uploadResult.error
+                });
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            logWebhookEvent('ERROR', 'Error processing media file', {
+                messageId,
+                error: errorMessage
+            });
+        }
+    }
+
+    /**
+     * Get media information from message
+     */
+    private getMediaInfo(message: WebhookMessage): any {
+        switch (message.type) {
+            case 'image': return message.image;
+            case 'audio': return message.audio;
+            case 'video': return message.video;
+            case 'document': return message.document;
+            case 'sticker': return message.sticker;
+            default: return null;
         }
     }
 } 

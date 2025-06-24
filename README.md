@@ -79,7 +79,7 @@ import WhatsAppCloudApiClient from './src/whatsapp-client-example';
 // Initialize the client
 const client = new WhatsAppCloudApiClient({
   accessToken: 'YOUR_WHATSAPP_ACCESS_TOKEN',
-  version: 'v21.0'
+  version: 'v23.0'
 });
 
 // Send a text message

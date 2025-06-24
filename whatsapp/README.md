@@ -45,7 +45,7 @@ const client = new WhatsAppCloudApiClient();
 ```typescript
 const client = new WhatsAppCloudApiClient({
     accessToken: 'your-access-token-here',
-    version: 'v21.0', // Optional, defaults to v21.0
+    version: 'v23.0', // Optional, defaults to v23.0
     baseUrl: 'https://graph.facebook.com', // Optional
 });
 ```
@@ -608,7 +608,7 @@ WHATSAPP_ACCESS_TOKEN=your-access-token
 ```typescript
 const client = new WhatsAppCloudApiClient({
     accessToken: 'your-access-token',
-    version: 'v21.0',           // API version
+    version: 'v23.0',           // API version
     baseUrl: 'https://graph.facebook.com'  // API base URL
 });
 ```

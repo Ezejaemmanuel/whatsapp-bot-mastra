@@ -1,5 +1,5 @@
 import { Api, HttpClient } from './api/Api';
-import { PHONE_NUMBER_ID, WABA_ID } from '../constant';
+import { PHONE_NUMBER_ID, WABA_ID, WHATSAPP_API_VERSION } from '../constant';
 
 /**
  * WhatsApp Cloud API Client
@@ -10,8 +10,8 @@ import { PHONE_NUMBER_ID, WABA_ID } from '../constant';
 // Configuration interface for the WhatsApp API client
 interface WhatsAppConfig {
     accessToken?: string;
-    version?: string;
     baseUrl?: string;
+    
     phoneNumberId?: string;
     wabaId?: string;
 }
@@ -159,11 +159,13 @@ interface WebhookPayload {
  * Webhook endpoint classification
  */
 class WebhookEndpoint {
+    private version: string;
     constructor(
         private api: Api<SecurityData>,
-        private version: string,
         private wabaId: string
-    ) { }
+    ) {
+        this.version =  WHATSAPP_API_VERSION
+     }
 
     /**
      * Subscribe to webhooks for a WhatsApp Business Account
@@ -581,11 +583,13 @@ class WebhookEndpoint {
  * Messages endpoint classification
  */
 class MessagesEndpoint {
+    private version: string;
     constructor(
         private api: Api<SecurityData>,
-        private version: string,
-        private phoneNumberId: string
-    ) { }
+        private phoneNumberId: string,
+    ) {
+        this.version = WHATSAPP_API_VERSION;
+     }
 
     /**
      * Send a text message
@@ -2038,6 +2042,7 @@ class MessagesEndpoint {
 export class WhatsAppCloudApiClient {
     private api: Api<SecurityData>;
     private config: Required<WhatsAppConfig>;
+    private version: string;
 
     // Organized endpoint classifications
     public messages: MessagesEndpoint;
@@ -2050,10 +2055,10 @@ export class WhatsAppCloudApiClient {
         if (!accessToken) {
             throw new Error('WhatsApp access token is required. Provide it in config or set WHATSAPP_ACCESS_TOKEN environment variable.');
         }
+        this.version = WHATSAPP_API_VERSION;
 
         this.config = {
             accessToken,
-            version: config.version || 'v21.0',
             baseUrl: config.baseUrl || 'https://graph.facebook.com',
             phoneNumberId: config.phoneNumberId || PHONE_NUMBER_ID,
             wabaId: config.wabaId || WABA_ID,
@@ -2078,8 +2083,8 @@ export class WhatsAppCloudApiClient {
         this.api = new Api<SecurityData>(httpClient);
 
         // Initialize endpoint classifications
-        this.messages = new MessagesEndpoint(this.api, this.config.version, this.config.phoneNumberId);
-        this.webhook = new WebhookEndpoint(this.api, this.config.version, this.config.wabaId);
+        this.messages = new MessagesEndpoint(this.api, this.config.phoneNumberId);
+        this.webhook = new WebhookEndpoint(this.api,  this.config.wabaId);
     }
 
     /**
@@ -2087,7 +2092,7 @@ export class WhatsAppCloudApiClient {
      */
     getConfig() {
         return {
-            version: this.config.version,
+            version: this.version,
             baseUrl: this.config.baseUrl,
             hasAccessToken: !!this.config.accessToken,
         };

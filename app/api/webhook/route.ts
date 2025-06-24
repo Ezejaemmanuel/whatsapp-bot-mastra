@@ -126,7 +126,32 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         // Process webhook payload with WhatsApp service for auto-responses
         try {
-            await whatsappService.processWebhookPayload(parsedBody);
+            // Process each entry and message individually to pass contact information
+            for (const entry of parsedBody.entry) {
+                for (const change of entry.changes) {
+                    if (change.value.messages) {
+                        for (const message of change.value.messages) {
+                            // Get contact name from the webhook contacts array
+                            let contactName: string | undefined;
+                            if (change.value.contacts && change.value.contacts.length > 0) {
+                                const contact = change.value.contacts.find(c => c.wa_id === message.from);
+                                contactName = contact?.profile?.name;
+                            }
+
+                            // Process individual message with contact name
+                            await whatsappService.processIncomingMessage(message, contactName);
+                        }
+                    }
+
+                    // Process status updates
+                    if (change.value.statuses) {
+                        for (const status of change.value.statuses) {
+                            await whatsappService.processStatusUpdate(status);
+                        }
+                    }
+                }
+            }
+
             logWebhookEvent('INFO', 'WhatsApp service processing completed');
         } catch (serviceError) {
             const serviceErrorMessage = serviceError instanceof Error ? serviceError.message : 'Unknown service error';
@@ -157,6 +182,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                     for (const message of change.value.messages) {
                         if (isWebhookMessage(message)) {
                             const messageInfo = extractMessageInfo(message);
+
+                            // Get contact name from the webhook contacts array
+                            let contactName: string | undefined;
+                            if (change.value.contacts && change.value.contacts.length > 0) {
+                                const contact = change.value.contacts.find(c => c.wa_id === messageInfo.from);
+                                contactName = contact?.profile?.name;
+                            }
+
                             logWebhookEvent('INFO', 'Received message', {
                                 messageId: messageInfo.id,
                                 from: messageInfo.from,

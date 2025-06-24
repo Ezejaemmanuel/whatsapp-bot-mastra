@@ -11,7 +11,12 @@
     "build:mastra": "mastra build --dir mastra",
     "lint": "next lint",
     "convert:postman": "node scripts/convert-postman-to-openapi.js",
-    "generate:api": "node scripts/generate-typescript-api.js"
+    "generate:api": "node scripts/generate-typescript-api.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:setup": "tsx scripts/setup-database.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^1.2.19",
@@ -20,14 +25,21 @@
     "@mastra/loggers": "^0.10.2",
     "@mastra/memory": "^0.10.4",
     "@radix-ui/react-slot": "^1.2.3",
+    "@types/pg": "^8.15.4",
+    "@uploadthing/react": "^7.3.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dotenv": "^16.5.0",
+    "drizzle-kit": "^0.31.2",
+    "drizzle-orm": "^0.44.2",
     "lucide-react": "^0.523.0",
     "next": "15.3.4",
+    "postgres": "^3.4.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
+    "uploadthing": "^7.7.3",
     "zod": "^3.25.67"
   },
   "devDependencies": {
@@ -44,6 +56,7 @@
     "postcss": "^8.4.49",
     "swagger-typescript-api": "^13.2.4",
     "tailwindcss": "^3.4.15",
+    "tsx": "^4.20.3",
     "typescript": "^5"
   },
   "packageManager": "pnpm@10.11.1+sha512.e519b9f7639869dc8d5c3c5dfef73b3f091094b0a006d7317353c72b124e80e1afd429732e28705ad6bfa1ee879c1fce46c128ccebd3192101f43dd67c667912"
