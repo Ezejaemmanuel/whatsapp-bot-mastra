@@ -21,8 +21,13 @@ Always be helpful and maintain a friendly tone.` as const;
 // Environment Variables (these should be set in .env file)
 export const ENV_VARS = {
     GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY, // Google AI SDK uses this env var name
-    UPSTASH_URL: process.env.UPSTASH_URL,
-    UPSTASH_TOKEN: process.env.UPSTASH_TOKEN,
+    // Upstash Redis for storage
+    UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
+    UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
+    // Upstash Vector for embeddings
+    UPSTASH_VECTOR_REST_URL: process.env.UPSTASH_VECTOR_REST_URL,
+    UPSTASH_VECTOR_REST_TOKEN: process.env.UPSTASH_VECTOR_REST_TOKEN,
+    // WhatsApp API
     WHATSAPP_ACCESS_TOKEN: process.env.WHATSAPP_ACCESS_TOKEN,
     WHATSAPP_PHONE_NUMBER_ID: process.env.WHATSAPP_PHONE_NUMBER_ID,
 } as const;

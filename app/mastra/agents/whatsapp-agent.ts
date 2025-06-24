@@ -10,26 +10,30 @@ if (!ENV_VARS.GOOGLE_GENERATIVE_AI_API_KEY) {
     throw new Error('GOOGLE_GENERATIVE_AI_API_KEY environment variable is required');
 }
 
-if (!ENV_VARS.UPSTASH_URL || !ENV_VARS.UPSTASH_TOKEN) {
-    throw new Error('UPSTASH_URL and UPSTASH_TOKEN environment variables are required');
+if (!ENV_VARS.UPSTASH_REDIS_REST_URL || !ENV_VARS.UPSTASH_REDIS_REST_TOKEN) {
+    throw new Error('UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN environment variables are required');
 }
 
-// Configure Upstash storage
+if (!ENV_VARS.UPSTASH_VECTOR_REST_URL || !ENV_VARS.UPSTASH_VECTOR_REST_TOKEN) {
+    throw new Error('UPSTASH_VECTOR_REST_URL and UPSTASH_VECTOR_REST_TOKEN environment variables are required');
+}
+
+// Configure Upstash Redis storage for general memory storage
 const upstashStorage = new UpstashStore({
-    url: ENV_VARS.UPSTASH_URL!,
-    token: ENV_VARS.UPSTASH_TOKEN!,
+    url: ENV_VARS.UPSTASH_REDIS_REST_URL!,
+    token: ENV_VARS.UPSTASH_REDIS_REST_TOKEN!,
 });
 
-// Configure Upstash vector database
+// Configure Upstash Vector database for embeddings and semantic search
 const upstashVector = new UpstashVector({
-    url: ENV_VARS.UPSTASH_URL!,
-    token: ENV_VARS.UPSTASH_TOKEN!,
+    url: ENV_VARS.UPSTASH_VECTOR_REST_URL!,
+    token: ENV_VARS.UPSTASH_VECTOR_REST_TOKEN!,
 });
 
-// Configure memory with Upstash storage and vector database
+// Configure memory with separate Upstash Redis storage and Vector database
 const memory = new Memory({
-    storage: upstashStorage,
-    vector: upstashVector, // Separate vector database
+    storage: upstashStorage, // Redis for general storage
+    vector: upstashVector, // Vector database for embeddings
     embedder: fastembed, // Local FastEmbed - free, fast, and private!
     options: {
         lastMessages: 10, // Keep last 10 messages in context
