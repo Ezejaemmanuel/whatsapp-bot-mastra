@@ -274,26 +274,24 @@ export class WhatsAppWebhookService {
      * Handle text messages
      */
     private async handleTextMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: string): Promise<void> {
-        // Example auto-response logic - customize as needed
-        if (messageInfo.text?.toLowerCase().includes('hello')) {
-            const response = 'Hello! Thank you for your message. How can I help you today?';
+        // Generic auto-response for all text messages
+        const response = 'Thank you for your message! This is an automated response. We have received your message and will get back to you soon.';
 
-            await this.sendTextReply(
-                messageInfo.from,
-                response,
-                messageInfo.id
-            );
+        await this.sendTextReply(
+            messageInfo.from,
+            response,
+            messageInfo.id
+        );
 
-            // Store outgoing message in database
-            await this.databaseService.storeOutgoingMessage(
-                messageInfo.from,
-                'text',
-                response,
-                conversationId,
-                undefined,
-                messageInfo.id
-            );
-        }
+        // Store outgoing message in database
+        await this.databaseService.storeOutgoingMessage(
+            messageInfo.from,
+            'text',
+            response,
+            conversationId,
+            undefined,
+            messageInfo.id
+        );
     }
 
     /**
