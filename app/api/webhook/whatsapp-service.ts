@@ -3,7 +3,7 @@ import { WebhookMessage, WebhookMessageStatus, WebhookPayload } from './types';
 import { logWebhookEvent, logSuccess, logError, logWarning, logInfo, extractMessageInfo, extractStatusInfo } from './utils';
 import { DatabaseService } from '@/lib/database-service';
 import { MediaUploadService } from '@/lib/media-upload-service';
-import { mastra } from '@/mastra';
+// import { mastra } from '@/mastra';
 
 /**
  * WhatsApp Webhook Service
@@ -369,20 +369,20 @@ export class WhatsAppWebhookService {
                 operation: 'handleTextMessage'
             });
 
-            // Use the WhatsApp agent to generate a response
-            const agentResponse = await mastra.getAgent('whatsappAgent').generate([
-                {
-                    role: 'user',
-                    content: messageInfo.text || '',
-                }
-            ], {
-                memory: {
-                    thread: `whatsapp-${messageInfo.from}`, // Use phone number as thread ID for conversation continuity
-                    resource: messageInfo.from, // Use phone number as resource ID
-                }
-            });
+            // // Use the WhatsApp agent to generate a response
+            // const agentResponse = await mastra.getAgent('whatsappAgent').generate([
+            //     {
+            //         role: 'user',
+            //         content: messageInfo.text || '',
+            //     }
+            // ], {
+            //     memory: {
+            //         thread: `whatsapp-${messageInfo.from}`, // Use phone number as thread ID for conversation continuity
+            //         resource: messageInfo.from, // Use phone number as resource ID
+            //     }
+            // });
 
-            const response = agentResponse.text || 'I apologize, but I was unable to process your message at the moment. Please try again.';
+            const response =  'Your text was recieved';
 
             logInfo('Generated agent response', {
                 messageId: messageInfo.id,
