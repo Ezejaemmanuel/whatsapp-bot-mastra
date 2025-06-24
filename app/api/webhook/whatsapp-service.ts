@@ -3,6 +3,7 @@ import { WebhookMessage, WebhookMessageStatus, WebhookPayload } from './types';
 import { logWebhookEvent, logSuccess, logError, logWarning, logInfo, extractMessageInfo, extractStatusInfo } from './utils';
 import { DatabaseService } from '@/lib/database-service';
 import { MediaUploadService } from '@/lib/media-upload-service';
+import { mastra } from '@/app/mastra';
 
 /**
  * WhatsApp Webhook Service
@@ -359,24 +360,82 @@ export class WhatsAppWebhookService {
      * Handle text messages
      */
     private async handleTextMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: string): Promise<void> {
-        // Generic auto-response for all text messages
-        const response = 'Thank you for your message! This is an automated response. We have received your message and will get back to you soon.';
+        try {
+            logInfo('Processing text message with Mastra agent', {
+                messageId: messageInfo.id,
+                from: messageInfo.from,
+                text: messageInfo.text,
+                conversationId,
+                operation: 'handleTextMessage'
+            });
 
-        await this.sendTextReply(
-            messageInfo.from,
-            response,
-            messageInfo.id
-        );
+            // Use the WhatsApp agent to generate a response
+            const agentResponse = await mastra.getAgent('whatsappAgent').generate([
+                {
+                    role: 'user',
+                    content: messageInfo.text || '',
+                }
+            ], {
+                memory: {
+                    thread: `whatsapp-${messageInfo.from}`, // Use phone number as thread ID for conversation continuity
+                    resource: messageInfo.from, // Use phone number as resource ID
+                }
+            });
 
-        // Store outgoing message in database
-        await this.databaseService.storeOutgoingMessage(
-            messageInfo.from,
-            'text',
-            response,
-            conversationId,
-            undefined,
-            messageInfo.id
-        );
+            const response = agentResponse.text || 'I apologize, but I was unable to process your message at the moment. Please try again.';
+
+            logInfo('Generated agent response', {
+                messageId: messageInfo.id,
+                from: messageInfo.from,
+                responseLength: response.length,
+                threadId: `whatsapp-${messageInfo.from}`,
+                operation: 'handleTextMessage'
+            });
+
+            await this.sendTextReply(
+                messageInfo.from,
+                response,
+                messageInfo.id
+            );
+
+            // Store outgoing message in database
+            await this.databaseService.storeOutgoingMessage(
+                messageInfo.from,
+                'text',
+                response,
+                conversationId,
+                undefined,
+                messageInfo.id
+            );
+
+        } catch (error) {
+            logError('Error processing text message with agent', error as Error, {
+                messageId: messageInfo.id,
+                from: messageInfo.from,
+                text: messageInfo.text,
+                conversationId,
+                operation: 'handleTextMessage'
+            });
+
+            // Fallback to generic response if agent fails
+            const fallbackResponse = 'I apologize, but I encountered an issue processing your message. Please try again in a moment.';
+
+            await this.sendTextReply(
+                messageInfo.from,
+                fallbackResponse,
+                messageInfo.id
+            );
+
+            // Store fallback message in database
+            await this.databaseService.storeOutgoingMessage(
+                messageInfo.from,
+                'text',
+                fallbackResponse,
+                conversationId,
+                undefined,
+                messageInfo.id
+            );
+        }
     }
 
     /**
@@ -617,6 +676,12 @@ export class WhatsAppWebhookService {
      */
     private async processAndStoreMedia(message: WebhookMessage, messageId: string): Promise<void> {
         try {
+            console.log('Raw webhook message for media processing:', {
+                messageType: message.type,
+                messageId,
+                messageContent: message
+            });
+
             const mediaInfo = this.getMediaInfo(message);
             if (!mediaInfo || !mediaInfo.id) {
                 logWarning('No media ID found in message', {
@@ -634,7 +699,14 @@ export class WhatsAppWebhookService {
                 mediaId: mediaInfo.id,
                 mimeType: mediaInfo.mime_type,
                 fileName: mediaInfo.filename,
+                sha256: mediaInfo.sha256,
                 operation: 'processAndStoreMedia'
+            });
+
+            console.log('Media info from getMediaInfo:', {
+                mediaInfo,
+                hasSha256: !!mediaInfo.sha256,
+                sha256Value: mediaInfo.sha256
             });
 
             // Download from WhatsApp and upload to UploadThing CDN

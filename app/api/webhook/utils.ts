@@ -229,6 +229,7 @@ export function extractMediaInfo(message: WebhookMessage): {
     mimeType?: string;
     caption?: string;
     filename?: string;
+    sha256?: string;
 } | null {
     if (!isWebhookMessage(message)) {
         return null;
@@ -243,7 +244,8 @@ export function extractMediaInfo(message: WebhookMessage): {
                 id: mediaObj.id,
                 mimeType: mediaObj.mime_type,
                 caption: mediaObj.caption,
-                filename: mediaType === 'document' ? (mediaObj as any).filename : undefined
+                filename: mediaType === 'document' ? (mediaObj as any).filename : undefined,
+                sha256: mediaObj.sha256
             };
         }
     }
