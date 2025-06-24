@@ -2,29 +2,49 @@
   "name": "whatsapp-bot-mastra",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "dev:mastra": "mastra dev --dir mastra",
     "build:mastra": "mastra build --dir mastra",
-    "lint": "next lint"
+    "lint": "next lint",
+    "convert:postman": "node scripts/convert-postman-to-openapi.js",
+    "generate:api": "node scripts/generate-typescript-api.js"
   },
   "dependencies": {
+    "@ai-sdk/google": "^1.2.19",
+    "@mastra/core": "^0.10.6",
+    "@mastra/libsql": "^0.10.3",
+    "@mastra/loggers": "^0.10.2",
+    "@mastra/memory": "^0.10.4",
+    "@radix-ui/react-slot": "^1.2.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.523.0",
+    "next": "15.3.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "next": "15.3.4"
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^3.25.67"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@eslint/eslintrc": "^3",
+    "@scalar/postman-to-openapi": "^0.3.11",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
+    "autoprefixer": "^10.4.20",
     "eslint": "^9",
     "eslint-config-next": "15.3.4",
-    "@eslint/eslintrc": "^3"
+    "js-yaml": "^4.1.0",
+    "postcss": "^8.4.49",
+    "swagger-typescript-api": "^13.2.4",
+    "tailwindcss": "^3.4.15",
+    "typescript": "^5"
   },
   "packageManager": "pnpm@10.11.1+sha512.e519b9f7639869dc8d5c3c5dfef73b3f091094b0a006d7317353c72b124e80e1afd429732e28705ad6bfa1ee879c1fce46c128ccebd3192101f43dd67c667912"
 }

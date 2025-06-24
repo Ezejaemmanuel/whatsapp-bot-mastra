@@ -1,36 +1,262 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# WhatsApp Bot with Mastra & TypeScript API
 
-## Getting Started
+This project provides a complete WhatsApp Bot solution built with Next.js, Mastra framework, and includes a fully type-safe TypeScript API client for the WhatsApp Cloud API.
 
-First, run the development server:
+## 🚀 Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Next.js Application** - Modern React framework with App Router
+- **Mastra Integration** - AI agents, tools, and workflows for WhatsApp automation
+- **TypeScript API Client** - Fully type-safe WhatsApp Cloud API client generated from OpenAPI
+- **OpenAPI Specification** - Complete API documentation in JSON and YAML formats
+- **Automated Conversion** - Scripts to convert Postman collections to OpenAPI and generate TypeScript clients
+
+## 📁 Project Structure
+
+```
+whatsapp-bot-mastra/
+├── app/                          # Next.js app directory
+│   ├── mastra/                   # Mastra configuration
+│   │   ├── agents/               # AI agents
+│   │   ├── tools/                # Mastra tools
+│   │   └── workflows/            # Automation workflows
+│   └── page.tsx                  # Main page component
+├── src/                          # Source code
+│   ├── api/                      # Generated TypeScript API client
+│   │   └── Api.ts               # Complete WhatsApp Cloud API client
+│   └── whatsapp-client-example.ts # Usage examples and wrapper
+├── scripts/                      # Automation scripts
+│   ├── convert-postman-to-openapi.js # Postman → OpenAPI converter
+│   ├── generate-typescript-api.js     # OpenAPI → TypeScript generator
+│   └── README.md                      # Scripts documentation
+├── whatsapp-cloud-api-openapi.json   # OpenAPI specification (JSON)
+├── whatsapp-cloud-api-openapi.yaml   # OpenAPI specification (YAML)
+└── WhatsApp-Cloud-API.postman_collection.json # Original Postman collection
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🛠️ Installation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd whatsapp-bot-mastra
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. **Install dependencies**
+   ```bash
+   pnpm install
+   ```
 
-## Learn More
+3. **Generate API client** (if not already generated)
+   ```bash
+   # Convert Postman collection to OpenAPI
+   pnpm run convert:postman
+   
+   # Generate TypeScript API client
+   pnpm run generate:api
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+## 🚀 Quick Start
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 1. Development Server
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+pnpm dev
+```
 
-## Deploy on Vercel
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 2. Mastra Development
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+pnpm run dev:mastra
+```
+
+### 3. Using the WhatsApp API Client
+
+```typescript
+import WhatsAppCloudApiClient from './src/whatsapp-client-example';
+
+// Initialize the client
+const client = new WhatsAppCloudApiClient({
+  accessToken: 'YOUR_WHATSAPP_ACCESS_TOKEN',
+  version: 'v21.0'
+});
+
+// Send a text message
+await client.sendTextMessage({
+  phoneNumberId: 'YOUR_PHONE_NUMBER_ID',
+  to: 'RECIPIENT_PHONE_NUMBER',
+  text: 'Hello from WhatsApp Cloud API!'
+});
+
+// Send a template message
+await client.sendTemplateMessage({
+  phoneNumberId: 'YOUR_PHONE_NUMBER_ID',
+  to: 'RECIPIENT_PHONE_NUMBER',
+  templateName: 'hello_world',
+  languageCode: 'en_US'
+});
+```
+
+## 📚 API Documentation
+
+### WhatsApp Cloud API Client
+
+The generated TypeScript client provides type-safe access to all WhatsApp Cloud API endpoints:
+
+- **Messages** - Send text, media, template, and interactive messages
+- **Media** - Upload, download, and manage media files
+- **Business Profile** - Manage business profile information
+- **Phone Numbers** - Manage phone number settings
+- **Templates** - Create and manage message templates
+- **Webhooks** - Subscribe to and manage webhook notifications
+- **Flows** - Create and manage WhatsApp Flows
+
+### Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `pnpm dev` | Start Next.js development server |
+| `pnpm build` | Build the Next.js application |
+| `pnpm start` | Start production server |
+| `pnpm dev:mastra` | Start Mastra development mode |
+| `pnpm build:mastra` | Build Mastra components |
+| `pnpm convert:postman` | Convert Postman collection to OpenAPI |
+| `pnpm generate:api` | Generate TypeScript API client |
+| `pnpm lint` | Run ESLint |
+
+## 🔧 Configuration
+
+### WhatsApp Cloud API Setup
+
+1. **Create a Meta App**
+   - Go to [Meta for Developers](https://developers.facebook.com/)
+   - Create a new app and add WhatsApp product
+
+2. **Get Access Token**
+   - Navigate to WhatsApp > Getting Started
+   - Copy your temporary access token (24h) or create a permanent system user token
+
+3. **Configure Webhook** (Optional)
+   - Set up webhook URL for receiving messages
+   - Configure webhook fields and verification
+
+### Environment Variables
+
+Create a `.env.local` file:
+
+```env
+WHATSAPP_ACCESS_TOKEN=your_access_token_here
+WHATSAPP_PHONE_NUMBER_ID=your_phone_number_id_here
+WHATSAPP_WABA_ID=your_waba_id_here
+WHATSAPP_WEBHOOK_VERIFY_TOKEN=your_webhook_verify_token_here
+```
+
+## 🤖 Mastra Integration
+
+This project includes Mastra agents and tools for WhatsApp automation:
+
+- **Weather Agent** - Provides weather information via WhatsApp
+- **Weather Tool** - Fetches weather data for locations
+- **Weather Workflow** - Automated weather update workflows
+
+## 📖 Examples
+
+### Send Different Message Types
+
+```typescript
+// Text message
+await client.sendTextMessage({
+  phoneNumberId: 'PHONE_NUMBER_ID',
+  to: '+1234567890',
+  text: 'Hello World!'
+});
+
+// Image message
+await client.sendMediaMessage({
+  phoneNumberId: 'PHONE_NUMBER_ID',
+  to: '+1234567890',
+  type: 'image',
+  mediaId: 'MEDIA_ID',
+  caption: 'Check this out!'
+});
+
+// Template message with parameters
+await client.sendTemplateMessage({
+  phoneNumberId: 'PHONE_NUMBER_ID',
+  to: '+1234567890',
+  templateName: 'order_confirmation',
+  languageCode: 'en_US',
+  components: [
+    {
+      type: 'body',
+      parameters: [
+        { type: 'text', text: 'John Doe' },
+        { type: 'text', text: 'ORD-12345' }
+      ]
+    }
+  ]
+});
+```
+
+### Business Profile Management
+
+```typescript
+// Get business profile
+const profile = await client.getBusinessProfile({
+  phoneNumberId: 'PHONE_NUMBER_ID'
+});
+
+// Update business profile
+await client.updateBusinessProfile({
+  phoneNumberId: 'PHONE_NUMBER_ID',
+  profileData: {
+    about: 'We provide excellent customer service!',
+    email: 'support@company.com',
+    websites: ['https://company.com']
+  }
+});
+```
+
+## 🔗 API Reference
+
+The complete API reference is available in the generated OpenAPI specifications:
+
+- **JSON Format**: `whatsapp-cloud-api-openapi.json`
+- **YAML Format**: `whatsapp-cloud-api-openapi.yaml`
+
+You can view these in any OpenAPI viewer like Swagger UI or Postman.
+
+## 🧪 Testing
+
+The TypeScript client includes comprehensive type checking and IntelliSense support. All API methods are fully typed with:
+
+- Request parameter validation
+- Response type definitions
+- Error handling types
+- Optional parameter support
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🆘 Support
+
+- **WhatsApp Cloud API**: [Official Documentation](https://developers.facebook.com/docs/whatsapp/cloud-api)
+- **Mastra Framework**: [Mastra Documentation](https://mastra.ai)
+- **Next.js**: [Next.js Documentation](https://nextjs.org/docs)
+
+## 🙏 Acknowledgments
+
+- **Meta** for the WhatsApp Cloud API
+- **@scalar/postman-to-openapi** for the conversion library
+- **swagger-typescript-api** for TypeScript generation
+- **Mastra** for the AI framework
