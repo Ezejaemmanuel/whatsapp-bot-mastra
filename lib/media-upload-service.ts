@@ -1,7 +1,6 @@
 import { WhatsAppCloudApiClient } from '@/whatsapp/whatsapp-client';
 import { UTApi } from "uploadthing/server";
 import crypto from 'crypto';
-import { WHATSAPP_API_VERSION } from '@/lib/env-config';
 
 /**
  * Media Upload Service with UploadThing Integration
@@ -16,8 +15,14 @@ export class MediaUploadService {
     private version: string;
 
     constructor(accessToken?: string) {
-        this.accessToken = accessToken || process.env.WHATSAPP_ACCESS_TOKEN || '';
-        this.version = WHATSAPP_API_VERSION;
+        const envAccessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+
+        if (!accessToken && !envAccessToken) {
+            throw new Error('Missing required environment variable: WHATSAPP_ACCESS_TOKEN (WhatsApp Business API access token from Meta Business)');
+        }
+
+        this.accessToken = accessToken || envAccessToken || '';
+        this.version = process.env.WHATSAPP_API_VERSION || 'v23.0';
         this.whatsappClient = new WhatsAppCloudApiClient({
             accessToken: this.accessToken
         });

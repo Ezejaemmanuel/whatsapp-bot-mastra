@@ -3,7 +3,6 @@ import WhatsAppCloudApiClient, {
     WebhookMessageStatus,
     WebhookError
 } from './whatsapp-client';
-import { PHONE_NUMBER_ID, TEST_WHATSAPP_NUMBER, WABA_ID } from '../lib/env-config';
 
 /**
  * Example usage of the WhatsApp Cloud API Client
@@ -21,9 +20,21 @@ const client2 = new WhatsAppCloudApiClient({
     baseUrl: 'https://graph.facebook.com', // Optional, defaults to Meta's Graph API
 });
 
-// Example phone number ID and recipient
-const recipientNumber = TEST_WHATSAPP_NUMBER;
-const wabaId = WABA_ID;
+// Example phone number ID and recipient - get from environment variables
+const recipientNumberEnv = process.env.WHATSAPP_TEST_NUMBER;
+const wabaIdEnv = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID;
+
+if (!recipientNumberEnv) {
+    throw new Error('Missing required environment variable: WHATSAPP_TEST_NUMBER (Test phone number for WhatsApp messages)');
+}
+
+if (!wabaIdEnv) {
+    throw new Error('Missing required environment variable: WHATSAPP_BUSINESS_ACCOUNT_ID (WhatsApp Business Account ID from Meta Business)');
+}
+
+// Now we can safely use them as strings
+const recipientNumber: string = recipientNumberEnv;
+const wabaId: string = wabaIdEnv;
 
 /**
  * Example functions demonstrating various message types

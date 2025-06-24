@@ -19,7 +19,6 @@ import {
     createSuccessResponse
 } from './utils';
 import { WhatsAppWebhookService } from './whatsapp-service';
-import { validateWhatsAppConfig } from '@/lib/env-config';
 
 // Environment variables for webhook configuration
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || 'your-verify-token-here';
@@ -27,7 +26,21 @@ const WEBHOOK_SECRET = process.env.WHATSAPP_WEBHOOK_SECRET || '';
 
 // Validate WhatsApp configuration on module load
 try {
-    validateWhatsAppConfig();
+    // Basic validation - check if required environment variables are present
+    const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+    const businessAccountId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID;
+
+    if (!accessToken) {
+        throw new Error('Missing required environment variable: WHATSAPP_ACCESS_TOKEN');
+    }
+    if (!phoneNumberId) {
+        throw new Error('Missing required environment variable: WHATSAPP_PHONE_NUMBER_ID');
+    }
+    if (!businessAccountId) {
+        throw new Error('Missing required environment variable: WHATSAPP_BUSINESS_ACCOUNT_ID');
+    }
+
     logWebhookEvent('INFO', 'WhatsApp environment configuration validated successfully');
 } catch (error) {
     logWebhookEvent('ERROR', 'WhatsApp environment configuration validation failed', {

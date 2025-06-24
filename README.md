@@ -123,8 +123,7 @@ The generated TypeScript client provides type-safe access to all WhatsApp Cloud 
 | `pnpm build:mastra` | Build Mastra components |
 | `pnpm convert:postman` | Convert Postman collection to OpenAPI |
 | `pnpm generate:api` | Generate TypeScript API client |
-| `pnpm validate-env` | Validate environment configuration |
-| `pnpm validate-env:extended` | Extended validation (includes DB, UploadThing) |
+
 | `pnpm lint` | Run ESLint |
 
 ## 🔧 Configuration
@@ -150,14 +149,12 @@ The generated TypeScript client provides type-safe access to all WhatsApp Cloud 
    WHATSAPP_BASE_URL=https://graph.facebook.com
    ```
 
-3. **Validate configuration**
+3. **Start the application**
    ```bash
-   # Basic validation
-   pnpm run validate-env
-   
-   # Extended validation (includes database and UploadThing)
-   pnpm run validate-env:extended
+   pnpm run dev
    ```
+   
+   The application will automatically validate environment variables on startup and show descriptive error messages if any are missing.
 
 ### WhatsApp Cloud API Setup
 

@@ -3,7 +3,6 @@ import { WebhookMessage, WebhookMessageStatus, WebhookPayload } from './types';
 import { logWebhookEvent, logSuccess, logError, logWarning, logInfo, extractMessageInfo, extractStatusInfo } from './utils';
 import { DatabaseService } from '@/lib/database-service';
 import { MediaUploadService } from '@/lib/media-upload-service';
-import { WHATSAPP_CONFIG } from '@/lib/env-config';
 
 /**
  * WhatsApp Webhook Service
@@ -20,8 +19,19 @@ export class WhatsAppWebhookService {
     constructor(accessToken?: string, phoneNumberId?: string) {
         try {
             // Use provided parameters or fall back to environment configuration
-            const finalAccessToken = accessToken || WHATSAPP_CONFIG.ACCESS_TOKEN;
-            const finalPhoneNumberId = phoneNumberId || WHATSAPP_CONFIG.PHONE_NUMBER_ID;
+            const envAccessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+            const envPhoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+
+            if (!accessToken && !envAccessToken) {
+                throw new Error('Missing required environment variable: WHATSAPP_ACCESS_TOKEN (WhatsApp Business API access token from Meta Business)');
+            }
+
+            if (!phoneNumberId && !envPhoneNumberId) {
+                throw new Error('Missing required environment variable: WHATSAPP_PHONE_NUMBER_ID (WhatsApp Business phone number ID from Meta Business)');
+            }
+
+            const finalAccessToken = accessToken || envAccessToken || '';
+            const finalPhoneNumberId = phoneNumberId || envPhoneNumberId || '';
 
             this.whatsappClient = new WhatsAppCloudApiClient({
                 accessToken: finalAccessToken

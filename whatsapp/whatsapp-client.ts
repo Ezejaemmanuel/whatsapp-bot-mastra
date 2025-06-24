@@ -1,5 +1,4 @@
 import { Api, HttpClient } from './api/Api';
-import { PHONE_NUMBER_ID, WABA_ID, WHATSAPP_API_VERSION } from '../lib/env-config';
 
 /**
  * WhatsApp Cloud API Client
@@ -164,7 +163,8 @@ class WebhookEndpoint {
         private api: Api<SecurityData>,
         private wabaId: string
     ) {
-        this.version = WHATSAPP_API_VERSION
+        const apiVersion = process.env.WHATSAPP_API_VERSION || 'v23.0';
+        this.version = apiVersion;
     }
 
     /**
@@ -588,7 +588,8 @@ class MessagesEndpoint {
         private api: Api<SecurityData>,
         private phoneNumberId: string,
     ) {
-        this.version = WHATSAPP_API_VERSION;
+        const apiVersion = process.env.WHATSAPP_API_VERSION || 'v23.0';
+        this.version = apiVersion;
     }
 
     /**
@@ -2053,15 +2054,28 @@ export class WhatsAppCloudApiClient {
         const accessToken = config.accessToken || process.env.WHATSAPP_ACCESS_TOKEN;
 
         if (!accessToken) {
-            throw new Error('WhatsApp access token is required. Provide it in config or set WHATSAPP_ACCESS_TOKEN environment variable.');
+            throw new Error('Missing required environment variable: WHATSAPP_ACCESS_TOKEN (WhatsApp Business API access token from Meta Business)');
         }
-        this.version = WHATSAPP_API_VERSION;
+
+        const apiVersion = process.env.WHATSAPP_API_VERSION || 'v23.0';
+        const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+        const wabaId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID;
+
+        if (!phoneNumberId) {
+            throw new Error('Missing required environment variable: WHATSAPP_PHONE_NUMBER_ID (WhatsApp Business phone number ID from Meta Business)');
+        }
+
+        if (!wabaId) {
+            throw new Error('Missing required environment variable: WHATSAPP_BUSINESS_ACCOUNT_ID (WhatsApp Business Account ID from Meta Business)');
+        }
+
+        this.version = apiVersion;
 
         this.config = {
             accessToken,
             baseUrl: config.baseUrl || 'https://graph.facebook.com',
-            phoneNumberId: config.phoneNumberId || PHONE_NUMBER_ID,
-            wabaId: config.wabaId || WABA_ID,
+            phoneNumberId: config.phoneNumberId || phoneNumberId,
+            wabaId: config.wabaId || wabaId,
         };
 
         // Initialize the HTTP client with authentication
