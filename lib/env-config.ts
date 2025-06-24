@@ -84,10 +84,15 @@ export const WHATSAPP_API_VERSION = WHATSAPP_CONFIG.API_VERSION;
 export function validateWhatsAppConfig(): void {
     try {
         // Access all required properties to trigger validation
-        WHATSAPP_CONFIG.ACCESS_TOKEN;
-        WHATSAPP_CONFIG.PHONE_NUMBER_ID;
-        WHATSAPP_CONFIG.BUSINESS_ACCOUNT_ID;
-        WHATSAPP_CONFIG.TEST_NUMBER;
+        const accessToken = WHATSAPP_CONFIG.ACCESS_TOKEN;
+        const phoneNumberId = WHATSAPP_CONFIG.PHONE_NUMBER_ID;
+        const businessAccountId = WHATSAPP_CONFIG.BUSINESS_ACCOUNT_ID;
+        const testNumber = WHATSAPP_CONFIG.TEST_NUMBER;
+
+        // Verify all values are present (additional safety check)
+        if (!accessToken || !phoneNumberId || !businessAccountId || !testNumber) {
+            throw new Error('One or more required environment variables are empty');
+        }
 
         console.log('✅ All required WhatsApp environment variables are configured');
     } catch (error) {
@@ -100,12 +105,39 @@ export function validateWhatsAppConfig(): void {
  * Get environment configuration summary (without sensitive values)
  */
 export function getConfigSummary(): Record<string, string> {
-    return {
+    const summary: Record<string, string> = {
         WHATSAPP_API_VERSION: WHATSAPP_CONFIG.API_VERSION,
         WHATSAPP_BASE_URL: WHATSAPP_CONFIG.BASE_URL,
-        WHATSAPP_PHONE_NUMBER_ID: WHATSAPP_CONFIG.PHONE_NUMBER_ID ? '***configured***' : 'missing',
-        WHATSAPP_BUSINESS_ACCOUNT_ID: WHATSAPP_CONFIG.BUSINESS_ACCOUNT_ID ? '***configured***' : 'missing',
-        WHATSAPP_ACCESS_TOKEN: WHATSAPP_CONFIG.ACCESS_TOKEN ? '***configured***' : 'missing',
-        WHATSAPP_TEST_NUMBER: WHATSAPP_CONFIG.TEST_NUMBER ? '***configured***' : 'missing'
     };
+
+    // Safely check if required vars are configured without exposing values
+    try {
+        const phoneNumberId = WHATSAPP_CONFIG.PHONE_NUMBER_ID;
+        summary.WHATSAPP_PHONE_NUMBER_ID = phoneNumberId ? '***configured***' : 'missing';
+    } catch {
+        summary.WHATSAPP_PHONE_NUMBER_ID = 'missing';
+    }
+
+    try {
+        const businessAccountId = WHATSAPP_CONFIG.BUSINESS_ACCOUNT_ID;
+        summary.WHATSAPP_BUSINESS_ACCOUNT_ID = businessAccountId ? '***configured***' : 'missing';
+    } catch {
+        summary.WHATSAPP_BUSINESS_ACCOUNT_ID = 'missing';
+    }
+
+    try {
+        const accessToken = WHATSAPP_CONFIG.ACCESS_TOKEN;
+        summary.WHATSAPP_ACCESS_TOKEN = accessToken ? '***configured***' : 'missing';
+    } catch {
+        summary.WHATSAPP_ACCESS_TOKEN = 'missing';
+    }
+
+    try {
+        const testNumber = WHATSAPP_CONFIG.TEST_NUMBER;
+        summary.WHATSAPP_TEST_NUMBER = testNumber ? '***configured***' : 'missing';
+    } catch {
+        summary.WHATSAPP_TEST_NUMBER = 'missing';
+    }
+
+    return summary;
 } 
