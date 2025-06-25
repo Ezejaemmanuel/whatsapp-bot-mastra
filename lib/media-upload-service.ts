@@ -259,7 +259,7 @@ export class MediaUploadService {
                 whatsappMediaId
             });
 
-            // Store file directly using the streamlined action
+            // Store file using the streamlined action that handles deduplication
             // Convert buffer to ArrayBuffer properly to avoid SharedArrayBuffer issues
             const arrayBuffer = buffer.buffer instanceof ArrayBuffer
                 ? buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
@@ -295,7 +295,8 @@ export class MediaUploadService {
                 fileName,
                 storageId: result.storageId,
                 storedUrl: result.storedUrl,
-                fileSize: result.fileSize
+                fileSize: result.fileSize,
+                isExistingFile: !!result.whatsappMediaId && result._creationTime < (Date.now() - 1000) // Check if this was an existing file
             });
 
             return {
@@ -303,7 +304,7 @@ export class MediaUploadService {
                 storedUrl: result.storedUrl,
                 fileName: result.fileName,
                 fileSize: result.fileSize,
-                storageId: result.storageId,
+                storageId: result.storageId?.toString(),
             };
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -437,33 +438,7 @@ export class MediaUploadService {
         return result;
     }
 
-    /**
-     * Delete file from Convex storage
-     */
-    async deleteFile(storageId: string): Promise<{
-        success: boolean;
-        error?: string;
-    }> {
-        try {
-            // Find the media file by storage ID
-            const mediaFiles = await this.convex.query(api.mediaFiles.listAllMediaFiles, { limit: 1000 });
-            const mediaFile = mediaFiles.find(file => file.storageId === storageId);
 
-            if (mediaFile) {
-                await this.convex.mutation(api.mediaFiles.deleteMediaFile, {
-                    mediaFileId: mediaFile._id
-                });
-            }
-
-            return { success: true };
-        } catch (error) {
-            console.error('Error deleting file from Convex storage:', error);
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Delete failed'
-            };
-        }
-    }
 
     /**
      * List files from Convex storage
@@ -478,6 +453,7 @@ export class MediaUploadService {
             readonly id: string;
             readonly status: "uploaded" | "pending" | "failed";
             readonly uploadedAt: number;
+            readonly storedUrl?: string; // Add stored URL to the response
         }>;
         error?: string;
     }> {
@@ -486,12 +462,13 @@ export class MediaUploadService {
 
             const files = mediaFiles.map(file => ({
                 name: file.fileName || 'unknown',
-                key: file.storageId || file._id,
+                key: (file.storageId || file._id) as string,
                 size: file.fileSize || 0,
                 customId: file.whatsappMediaId || null,
-                id: file._id,
+                id: file._id as string,
                 status: (file.uploadStatus as "uploaded" | "pending" | "failed") || "uploaded",
-                uploadedAt: file._creationTime || Date.now()
+                uploadedAt: file._creationTime || Date.now(),
+                storedUrl: file.storedUrl || undefined // Include the stored URL, handle null case
             }));
 
             return { success: true, files };

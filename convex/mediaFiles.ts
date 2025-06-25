@@ -20,19 +20,46 @@ export const storeFileFromBuffer = action({
     handler: async (ctx, args): Promise<{
         _id: Id<"mediaFiles">;
         _creationTime: number;
-        storageId?: Id<"_storage">;
+        storageId: Id<"_storage">;
         messageId?: Id<"messages">;
         whatsappMediaId?: string;
         originalUrl?: string;
-        fileName?: string;
+        fileName: string;
         mimeType?: string;
-        fileSize?: number;
+        fileSize: number;
         sha256?: string;
-        uploadStatus?: string;
+        uploadStatus: string;
         metadata?: any;
-        storedUrl?: string;
+        storedUrl: string;
     } | null> => {
         try {
+            // Check if file with this WhatsApp media ID already exists
+            if (args.whatsappMediaId) {
+                const existingFile = await ctx.runQuery(api.mediaFiles.getMediaFileByWhatsAppId, {
+                    whatsappMediaId: args.whatsappMediaId
+                });
+
+                if (existingFile) {
+                    console.log('File already exists with WhatsApp media ID:', args.whatsappMediaId);
+                    // Return existing file with proper type structure
+                    return {
+                        _id: existingFile._id,
+                        _creationTime: existingFile._creationTime,
+                        storageId: existingFile.storageId!,
+                        messageId: existingFile.messageId,
+                        whatsappMediaId: existingFile.whatsappMediaId,
+                        originalUrl: existingFile.originalUrl,
+                        fileName: existingFile.fileName || args.fileName,
+                        mimeType: existingFile.mimeType,
+                        fileSize: existingFile.fileSize || 0,
+                        sha256: existingFile.sha256,
+                        uploadStatus: existingFile.uploadStatus || "uploaded",
+                        metadata: existingFile.metadata,
+                        storedUrl: existingFile.storedUrl || "",
+                    };
+                }
+            }
+
             // Store the file in Convex storage
             const blob = new Blob([args.fileData], { type: args.contentType || "application/octet-stream" });
             const storageId = await ctx.storage.store(blob);
@@ -40,7 +67,11 @@ export const storeFileFromBuffer = action({
             // Get the file URL immediately
             const fileUrl = await ctx.storage.getUrl(storageId);
 
-            // Store metadata directly in database (avoiding internal mutation)
+            if (!fileUrl) {
+                throw new Error('Failed to get file URL from storage');
+            }
+
+            // Store metadata in database with the file URL
             const mediaFileId = await ctx.runMutation(api.mediaFiles.insertMediaFileRecord, {
                 storageId,
                 messageId: args.messageId,
@@ -51,22 +82,29 @@ export const storeFileFromBuffer = action({
                 sha256: args.sha256,
                 uploadStatus: "uploaded",
                 metadata: args.metadata,
+                storedUrl: fileUrl, // Store the URL directly in the record
             });
 
             if (!mediaFileId) {
+                // Clean up storage if database insert failed
+                await ctx.storage.delete(storageId);
                 return null;
             }
 
-            // Get the complete record
-            const mediaFile = await ctx.runQuery(api.mediaFiles.getMediaFileById, { id: mediaFileId });
-
-            if (!mediaFile) {
-                return null;
-            }
-
+            // Return the complete record with URL
             return {
-                ...mediaFile,
-                storedUrl: fileUrl || undefined,
+                _id: mediaFileId,
+                _creationTime: Date.now(),
+                storageId,
+                messageId: args.messageId,
+                whatsappMediaId: args.whatsappMediaId,
+                fileName: args.fileName,
+                mimeType: args.contentType,
+                fileSize: args.fileData.byteLength,
+                sha256: args.sha256,
+                uploadStatus: "uploaded",
+                metadata: args.metadata,
+                storedUrl: fileUrl,
             };
         } catch (error) {
             console.error('Error in storeFileFromBuffer:', error);
@@ -89,6 +127,7 @@ export const insertMediaFileRecord = mutation({
         sha256: v.optional(v.string()),
         uploadStatus: v.optional(v.string()),
         metadata: v.optional(v.any()),
+        storedUrl: v.optional(v.string()), // Add storedUrl field
     },
     handler: async (ctx, args) => {
         const mediaFileId = await ctx.db.insert("mediaFiles", {
@@ -101,6 +140,7 @@ export const insertMediaFileRecord = mutation({
             sha256: args.sha256,
             uploadStatus: args.uploadStatus || "uploaded",
             metadata: args.metadata,
+            storedUrl: args.storedUrl, // Store the URL in the database
         });
 
         return mediaFileId;
@@ -131,6 +171,7 @@ export const storeMediaFile = mutation({
         sha256: v.optional(v.string()),
         uploadStatus: v.optional(v.string()),
         storageId: v.optional(v.id("_storage")),
+        storedUrl: v.optional(v.string()), // Add storedUrl field
     },
     handler: async (ctx, args) => {
         const mediaFileId = await ctx.db.insert("mediaFiles", {
@@ -143,6 +184,7 @@ export const storeMediaFile = mutation({
             sha256: args.sha256,
             uploadStatus: args.uploadStatus || "uploaded",
             storageId: args.storageId,
+            storedUrl: args.storedUrl, // Store the URL in the database
         });
 
         return await ctx.db.get(mediaFileId);
@@ -170,10 +212,13 @@ export const getMediaFilesByMessageId = query({
             .withIndex("by_message_id", (q) => q.eq("messageId", args.messageId))
             .collect();
 
-        // Add file URLs to each media file
+        // Return files with stored URLs (no need to fetch URLs again if already stored)
         const mediaFilesWithUrls = await Promise.all(
             mediaFiles.map(async (file) => {
-                if (file.storageId) {
+                if (file.storedUrl) {
+                    return file; // URL already stored in database
+                } else if (file.storageId) {
+                    // Fallback: get URL from storage if not stored in database
                     const storedUrl = await ctx.storage.getUrl(file.storageId);
                     return { ...file, storedUrl };
                 }
@@ -196,7 +241,15 @@ export const getMediaFileByWhatsAppId = query({
             .withIndex("by_whatsapp_media_id", (q) => q.eq("whatsappMediaId", args.whatsappMediaId))
             .first();
 
-        if (mediaFile && mediaFile.storageId) {
+        if (!mediaFile) {
+            return null;
+        }
+
+        // Return file with stored URL (no need to fetch URL again if already stored)
+        if (mediaFile.storedUrl) {
+            return mediaFile; // URL already stored in database
+        } else if (mediaFile.storageId) {
+            // Fallback: get URL from storage if not stored in database
             const storedUrl = await ctx.storage.getUrl(mediaFile.storageId);
             return { ...mediaFile, storedUrl };
         }
@@ -234,10 +287,13 @@ export const listAllMediaFiles = query({
         const limit = args.limit || 100;
         const mediaFiles = await ctx.db.query("mediaFiles").take(limit);
 
-        // Add file URLs and metadata
+        // Return files with stored URLs (no need to fetch URLs again if already stored)
         const filesWithDetails = await Promise.all(
             mediaFiles.map(async (file) => {
-                if (file.storageId) {
+                if (file.storedUrl) {
+                    return { ...file, storageMetadata: null }; // URL already stored in database
+                } else if (file.storageId) {
+                    // Fallback: get URL from storage if not stored in database
                     const storedUrl = await ctx.storage.getUrl(file.storageId);
                     const metadata = await ctx.db.system.get(file.storageId);
                     return { ...file, storedUrl, storageMetadata: metadata };
