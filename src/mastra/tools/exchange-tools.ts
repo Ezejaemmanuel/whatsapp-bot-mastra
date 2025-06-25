@@ -1,8 +1,8 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { fetchQuery, fetchMutation } from "convex/nextjs";
-import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
+import { api } from "../../../convex/_generated/api";
+import { Id } from "../../../convex/_generated/dataModel";
 import crypto from 'crypto';
 
 /**
