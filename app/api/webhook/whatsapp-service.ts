@@ -36,7 +36,8 @@ export class WhatsAppWebhookService {
             const finalPhoneNumberId = phoneNumberId || envPhoneNumberId || '';
 
             this.whatsappClient = new WhatsAppCloudApiClient({
-                accessToken: finalAccessToken
+                accessToken: finalAccessToken,
+                phoneNumberId: finalPhoneNumberId
             });
 
             this.phoneNumberId = finalPhoneNumberId;
