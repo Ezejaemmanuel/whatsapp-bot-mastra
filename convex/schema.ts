@@ -117,4 +117,87 @@ export default defineSchema({
         .index("by_level", ["level"])
         .index("by_timestamp", ["timestamp"])
         .index("by_source", ["source"]),
+
+    /**
+     * Exchange rates table - stores currency exchange rates with min/max boundaries
+     */
+    exchangeRates: defineTable({
+        currencyPair: v.string(), // 'USD_NGN', 'GBP_NGN', 'EUR_NGN', etc.
+        minRate: v.number(), // Minimum acceptable rate for the business
+        maxRate: v.number(), // Maximum rate offered to customers
+        currentMarketRate: v.number(), // Current market rate for reference
+        isActive: v.boolean(), // Whether this rate is currently active
+        lastUpdated: v.number(), // Last update timestamp
+        metadata: v.optional(v.any()), // Additional rate metadata
+    })
+        .index("by_currency_pair", ["currencyPair"])
+        .index("by_is_active", ["isActive"])
+        .index("by_last_updated", ["lastUpdated"]),
+
+    /**
+     * Transactions table - stores exchange transaction details
+     */
+    transactions: defineTable({
+        userId: v.id("users"), // Reference to user
+        conversationId: v.id("conversations"), // Reference to conversation
+        currencyFrom: v.string(), // Source currency (USD, GBP, EUR, etc.)
+        currencyTo: v.string(), // Target currency (NGN, etc.)
+        amountFrom: v.number(), // Amount to exchange from
+        amountTo: v.number(), // Amount to receive
+        negotiatedRate: v.number(), // Final negotiated rate
+        customerBankName: v.optional(v.string()), // Customer's bank name
+        customerAccountNumber: v.optional(v.string()), // Customer's account number
+        customerAccountName: v.optional(v.string()), // Customer's account name
+        paymentReference: v.optional(v.string()), // Payment reference number
+        receiptImageUrl: v.optional(v.string()), // URL to receipt image
+        extractedDetails: v.optional(v.any()), // OCR extracted data from receipt
+        status: v.string(), // 'pending', 'paid', 'verified', 'completed', 'failed', 'cancelled'
+        duplicateCheckHash: v.optional(v.string()), // Hash for duplicate prevention
+        negotiationHistory: v.optional(v.array(v.any())), // History of rate negotiations
+        createdAt: v.number(), // Transaction creation timestamp
+        updatedAt: v.number(), // Last update timestamp
+        metadata: v.optional(v.any()), // Additional transaction metadata
+    })
+        .index("by_user_id", ["userId"])
+        .index("by_conversation_id", ["conversationId"])
+        .index("by_status", ["status"])
+        .index("by_duplicate_check_hash", ["duplicateCheckHash"])
+        .index("by_created_at", ["createdAt"])
+        .index("by_updated_at", ["updatedAt"]),
+
+    /**
+     * Conversation states table - tracks conversation flow states for complex interactions
+     */
+    conversationStates: defineTable({
+        conversationId: v.id("conversations"), // Reference to conversation
+        currentFlow: v.string(), // Current flow state: 'welcome', 'currency_selection', 'rate_inquiry', 'negotiation', 'account_details', 'payment', 'verification', 'completed'
+        lastInteraction: v.string(), // Last interaction type: 'text', 'button', 'list', 'image'
+        transactionData: v.optional(v.any()), // Current transaction data being processed
+        negotiationHistory: v.optional(v.array(v.any())), // History of negotiations in current session
+        interactiveMenuState: v.optional(v.any()), // State of interactive menus
+        awaitingResponse: v.optional(v.string()), // What type of response we're awaiting
+        contextData: v.optional(v.any()), // Additional context data for the conversation
+        lastUpdated: v.number(), // Last state update timestamp
+        expiresAt: v.optional(v.number()), // When this state expires (for cleanup)
+    })
+        .index("by_conversation_id", ["conversationId"])
+        .index("by_current_flow", ["currentFlow"])
+        .index("by_last_updated", ["lastUpdated"])
+        .index("by_expires_at", ["expiresAt"]),
+
+    /**
+     * Duplicate detection table - prevents duplicate transaction processing
+     */
+    duplicateDetection: defineTable({
+        hash: v.string(), // Unique hash for the transaction/receipt
+        transactionId: v.optional(v.id("transactions")), // Reference to transaction if created
+        userId: v.id("users"), // Reference to user
+        detectionData: v.any(), // Data used for duplicate detection
+        detectedAt: v.number(), // When duplicate was detected
+        status: v.string(), // 'active', 'resolved', 'false_positive'
+    })
+        .index("by_hash", ["hash"])
+        .index("by_user_id", ["userId"])
+        .index("by_detected_at", ["detectedAt"])
+        .index("by_status", ["status"]),
 }); 

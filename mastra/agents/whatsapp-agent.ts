@@ -4,6 +4,7 @@ import { UpstashStore, UpstashVector } from '@mastra/upstash';
 import { google } from '@ai-sdk/google';
 import { fastembed } from '@mastra/fastembed';
 import { WHATSAPP_AGENT_NAME, WHATSAPP_AGENT_INSTRUCTIONS, GEMINI_MODEL } from './agent-instructions';
+import { exchangeTools } from '../tools/exchange-tools';
 
 // Validate required environment variables
 if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
@@ -30,32 +31,50 @@ const upstashVector = new UpstashVector({
     token: process.env.UPSTASH_VECTOR_REST_TOKEN!,
 });
 
-// Configure memory with separate Upstash Redis storage and Vector database
+// Enhanced memory configuration for exchange bot context
 const memory = new Memory({
     storage: upstashStorage, // Redis for general storage
     vector: upstashVector, // Vector database for embeddings
     embedder: fastembed, // Local FastEmbed - free, fast, and private!
     options: {
-        lastMessages: 10, // Keep last 10 messages in context
+        lastMessages: 15, // Keep more messages for complex exchange conversations
         semanticRecall: {
-            topK: 3, // Retrieve 3 most similar messages
-            messageRange: 2, // Include 2 messages before and after each match
+            topK: 5, // Retrieve more similar messages for better context
+            messageRange: 3, // Include more context around matches
             scope: 'thread', // Search within current thread
         },
         workingMemory: {
             enabled: true,
             template: `
-# User Information
-- Name:
+# Customer Information
+- WhatsApp ID: 
 - Phone Number:
-- Preferences:
-- Current Topic:
-- Important Notes:
+- Profile Name:
+- Customer Status: (new/returning)
+- Preferred Currency Pairs:
+- Transaction History Summary:
+
+# Current Exchange Session
+- Current Flow State: (welcome/currency_selection/rate_inquiry/negotiation/account_details/payment/verification/completed)
+- Selected Currency Pair:
+- Exchange Amount:
+- Negotiated Rate:
+- Transaction ID:
+- Customer Bank Details:
+- Payment Status:
 
 # Conversation Context
-- Last Interaction:
-- Ongoing Tasks:
-- User Needs:
+- Last Interaction Type: (text/button/list/image)
+- Awaiting Response: 
+- Negotiation History:
+- Important Notes:
+- Security Flags:
+
+# Business Context
+- Current Market Conditions:
+- Rate Boundaries:
+- Volume Considerations:
+- Special Instructions:
 `,
         },
         threads: {
@@ -64,13 +83,18 @@ const memory = new Memory({
     },
 });
 
-// Create the WhatsApp agent with Google Gemini 2.5 Flash
+// Convert tools array to tools object for agent
+const toolsObject = exchangeTools.reduce((acc, tool) => {
+    acc[tool.id] = tool;
+    return acc;
+}, {} as Record<string, any>);
+
+// Create the enhanced WhatsApp Exchange Agent with Google Gemini 2.5 Flash
 export const whatsappAgent = new Agent({
     name: WHATSAPP_AGENT_NAME,
-    description: 'A WhatsApp assistant powered by Google Gemini 2.5 Flash with memory capabilities',
+    description: 'An intelligent WhatsApp exchange bot for KhalidWid Exchange, specializing in currency exchange with smart negotiation, transaction processing, and fraud prevention capabilities.',
     instructions: WHATSAPP_AGENT_INSTRUCTIONS,
     model: google(GEMINI_MODEL), // API key should be set via GOOGLE_GENERATIVE_AI_API_KEY environment variable
     memory,
-    // No tools for now as requested - we'll add them later
-    tools: {},
+    tools: toolsObject,
 }); 

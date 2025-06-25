@@ -4,7 +4,7 @@ import { logWebhookEvent, logSuccess, logError, logWarning, logInfo, extractMess
 import { DatabaseService } from '@/lib/database-service';
 import { MediaUploadService } from '@/lib/media-upload-service';
 import { Id } from '@/convex/_generated/dataModel';
-// import { mastra } from '@/mastra';
+import { whatsappAgent } from '@/mastra/agents/whatsapp-agent';
 
 /**
  * WhatsApp Webhook Service
@@ -359,11 +359,11 @@ export class WhatsAppWebhookService {
     }
 
     /**
-     * Handle text messages
+     * Handle text messages with enhanced exchange bot logic
      */
     private async handleTextMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: Id<"conversations">): Promise<void> {
         try {
-            logInfo('Processing text message with Mastra agent', {
+            logInfo('Processing text message with KhalidWid Exchange Agent', {
                 messageId: messageInfo.id,
                 from: messageInfo.from,
                 text: messageInfo.text,
@@ -371,28 +371,239 @@ export class WhatsAppWebhookService {
                 operation: 'handleTextMessage'
             });
 
-            // // Use the WhatsApp agent to generate a response
-            // const agentResponse = await mastra.getAgent('whatsappAgent').generate([
-            //     {
-            //         role: 'user',
-            //         content: messageInfo.text || '',
-            //     }
-            // ], {
-            //     memory: {
-            //         thread: `whatsapp-${messageInfo.from}`, // Use phone number as thread ID for conversation continuity
-            //         resource: messageInfo.from, // Use phone number as resource ID
-            //     }
-            // });
+            // Use the enhanced WhatsApp Exchange Agent to generate a response
+            const agentResponse = await whatsappAgent.generate([
+                {
+                    role: 'user',
+                    content: messageInfo.text || '',
+                }
+            ], {
+                memory: {
+                    thread: `whatsapp-${messageInfo.from}`, // Use phone number as thread ID for conversation continuity
+                    resource: messageInfo.from, // Use phone number as resource ID
+                }
+            });
 
-            const response = 'Your text was recieved';
+            const response = agentResponse.text || 'I apologize, but I couldn\'t process your message at the moment. Please try again.';
 
-            logInfo('Generated agent response', {
+            logInfo('Generated exchange agent response', {
                 messageId: messageInfo.id,
                 from: messageInfo.from,
                 responseLength: response.length,
                 threadId: `whatsapp-${messageInfo.from}`,
+                hasToolCalls: agentResponse.toolCalls && agentResponse.toolCalls.length > 0,
+                toolCallsCount: agentResponse.toolCalls?.length || 0,
                 operation: 'handleTextMessage'
             });
+
+            // Send response to user
+            await this.sendTextReply(
+                messageInfo.from,
+                response,
+                messageInfo.id
+            );
+
+            // Store outgoing message in database
+            await this.databaseService.storeOutgoingMessage(
+                messageInfo.from,
+                'text',
+                response,
+                conversationId,
+                undefined,
+                messageInfo.id
+            );
+
+            // Log successful processing
+            logSuccess('Text message processed successfully with exchange agent', {
+                messageId: messageInfo.id,
+                from: messageInfo.from,
+                responseLength: response.length,
+                operation: 'handleTextMessage'
+            });
+
+        } catch (error) {
+            logError('Error processing text message with exchange agent', error as Error, {
+                messageId: messageInfo.id,
+                from: messageInfo.from,
+                text: messageInfo.text,
+                conversationId,
+                operation: 'handleTextMessage'
+            });
+
+            // Fallback to generic response if agent fails
+            const fallbackResponse = 'I apologize, but I encountered an issue processing your message. Please try again in a moment, or contact support if the problem persists.';
+
+            try {
+                await this.sendTextReply(
+                    messageInfo.from,
+                    fallbackResponse,
+                    messageInfo.id
+                );
+
+                // Store fallback message in database
+                await this.databaseService.storeOutgoingMessage(
+                    messageInfo.from,
+                    'text',
+                    fallbackResponse,
+                    conversationId,
+                    undefined,
+                    messageInfo.id
+                );
+            } catch (fallbackError) {
+                logError('Failed to send fallback response', fallbackError as Error, {
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    operation: 'handleTextMessage'
+                });
+            }
+        }
+    }
+
+    /**
+     * Handle media messages (images for receipt processing)
+     */
+    private async handleMediaMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: Id<"conversations">): Promise<void> {
+        try {
+            logInfo('Media message received for processing', {
+                messageType: messageInfo.type,
+                messageId: messageInfo.id,
+                from: messageInfo.from,
+                mediaInfo: messageInfo.mediaInfo,
+                hasCaption: !!messageInfo.mediaInfo?.caption,
+                operation: 'handleMediaMessage'
+            });
+
+            // Handle different media types
+            if (messageInfo.type === 'image') {
+                // Process image with exchange agent for receipt analysis
+                const agentResponse = await whatsappAgent.generate([
+                    {
+                        role: 'user',
+                        content: `I'm sending you a receipt image for payment verification. ${messageInfo.mediaInfo?.caption ? `Caption: ${messageInfo.mediaInfo.caption}` : ''}`,
+                    }
+                ], {
+                    memory: {
+                        thread: `whatsapp-${messageInfo.from}`,
+                        resource: messageInfo.from,
+                    }
+                });
+
+                const response = agentResponse.text || 'Got your receipt! 📸 Let me check the details...';
+
+                await this.sendTextReply(
+                    messageInfo.from,
+                    response,
+                    messageInfo.id
+                );
+
+                // Store outgoing message in database
+                await this.databaseService.storeOutgoingMessage(
+                    messageInfo.from,
+                    'text',
+                    response,
+                    conversationId,
+                    undefined,
+                    messageInfo.id
+                );
+
+                logSuccess('Image receipt processed successfully', {
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    operation: 'handleMediaMessage'
+                });
+
+            } else {
+                // Handle unsupported media types
+                const response = `Hey! I can only work with text messages and images right now 📱
+Send me a text or share your payment receipt as an image, and I'll help you out! 😊`;
+
+                await this.sendTextReply(
+                    messageInfo.from,
+                    response,
+                    messageInfo.id
+                );
+
+                // Store outgoing message in database
+                await this.databaseService.storeOutgoingMessage(
+                    messageInfo.from,
+                    'text',
+                    response,
+                    conversationId,
+                    undefined,
+                    messageInfo.id
+                );
+
+                logInfo('Unsupported media type handled', {
+                    messageType: messageInfo.type,
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    operation: 'handleMediaMessage'
+                });
+            }
+
+        } catch (error) {
+            logError('Error processing media message', error as Error, {
+                messageType: messageInfo.type,
+                messageId: messageInfo.id,
+                from: messageInfo.from,
+                operation: 'handleMediaMessage'
+            });
+
+            // Fallback response for media processing errors
+            const fallbackResponse = 'I had trouble processing your media. Could you try sending it again or contact support if the issue persists?';
+
+            try {
+                await this.sendTextReply(
+                    messageInfo.from,
+                    fallbackResponse,
+                    messageInfo.id
+                );
+
+                await this.databaseService.storeOutgoingMessage(
+                    messageInfo.from,
+                    'text',
+                    fallbackResponse,
+                    conversationId,
+                    undefined,
+                    messageInfo.id
+                );
+            } catch (fallbackError) {
+                logError('Failed to send media fallback response', fallbackError as Error, {
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    operation: 'handleMediaMessage'
+                });
+            }
+        }
+    }
+
+    /**
+     * Handle interactive messages (button/list replies) with exchange bot logic
+     */
+    private async handleInteractiveMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: Id<"conversations">): Promise<void> {
+        try {
+            logInfo('Interactive message received for processing', {
+                messageId: messageInfo.id,
+                from: messageInfo.from,
+                text: messageInfo.text,
+                messageType: messageInfo.type,
+                operation: 'handleInteractiveMessage'
+            });
+
+            // Process interactive message with exchange agent
+            const agentResponse = await whatsappAgent.generate([
+                {
+                    role: 'user',
+                    content: `User selected: ${messageInfo.text || 'interactive option'}`,
+                }
+            ], {
+                memory: {
+                    thread: `whatsapp-${messageInfo.from}`,
+                    resource: messageInfo.from,
+                }
+            });
+
+            const response = agentResponse.text || `Thanks for your selection! Let me help you with that.`;
 
             await this.sendTextReply(
                 messageInfo.from,
@@ -410,99 +621,47 @@ export class WhatsAppWebhookService {
                 messageInfo.id
             );
 
+            logSuccess('Interactive message processed successfully', {
+                messageId: messageInfo.id,
+                from: messageInfo.from,
+                selection: messageInfo.text,
+                operation: 'handleInteractiveMessage'
+            });
+
         } catch (error) {
-            logError('Error processing text message with agent', error as Error, {
+            logError('Error processing interactive message', error as Error, {
                 messageId: messageInfo.id,
                 from: messageInfo.from,
                 text: messageInfo.text,
-                conversationId,
-                operation: 'handleTextMessage'
+                operation: 'handleInteractiveMessage'
             });
 
-            // Fallback to generic response if agent fails
-            const fallbackResponse = 'I apologize, but I encountered an issue processing your message. Please try again in a moment.';
+            // Fallback response for interactive message errors
+            const fallbackResponse = 'I received your selection but had trouble processing it. Please try again or send me a text message.';
 
-            await this.sendTextReply(
-                messageInfo.from,
-                fallbackResponse,
-                messageInfo.id
-            );
+            try {
+                await this.sendTextReply(
+                    messageInfo.from,
+                    fallbackResponse,
+                    messageInfo.id
+                );
 
-            // Store fallback message in database
-            await this.databaseService.storeOutgoingMessage(
-                messageInfo.from,
-                'text',
-                fallbackResponse,
-                conversationId,
-                undefined,
-                messageInfo.id
-            );
+                await this.databaseService.storeOutgoingMessage(
+                    messageInfo.from,
+                    'text',
+                    fallbackResponse,
+                    conversationId,
+                    undefined,
+                    messageInfo.id
+                );
+            } catch (fallbackError) {
+                logError('Failed to send interactive fallback response', fallbackError as Error, {
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    operation: 'handleInteractiveMessage'
+                });
+            }
         }
-    }
-
-    /**
-     * Handle media messages
-     */
-    private async handleMediaMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: Id<"conversations">): Promise<void> {
-        logInfo('Media message received', {
-            messageType: messageInfo.type,
-            messageId: messageInfo.id,
-            from: messageInfo.from,
-            mediaInfo: messageInfo.mediaInfo,
-            hasCaption: !!messageInfo.mediaInfo?.caption,
-            operation: 'handleMediaMessage'
-        });
-
-        // Example response to media
-        const response = `Thank you for sharing the ${messageInfo.type}!`;
-
-        await this.sendTextReply(
-            messageInfo.from,
-            response,
-            messageInfo.id
-        );
-
-        // Store outgoing message in database
-        await this.databaseService.storeOutgoingMessage(
-            messageInfo.from,
-            'text',
-            response,
-            conversationId,
-            undefined,
-            messageInfo.id
-        );
-    }
-
-    /**
-     * Handle interactive messages (button/list replies)
-     */
-    private async handleInteractiveMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: Id<"conversations">): Promise<void> {
-        logInfo('Interactive message received', {
-            messageId: messageInfo.id,
-            from: messageInfo.from,
-            text: messageInfo.text,
-            messageType: messageInfo.type,
-            operation: 'handleInteractiveMessage'
-        });
-
-        // Handle button/list responses
-        const response = `You selected: ${messageInfo.text}`;
-
-        await this.sendTextReply(
-            messageInfo.from,
-            response,
-            messageInfo.id
-        );
-
-        // Store outgoing message in database
-        await this.databaseService.storeOutgoingMessage(
-            messageInfo.from,
-            'text',
-            response,
-            conversationId,
-            undefined,
-            messageInfo.id
-        );
     }
 
     /**
