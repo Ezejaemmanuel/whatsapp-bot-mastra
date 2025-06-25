@@ -199,7 +199,6 @@ export class DatabaseService {
     async storeMediaFile(
         messageId: Id<"messages">,
         whatsappMediaId: string,
-        originalUrl: string,
         storedUrl: string,
         fileName: string,
         mimeType: string,
@@ -211,7 +210,6 @@ export class DatabaseService {
             const mediaData = {
                 messageId,
                 whatsappMediaId,
-                originalUrl,
                 fileName,
                 mimeType,
                 fileSize,

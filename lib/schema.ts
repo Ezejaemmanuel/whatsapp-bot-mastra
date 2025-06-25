@@ -95,7 +95,6 @@ export interface MediaFile extends BaseDocument {
     _id: Id<"mediaFiles">;
     messageId?: Id<"messages">;
     whatsappMediaId?: string;
-    originalUrl?: string;
     storedUrl?: string;
     fileName?: string;
     mimeType?: string;
@@ -108,7 +107,6 @@ export interface MediaFile extends BaseDocument {
 export interface NewMediaFile {
     messageId?: Id<"messages">;
     whatsappMediaId?: string;
-    originalUrl?: string;
     storedUrl?: string;
     fileName?: string;
     mimeType?: string;

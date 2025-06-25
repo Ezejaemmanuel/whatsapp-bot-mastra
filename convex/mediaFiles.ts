@@ -23,7 +23,6 @@ export const storeFileFromBuffer = action({
         storageId: Id<"_storage">;
         messageId?: Id<"messages">;
         whatsappMediaId?: string;
-        originalUrl?: string;
         fileName: string;
         mimeType?: string;
         fileSize: number;
@@ -48,7 +47,6 @@ export const storeFileFromBuffer = action({
                         storageId: existingFile.storageId!,
                         messageId: existingFile.messageId,
                         whatsappMediaId: existingFile.whatsappMediaId,
-                        originalUrl: existingFile.originalUrl,
                         fileName: existingFile.fileName || args.fileName,
                         mimeType: existingFile.mimeType,
                         fileSize: existingFile.fileSize || 0,
@@ -164,7 +162,6 @@ export const storeMediaFile = mutation({
     args: {
         messageId: v.optional(v.id("messages")),
         whatsappMediaId: v.optional(v.string()),
-        originalUrl: v.optional(v.string()),
         fileName: v.optional(v.string()),
         mimeType: v.optional(v.string()),
         fileSize: v.optional(v.number()),
@@ -177,7 +174,6 @@ export const storeMediaFile = mutation({
         const mediaFileId = await ctx.db.insert("mediaFiles", {
             messageId: args.messageId,
             whatsappMediaId: args.whatsappMediaId,
-            originalUrl: args.originalUrl,
             fileName: args.fileName,
             mimeType: args.mimeType,
             fileSize: args.fileSize,

@@ -72,7 +72,6 @@ export default defineSchema({
         storageId: v.optional(v.id("_storage")), // Convex storage ID
         messageId: v.optional(v.id("messages")), // Reference to message
         whatsappMediaId: v.optional(v.string()), // WhatsApp media ID
-        originalUrl: v.optional(v.string()), // Original WhatsApp media URL
         storedUrl: v.optional(v.string()), // Stored file URL from Convex storage
         fileName: v.optional(v.string()), // File name
         mimeType: v.optional(v.string()), // MIME type
