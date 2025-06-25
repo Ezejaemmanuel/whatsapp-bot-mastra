@@ -438,7 +438,33 @@ export class MediaUploadService {
         return result;
     }
 
+    /**
+     * Delete file from Convex storage
+     */
+    async deleteFile(storageId: string): Promise<{
+        success: boolean;
+        error?: string;
+    }> {
+        try {
+            // Find the media file by storage ID
+            const mediaFiles = await this.convex.query(api.mediaFiles.listAllMediaFiles, { limit: 1000 });
+            const mediaFile = mediaFiles.find(file => file.storageId === storageId);
 
+            if (mediaFile) {
+                await this.convex.mutation(api.mediaFiles.deleteMediaFile, {
+                    mediaFileId: mediaFile._id
+                });
+            }
+
+            return { success: true };
+        } catch (error) {
+            console.error('Error deleting file from Convex storage:', error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Delete failed'
+            };
+        }
+    }
 
     /**
      * List files from Convex storage
