@@ -711,26 +711,17 @@ export class WhatsAppWebhookService {
             });
 
             // Download from WhatsApp and upload to Convex storage
+            // The processMediaMessage already handles both file storage AND database record creation
             const uploadResult = await this.mediaUploadService.processMediaMessage(
                 mediaInfo.id,
                 mediaInfo.filename,
                 mediaInfo.mime_type,
-                mediaInfo.sha256
+                mediaInfo.sha256,
+                messageId  // Pass messageId to avoid duplicate storage
             );
 
             if (uploadResult.success && uploadResult.storedUrl) {
-                // Store media file information in database with Convex storage
-                await this.databaseService.storeMediaFile(
-                    messageId,
-                    mediaInfo.id,
-                    '', // originalUrl - we don't store the temporary WhatsApp URL
-                    uploadResult.storedUrl, // This is now a permanent Convex storage URL
-                    uploadResult.fileName || mediaInfo.filename || 'unknown',
-                    mediaInfo.mime_type,
-                    uploadResult.fileSize,
-                    mediaInfo.sha256,
-                    uploadResult.storageId as any
-                );
+                // No need for additional database operations - everything is handled by processMediaMessage
 
                 logSuccess('Media file processed and uploaded to Convex storage', {
                     messageId,

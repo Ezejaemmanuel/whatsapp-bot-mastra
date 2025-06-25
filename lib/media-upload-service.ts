@@ -2,6 +2,7 @@ import { WhatsAppCloudApiClient } from '@/whatsapp/whatsapp-client';
 import { ConvexHttpClient } from 'convex/browser';
 import { api } from '@/convex/_generated/api';
 import crypto from 'crypto';
+import { Id } from '@/convex/_generated/dataModel';
 
 /**
  * Media Upload Service with Convex File Storage Integration
@@ -43,7 +44,8 @@ export class MediaUploadService {
         mediaId: string,
         fileName?: string,
         mimeType?: string,
-        expectedSha256?: string
+        expectedSha256?: string,
+        messageId?: Id<"messages">
     ): Promise<{
         success: boolean;
         storedUrl?: string;
@@ -126,7 +128,8 @@ export class MediaUploadService {
                 downloadResult.fileName!,
                 mimeType,
                 mediaId,
-                expectedSha256
+                expectedSha256,
+                messageId
             );
 
             console.log('Upload process completed', {
@@ -242,7 +245,8 @@ export class MediaUploadService {
         fileName: string,
         mimeType?: string,
         whatsappMediaId?: string,
-        sha256?: string
+        sha256?: string,
+        messageId?: Id<"messages">
     ): Promise<{
         success: boolean;
         storedUrl?: string;
@@ -275,6 +279,7 @@ export class MediaUploadService {
                 fileData: arrayBuffer,
                 fileName: this.sanitizeFileName(fileName),
                 contentType: mimeType,
+                messageId,
                 whatsappMediaId,
                 sha256,
                 metadata: {
@@ -409,7 +414,8 @@ export class MediaUploadService {
         mediaId: string,
         fileName?: string,
         mimeType?: string,
-        sha256?: string
+        sha256?: string,
+        messageId?: any
     ): Promise<{
         success: boolean;
         storedUrl?: string;
@@ -426,7 +432,7 @@ export class MediaUploadService {
         });
 
         // Download and store the media using Convex file storage
-        const result = await this.downloadAndStoreMedia(mediaId, fileName, mimeType, sha256);
+        const result = await this.downloadAndStoreMedia(mediaId, fileName, mimeType, sha256, messageId);
 
         console.log('Media processing completed', {
             mediaId,

@@ -217,7 +217,8 @@ export class DatabaseService {
                 fileSize,
                 sha256,
                 uploadStatus: "uploaded",
-                storageId
+                storageId,
+                storedUrl  // Include storedUrl parameter
             };
 
             const mediaFile = await fetchMutation(api.mediaFiles.storeMediaFile, mediaData);
