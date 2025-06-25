@@ -1,17 +1,17 @@
-import { database } from './database';
+import { fetchQuery, fetchMutation } from "convex/nextjs";
+import { api } from "../convex/_generated/api";
 import {
-    users, conversations, messages, mediaFiles, messageStatuses, webhookLogs,
     User, NewUser, Conversation, NewConversation, Message, NewMessage,
     MediaFile, NewMediaFile, MessageStatus, NewMessageStatus, WebhookLog, NewWebhookLog
 } from './schema';
-import { eq, desc, and } from 'drizzle-orm';
 import { WebhookMessage, WebhookMessageStatus } from '@/app/api/webhook/types';
+import { Id } from "../convex/_generated/dataModel";
 
 /**
  * Database Service for WhatsApp Bot
  * 
  * Provides high-level methods for storing and retrieving WhatsApp conversations,
- * messages, and related data using Drizzle ORM.
+ * messages, and related data using Convex.
  */
 export class DatabaseService {
 
@@ -20,47 +20,17 @@ export class DatabaseService {
      */
     async getOrCreateUser(whatsappId: string, profileName?: string, phoneNumber?: string): Promise<User> {
         try {
-            // Try to find existing user
-            const existingUser = await database
-                .select()
-                .from(users)
-                .where(eq(users.whatsappId, whatsappId))
-                .limit(1);
-
-            if (existingUser.length > 0) {
-                // Update profile name and phone number if provided
-                if (profileName && existingUser[0].profileName !== profileName) {
-                    await database
-                        .update(users)
-                        .set({
-                            profileName,
-                            phoneNumber: phoneNumber || null, // Convert undefined to null
-                            updatedAt: new Date()
-                        })
-                        .where(eq(users.id, existingUser[0].id));
-
-                    return {
-                        ...existingUser[0],
-                        profileName,
-                        phoneNumber: phoneNumber || null // Convert undefined to null
-                    };
-                }
-                return existingUser[0];
-            }
-
-            // Create new user
-            const newUser: NewUser = {
+            const user = await fetchMutation(api.users.getOrCreateUser, {
                 whatsappId,
                 profileName,
-                phoneNumber: phoneNumber || null, // Convert undefined to null
-            };
+                phoneNumber,
+            });
 
-            const createdUsers = await database
-                .insert(users)
-                .values(newUser)
-                .returning();
+            if (!user) {
+                throw new Error('Failed to create or retrieve user');
+            }
 
-            return createdUsers[0];
+            return user;
         } catch (error) {
             console.error('Error in getOrCreateUser:', error);
             throw error;
@@ -70,37 +40,18 @@ export class DatabaseService {
     /**
      * Get or create a conversation for a user
      */
-    async getOrCreateConversation(userId: number, whatsappConversationId?: string): Promise<Conversation> {
+    async getOrCreateConversation(userId: Id<"users">, whatsappConversationId?: string): Promise<Conversation> {
         try {
-            // Try to find active conversation for the user
-            const existingConversation = await database
-                .select()
-                .from(conversations)
-                .where(and(
-                    eq(conversations.userId, userId),
-                    eq(conversations.status, 'active')
-                ))
-                .orderBy(desc(conversations.lastMessageAt))
-                .limit(1);
-
-            if (existingConversation.length > 0) {
-                return existingConversation[0];
-            }
-
-            // Create new conversation
-            const newConversation: NewConversation = {
+            const conversation = await fetchMutation(api.conversations.getOrCreateConversation, {
                 userId,
                 whatsappConversationId,
-                status: 'active',
-                lastMessageAt: new Date(),
-            };
+            });
 
-            const createdConversations = await database
-                .insert(conversations)
-                .values(newConversation)
-                .returning();
+            if (!conversation) {
+                throw new Error('Failed to create or retrieve conversation');
+            }
 
-            return createdConversations[0];
+            return conversation;
         } catch (error) {
             console.error('Error in getOrCreateConversation:', error);
             throw error;
@@ -112,32 +63,31 @@ export class DatabaseService {
      */
     async storeIncomingMessage(
         webhookMessage: WebhookMessage,
-        conversationId: string,
+        conversationId: Id<"conversations">,
         contactName?: string
     ): Promise<Message> {
         try {
-            const messageData: NewMessage = {
+            const messageData: any = {
                 conversationId,
                 whatsappMessageId: webhookMessage.id,
-                direction: 'inbound',
                 messageType: webhookMessage.type,
-                content: webhookMessage.text?.body || null,
+                content: webhookMessage.text?.body,
                 caption: this.getMediaCaption(webhookMessage),
                 location: webhookMessage.location ? {
                     latitude: webhookMessage.location.latitude,
                     longitude: webhookMessage.location.longitude,
                     name: webhookMessage.location.name,
                     address: webhookMessage.location.address
-                } : null,
-                contacts: webhookMessage.contacts || null,
-                interactive: webhookMessage.interactive || null,
+                } : undefined,
+                contacts: webhookMessage.contacts,
+                interactive: webhookMessage.interactive,
                 context: webhookMessage.context ? {
                     forwarded: webhookMessage.context.forwarded,
                     frequently_forwarded: webhookMessage.context.frequently_forwarded,
                     from: webhookMessage.context.from,
                     id: webhookMessage.context.id
-                } : null,
-                timestamp: new Date(parseInt(webhookMessage.timestamp) * 1000),
+                } : undefined,
+                timestamp: parseInt(webhookMessage.timestamp) * 1000,
                 metadata: {
                     contactName,
                     originalPayload: webhookMessage
@@ -150,27 +100,19 @@ export class DatabaseService {
                 messageData.mediaType = mediaInfo.mime_type;
                 messageData.fileName = mediaInfo.filename;
                 messageData.metadata = {
-                    ...(messageData.metadata || {}),
+                    ...messageData.metadata,
                     whatsappMediaId: mediaInfo.id,
                     sha256: mediaInfo.sha256
                 };
             }
 
-            const createdMessages = await database
-                .insert(messages)
-                .values(messageData)
-                .returning();
+            const message = await fetchMutation(api.messages.storeIncomingMessage, messageData);
 
-            // Update conversation last message time
-            await database
-                .update(conversations)
-                .set({
-                    lastMessageAt: messageData.timestamp,
-                    updatedAt: new Date()
-                })
-                .where(eq(conversations.id, conversationId));
+            if (!message) {
+                throw new Error('Failed to store incoming message');
+            }
 
-            return createdMessages[0];
+            return message;
         } catch (error) {
             console.error('Error in storeIncomingMessage:', error);
             throw error;
@@ -184,39 +126,30 @@ export class DatabaseService {
         to: string,
         messageType: string,
         content: string,
-        conversationId: string,
+        conversationId: Id<"conversations">,
         whatsappMessageId?: string,
         replyToMessageId?: string
     ): Promise<Message> {
         try {
-            const messageData: NewMessage = {
+            const messageData = {
                 conversationId,
                 whatsappMessageId,
-                direction: 'outbound',
                 messageType,
                 content,
-                timestamp: new Date(),
-                context: replyToMessageId ? { id: replyToMessageId } : null,
+                context: replyToMessageId ? { id: replyToMessageId } : undefined,
                 metadata: {
-                    recipient: to
+                    to,
+                    bot_generated: true
                 }
             };
 
-            const createdMessages = await database
-                .insert(messages)
-                .values(messageData)
-                .returning();
+            const message = await fetchMutation(api.messages.storeOutgoingMessage, messageData);
 
-            // Update conversation last message time
-            await database
-                .update(conversations)
-                .set({
-                    lastMessageAt: new Date(),
-                    updatedAt: new Date()
-                })
-                .where(eq(conversations.id, conversationId));
+            if (!message) {
+                throw new Error('Failed to store outgoing message');
+            }
 
-            return createdMessages[0];
+            return message;
         } catch (error) {
             console.error('Error in storeOutgoingMessage:', error);
             throw error;
@@ -228,31 +161,32 @@ export class DatabaseService {
      */
     async storeMessageStatus(statusUpdate: WebhookMessageStatus): Promise<MessageStatus> {
         try {
-            const statusData: NewMessageStatus = {
-                messageId: statusUpdate.id, // This should be mapped to our message ID
+            // First find the message by WhatsApp ID
+            const message = await fetchQuery(api.messages.getMessageByWhatsAppId, {
+                whatsappMessageId: statusUpdate.id
+            });
+
+            if (!message) {
+                throw new Error(`Message not found for WhatsApp ID: ${statusUpdate.id}`);
+            }
+
+            const statusData = {
+                messageId: message._id,
                 status: statusUpdate.status,
-                timestamp: new Date(parseInt(statusUpdate.timestamp) * 1000),
+                timestamp: parseInt(statusUpdate.timestamp) * 1000,
                 recipientId: statusUpdate.recipient_id,
-                conversationInfo: statusUpdate.conversation || null,
-                pricingInfo: statusUpdate.pricing || null,
-                error: statusUpdate.errors || null
+                conversationInfo: statusUpdate.conversation,
+                pricingInfo: statusUpdate.pricing,
+                error: statusUpdate.errors?.[0]
             };
 
-            const createdStatuses = await database
-                .insert(messageStatuses)
-                .values(statusData)
-                .returning();
+            const messageStatus = await fetchMutation(api.messageStatuses.storeMessageStatus, statusData);
 
-            // Update the message status
-            await database
-                .update(messages)
-                .set({
-                    status: statusUpdate.status,
-                    updatedAt: new Date()
-                })
-                .where(eq(messages.whatsappMessageId, statusUpdate.id));
+            if (!messageStatus) {
+                throw new Error('Failed to store message status');
+            }
 
-            return createdStatuses[0];
+            return messageStatus;
         } catch (error) {
             console.error('Error in storeMessageStatus:', error);
             throw error;
@@ -263,43 +197,36 @@ export class DatabaseService {
      * Store media file information
      */
     async storeMediaFile(
-        messageId: string,
+        messageId: Id<"messages">,
         whatsappMediaId: string,
         originalUrl: string,
         storedUrl: string,
         fileName: string,
         mimeType: string,
         fileSize?: number,
-        sha256?: string
+        sha256?: string,
+        storageId?: Id<"_storage">
     ): Promise<MediaFile> {
         try {
-            const mediaData: NewMediaFile = {
+            const mediaData = {
                 messageId,
                 whatsappMediaId,
                 originalUrl,
-                storedUrl,
                 fileName,
                 mimeType,
                 fileSize,
                 sha256,
-                uploadStatus: 'uploaded'
+                uploadStatus: "uploaded",
+                storageId
             };
 
-            const createdMediaFiles = await database
-                .insert(mediaFiles)
-                .values(mediaData)
-                .returning();
+            const mediaFile = await fetchMutation(api.mediaFiles.storeMediaFile, mediaData);
 
-            // Update message with media URL
-            await database
-                .update(messages)
-                .set({
-                    mediaUrl: storedUrl,
-                    updatedAt: new Date()
-                })
-                .where(eq(messages.id, messageId));
+            if (!mediaFile) {
+                throw new Error('Failed to store media file');
+            }
 
-            return createdMediaFiles[0];
+            return mediaFile;
         } catch (error) {
             console.error('Error in storeMediaFile:', error);
             throw error;
@@ -309,15 +236,13 @@ export class DatabaseService {
     /**
      * Get conversation history
      */
-    async getConversationHistory(conversationId: string, limit: number = 50, offset: number = 0): Promise<Message[]> {
+    async getConversationHistory(conversationId: Id<"conversations">, limit: number = 50, offset: number = 0): Promise<Message[]> {
         try {
-            return await database
-                .select()
-                .from(messages)
-                .where(eq(messages.conversationId, conversationId))
-                .orderBy(desc(messages.timestamp))
-                .limit(limit)
-                .offset(offset);
+            return await fetchQuery(api.messages.getConversationHistory, {
+                conversationId,
+                limit,
+                offset
+            });
         } catch (error) {
             console.error('Error in getConversationHistory:', error);
             throw error;
@@ -327,14 +252,12 @@ export class DatabaseService {
     /**
      * Get user conversations
      */
-    async getUserConversations(userId: number, limit: number = 20): Promise<Conversation[]> {
+    async getUserConversations(userId: Id<"users">, limit: number = 20): Promise<Conversation[]> {
         try {
-            return await database
-                .select()
-                .from(conversations)
-                .where(eq(conversations.userId, userId))
-                .orderBy(desc(conversations.lastMessageAt))
-                .limit(limit);
+            return await fetchQuery(api.conversations.getUserConversations, {
+                userId,
+                limit
+            });
         } catch (error) {
             console.error('Error in getUserConversations:', error);
             throw error;
@@ -342,7 +265,7 @@ export class DatabaseService {
     }
 
     /**
-     * Log webhook events
+     * Log webhook event
      */
     async logWebhookEvent(
         level: 'INFO' | 'WARN' | 'ERROR',
@@ -354,7 +277,7 @@ export class DatabaseService {
         stack?: string
     ): Promise<WebhookLog> {
         try {
-            const logData: NewWebhookLog = {
+            const logData = {
                 level,
                 message,
                 data,
@@ -364,12 +287,13 @@ export class DatabaseService {
                 stack
             };
 
-            const createdLogs = await database
-                .insert(webhookLogs)
-                .values(logData)
-                .returning();
+            const logEntry = await fetchMutation(api.webhookLogs.logWebhookEvent, logData);
 
-            return createdLogs[0];
+            if (!logEntry) {
+                throw new Error('Failed to log webhook event');
+            }
+
+            return logEntry;
         } catch (error) {
             console.error('Error in logWebhookEvent:', error);
             throw error;
@@ -377,59 +301,54 @@ export class DatabaseService {
     }
 
     /**
-     * Get message by WhatsApp message ID
+     * Get message by WhatsApp ID
      */
     async getMessageByWhatsAppId(whatsappMessageId: string): Promise<Message | null> {
         try {
-            const result = await database
-                .select()
-                .from(messages)
-                .where(eq(messages.whatsappMessageId, whatsappMessageId))
-                .limit(1);
-
-            return result.length > 0 ? result[0] : null;
+            return await fetchQuery(api.messages.getMessageByWhatsAppId, {
+                whatsappMessageId
+            });
         } catch (error) {
             console.error('Error in getMessageByWhatsAppId:', error);
-            throw error;
+            return null;
         }
     }
 
     /**
      * Archive conversation
      */
-    async archiveConversation(conversationId: string): Promise<void> {
+    async archiveConversation(conversationId: Id<"conversations">): Promise<void> {
         try {
-            await database
-                .update(conversations)
-                .set({
-                    status: 'archived',
-                    updatedAt: new Date()
-                })
-                .where(eq(conversations.id, conversationId));
+            await fetchMutation(api.conversations.archiveConversation, {
+                conversationId
+            });
         } catch (error) {
             console.error('Error in archiveConversation:', error);
             throw error;
         }
     }
 
-    // Helper methods
+    /**
+     * Helper method to check if a message contains media
+     */
     private isMediaMessage(message: WebhookMessage): boolean {
-        return ['image', 'audio', 'video', 'document', 'sticker'].includes(message.type);
+        return ['image', 'audio', 'video', 'document'].includes(message.type);
     }
 
+    /**
+     * Helper method to extract media information from webhook message
+     */
     private getMediaInfo(message: WebhookMessage): any {
-        switch (message.type) {
-            case 'image': return message.image;
-            case 'audio': return message.audio;
-            case 'video': return message.video;
-            case 'document': return message.document;
-            case 'sticker': return message.sticker;
-            default: return null;
-        }
+        return message.image || message.audio || message.video || message.document || {};
     }
 
-    private getMediaCaption(message: WebhookMessage): string | null {
-        const mediaInfo = this.getMediaInfo(message);
-        return mediaInfo?.caption || null;
+    /**
+     * Helper method to extract media caption from webhook message
+     */
+    private getMediaCaption(message: WebhookMessage): string | undefined {
+        if (message.image?.caption) return message.image.caption;
+        if (message.video?.caption) return message.video.caption;
+        if (message.document?.caption) return message.document.caption;
+        return undefined;
     }
 }

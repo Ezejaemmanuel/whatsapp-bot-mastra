@@ -3,6 +3,7 @@ import { WebhookMessage, WebhookMessageStatus, WebhookPayload } from './types';
 import { logWebhookEvent, logSuccess, logError, logWarning, logInfo, extractMessageInfo, extractStatusInfo } from './utils';
 import { DatabaseService } from '@/lib/database-service';
 import { MediaUploadService } from '@/lib/media-upload-service';
+import { Id } from '@/convex/_generated/dataModel';
 // import { mastra } from '@/mastra';
 
 /**
@@ -85,18 +86,18 @@ export class WhatsAppWebhookService {
                 contactName
             );
 
-            const conversation = await this.databaseService.getOrCreateConversation(user.id);
+            const conversation = await this.databaseService.getOrCreateConversation(user._id);
 
             // Store the incoming message in database
             const storedMessage = await this.databaseService.storeIncomingMessage(
                 message,
-                conversation.id,
+                conversation._id,
                 contactName
             );
 
             // Handle media messages - download and store files
             if (this.isMediaMessage(message)) {
-                await this.processAndStoreMedia(message, storedMessage.id);
+                await this.processAndStoreMedia(message, storedMessage._id);
             }
 
             // Mark message as read
@@ -114,22 +115,22 @@ export class WhatsAppWebhookService {
             switch (messageInfo.type) {
 
                 case 'text':
-                    await this.handleTextMessage(messageInfo, conversation.id);
+                    await this.handleTextMessage(messageInfo, conversation._id);
                     break;
                 case 'image':
                 case 'audio':
                 case 'video':
                 case 'document':
-                    await this.handleMediaMessage(messageInfo, conversation.id);
+                    await this.handleMediaMessage(messageInfo, conversation._id);
                     break;
                 case 'interactive':
-                    await this.handleInteractiveMessage(messageInfo, conversation.id);
+                    await this.handleInteractiveMessage(messageInfo, conversation._id);
                     break;
                 case 'location':
-                    await this.handleLocationMessage(messageInfo, conversation.id);
+                    await this.handleLocationMessage(messageInfo, conversation._id);
                     break;
                 case 'contacts':
-                    await this.handleContactMessage(messageInfo, conversation.id);
+                    await this.handleContactMessage(messageInfo, conversation._id);
                     break;
                 default:
                     logWarning('Unhandled message type received', {
@@ -359,7 +360,7 @@ export class WhatsAppWebhookService {
     /**
      * Handle text messages
      */
-    private async handleTextMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: string): Promise<void> {
+    private async handleTextMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: Id<"conversations">): Promise<void> {
         try {
             logInfo('Processing text message with Mastra agent', {
                 messageId: messageInfo.id,
@@ -382,7 +383,7 @@ export class WhatsAppWebhookService {
             //     }
             // });
 
-            const response =  'Your text was recieved';
+            const response = 'Your text was recieved';
 
             logInfo('Generated agent response', {
                 messageId: messageInfo.id,
@@ -441,7 +442,7 @@ export class WhatsAppWebhookService {
     /**
      * Handle media messages
      */
-    private async handleMediaMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: string): Promise<void> {
+    private async handleMediaMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: Id<"conversations">): Promise<void> {
         logInfo('Media message received', {
             messageType: messageInfo.type,
             messageId: messageInfo.id,
@@ -474,7 +475,7 @@ export class WhatsAppWebhookService {
     /**
      * Handle interactive messages (button/list replies)
      */
-    private async handleInteractiveMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: string): Promise<void> {
+    private async handleInteractiveMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: Id<"conversations">): Promise<void> {
         logInfo('Interactive message received', {
             messageId: messageInfo.id,
             from: messageInfo.from,
@@ -506,7 +507,7 @@ export class WhatsAppWebhookService {
     /**
      * Handle location messages
      */
-    private async handleLocationMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: string): Promise<void> {
+    private async handleLocationMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: Id<"conversations">): Promise<void> {
         const response = 'Thank you for sharing your location!';
 
         await this.sendTextReply(
@@ -529,7 +530,7 @@ export class WhatsAppWebhookService {
     /**
      * Handle contact messages
      */
-    private async handleContactMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: string): Promise<void> {
+    private async handleContactMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: Id<"conversations">): Promise<void> {
         const response = 'Thank you for sharing the contact!';
 
         await this.sendTextReply(
@@ -671,10 +672,10 @@ export class WhatsAppWebhookService {
     }
 
     /**
-     * Process and store media files using UploadThing with enhanced error handling
-     * Downloads media from WhatsApp and uploads to UploadThing CDN
+     * Process and store media files using Convex file storage with enhanced error handling
+     * Downloads media from WhatsApp and uploads to Convex storage
      */
-    private async processAndStoreMedia(message: WebhookMessage, messageId: string): Promise<void> {
+    private async processAndStoreMedia(message: WebhookMessage, messageId: Id<"messages">): Promise<void> {
         try {
             console.log('Raw webhook message for media processing:', {
                 messageType: message.type,
@@ -709,7 +710,7 @@ export class WhatsAppWebhookService {
                 sha256Value: mediaInfo.sha256
             });
 
-            // Download from WhatsApp and upload to UploadThing CDN
+            // Download from WhatsApp and upload to Convex storage
             const uploadResult = await this.mediaUploadService.processMediaMessage(
                 mediaInfo.id,
                 mediaInfo.filename,
@@ -718,24 +719,26 @@ export class WhatsAppWebhookService {
             );
 
             if (uploadResult.success && uploadResult.storedUrl) {
-                // Store media file information in database with UploadThing CDN URL
+                // Store media file information in database with Convex storage
                 await this.databaseService.storeMediaFile(
                     messageId,
                     mediaInfo.id,
                     '', // originalUrl - we don't store the temporary WhatsApp URL
-                    uploadResult.storedUrl, // This is now a permanent UploadThing CDN URL
+                    uploadResult.storedUrl, // This is now a permanent Convex storage URL
                     uploadResult.fileName || mediaInfo.filename || 'unknown',
                     mediaInfo.mime_type,
                     uploadResult.fileSize,
-                    mediaInfo.sha256
+                    mediaInfo.sha256,
+                    uploadResult.storageId as any
                 );
 
-                logSuccess('Media file processed and uploaded to UploadThing CDN', {
+                logSuccess('Media file processed and uploaded to Convex storage', {
                     messageId,
                     mediaId: mediaInfo.id,
                     fileName: uploadResult.fileName,
                     fileSize: uploadResult.fileSize,
                     storedUrl: uploadResult.storedUrl,
+                    storageId: uploadResult.storageId,
                     mimeType: mediaInfo.mime_type,
                     operation: 'processAndStoreMedia'
                 });

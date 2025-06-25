@@ -1,0 +1,9 @@
+{
+  "node": {
+    "externalPackages": [
+      "@mastra/core",
+      "@mastra/memory",
+      "@mastra/upstash"
+    ]
+  }
+}

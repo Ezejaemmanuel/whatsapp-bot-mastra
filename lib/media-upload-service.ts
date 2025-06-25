@@ -1,16 +1,17 @@
 import { WhatsAppCloudApiClient } from '@/whatsapp/whatsapp-client';
-import { UTApi } from "uploadthing/server";
+import { ConvexHttpClient } from 'convex/browser';
+import { api } from '@/convex/_generated/api';
 import crypto from 'crypto';
 
 /**
- * Media Upload Service with UploadThing Integration
+ * Media Upload Service with Convex File Storage Integration
  * 
- * Handles downloading WhatsApp media files and uploading them to UploadThing cloud storage.
- * Provides permanent CDN URLs for media files.
+ * Handles downloading WhatsApp media files and uploading them to Convex file storage.
+ * Provides permanent URLs for media files through Convex storage.
  */
 export class MediaUploadService {
     private whatsappClient: WhatsAppCloudApiClient;
-    private utapi: UTApi;
+    private convex: ConvexHttpClient;
     private accessToken: string;
     private version: string;
 
@@ -27,14 +28,16 @@ export class MediaUploadService {
             accessToken: this.accessToken
         });
 
-        // Initialize UploadThing API
-        this.utapi = new UTApi({
-            token: process.env.UPLOADTHING_TOKEN,
-        });
+        // Initialize Convex HTTP client
+        const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+        if (!convexUrl) {
+            throw new Error('Missing required environment variable: NEXT_PUBLIC_CONVEX_URL');
+        }
+        this.convex = new ConvexHttpClient(convexUrl);
     }
 
     /**
-     * Download and store media file from WhatsApp using UploadThing with enhanced error handling
+     * Download and store media file from WhatsApp using Convex file storage with enhanced error handling
      */
     async downloadAndStoreMedia(
         mediaId: string,
@@ -46,6 +49,7 @@ export class MediaUploadService {
         storedUrl?: string;
         fileName?: string;
         fileSize?: number;
+        storageId?: any;
         error?: string;
     }> {
         try {
@@ -116,11 +120,13 @@ export class MediaUploadService {
                 bufferSize: downloadResult.buffer.length
             });
 
-            // Upload to UploadThing
-            const uploadResult = await this.uploadToUploadThing(
+            // Upload to Convex file storage
+            const uploadResult = await this.uploadToConvexStorage(
                 downloadResult.buffer,
                 downloadResult.fileName!,
-                mimeType
+                mimeType,
+                mediaId,
+                expectedSha256
             );
 
             console.log('Upload process completed', {
@@ -198,83 +204,118 @@ export class MediaUploadService {
                 // Compare ignoring case (WhatsApp might send uppercase, we generate lowercase)
                 if (actualSha256.toLowerCase() !== expectedSha256.toLowerCase()) {
                     // For debugging: temporarily allow mismatches but log them
-                    console.warn('SHA256 mismatch detected but continuing with upload for debugging');
-                    console.warn('If you want to enforce integrity checks, uncomment the return statement below');
-
-                    // Uncomment this return statement to enforce strict SHA256 verification:
-                    /*
-                    return {
-                        success: false,
-                        error: `File integrity check failed: SHA256 mismatch (expected: ${expectedSha256}, actual: ${actualSha256})`
-                    };
-                    */
+                    console.warn('SHA256 mismatch detected but continuing with upload', {
+                        expected: expectedSha256,
+                        actual: actualSha256,
+                        bufferSize: uint8Array.length
+                    });
                 }
             }
 
             // Generate filename if not provided
-            const timestamp = Date.now();
-            const extension = this.getFileExtension(mimeType, response.headers.get('content-type') || undefined);
-            const finalFileName = fileName || `whatsapp_media_${timestamp}${extension}`;
-
-            // Sanitize filename
-            const sanitizedFileName = this.sanitizeFileName(finalFileName);
+            const finalFileName = fileName || this.generateFileName(mimeType);
 
             return {
                 success: true,
                 buffer: uint8Array,
-                fileName: sanitizedFileName
+                fileName: finalFileName
             };
         } catch (error) {
-            console.error('Error downloading media file:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            console.error('Error downloading media file:', {
+                mediaUrl,
+                error: errorMessage
+            });
+
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'Download failed'
+                error: `Download failed: ${errorMessage}`
             };
         }
     }
 
     /**
-     * Upload buffer to UploadThing
+     * Upload buffer to Convex file storage
      */
-    private async uploadToUploadThing(
+    private async uploadToConvexStorage(
         buffer: Uint8Array,
         fileName: string,
-        mimeType?: string
+        mimeType?: string,
+        whatsappMediaId?: string,
+        sha256?: string
     ): Promise<{
         success: boolean;
         storedUrl?: string;
         fileName?: string;
         fileSize?: number;
+        storageId?: string;
         error?: string;
     }> {
         try {
-            // Create a File object from the buffer
-            const file = new File([buffer], fileName, {
-                type: mimeType || 'application/octet-stream'
+            console.log('Starting Convex storage upload', {
+                fileName,
+                mimeType,
+                bufferSize: buffer.length,
+                whatsappMediaId
             });
 
-            // Upload to UploadThing
-            const uploadResult = await this.utapi.uploadFiles([file]);
+            // Store file directly using the streamlined action
+            // Convert buffer to ArrayBuffer properly to avoid SharedArrayBuffer issues
+            const arrayBuffer = buffer.buffer instanceof ArrayBuffer
+                ? buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
+                : new ArrayBuffer(buffer.byteLength);
 
-            if (uploadResult[0]?.data) {
-                const uploadedFile = uploadResult[0].data;
-                return {
-                    success: true,
-                    storedUrl: uploadedFile.url,
-                    fileName: uploadedFile.name,
-                    fileSize: uploadedFile.size
-                };
-            } else {
+            if (!(buffer.buffer instanceof ArrayBuffer)) {
+                // Copy data from SharedArrayBuffer to ArrayBuffer
+                const uint8View = new Uint8Array(arrayBuffer);
+                uint8View.set(new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength));
+            }
+
+            const result = await this.convex.action(api.mediaFiles.storeFileFromBuffer, {
+                fileData: arrayBuffer,
+                fileName: this.sanitizeFileName(fileName),
+                contentType: mimeType,
+                whatsappMediaId,
+                sha256,
+                metadata: {
+                    originalFileName: fileName,
+                    uploadedAt: Date.now(),
+                    source: 'whatsapp'
+                }
+            });
+
+            if (!result) {
                 return {
                     success: false,
-                    error: uploadResult[0]?.error?.message || 'Upload to UploadThing failed'
+                    error: 'Failed to store file in Convex storage'
                 };
             }
+
+            console.log('File uploaded to Convex storage successfully', {
+                fileName,
+                storageId: result.storageId,
+                storedUrl: result.storedUrl,
+                fileSize: result.fileSize
+            });
+
+            return {
+                success: true,
+                storedUrl: result.storedUrl,
+                fileName: result.fileName,
+                fileSize: result.fileSize,
+                storageId: result.storageId,
+            };
         } catch (error) {
-            console.error('Error uploading to UploadThing:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            console.error('Error uploading to Convex storage:', {
+                fileName,
+                error: errorMessage,
+                bufferSize: buffer.length
+            });
+
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'UploadThing upload failed'
+                error: errorMessage
             };
         }
     }
@@ -285,60 +326,50 @@ export class MediaUploadService {
     private getFileExtension(mimeType?: string, contentType?: string): string {
         const type = mimeType || contentType || '';
 
-        const mimeMap: Record<string, string> = {
+        const mimeToExt: Record<string, string> = {
             'image/jpeg': '.jpg',
             'image/jpg': '.jpg',
             'image/png': '.png',
             'image/gif': '.gif',
             'image/webp': '.webp',
             'audio/mpeg': '.mp3',
-            'audio/mp3': '.mp3',
             'audio/mp4': '.m4a',
-            'audio/aac': '.aac',
             'audio/ogg': '.ogg',
             'audio/wav': '.wav',
             'video/mp4': '.mp4',
-            'video/mpeg': '.mpeg',
             'video/quicktime': '.mov',
-            'video/webm': '.webm',
+            'video/x-msvideo': '.avi',
             'application/pdf': '.pdf',
             'application/msword': '.doc',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
-            'application/vnd.ms-excel': '.xls',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
-            'text/plain': '.txt',
-            'text/csv': '.csv'
+            'text/plain': '.txt'
         };
 
-        return mimeMap[type.toLowerCase()] || '.bin';
+        return mimeToExt[type.toLowerCase()] || '.bin';
     }
 
     /**
-     * Sanitize filename to prevent directory traversal and invalid characters
+     * Generate filename with timestamp and extension
+     */
+    private generateFileName(mimeType?: string): string {
+        const timestamp = Date.now();
+        const extension = this.getFileExtension(mimeType);
+        return `media_${timestamp}${extension}`;
+    }
+
+    /**
+     * Sanitize filename for safe storage
      */
     private sanitizeFileName(fileName: string): string {
-        // Remove directory traversal attempts
-        let sanitized = fileName.replace(/[\/\\]/g, '_');
-
-        // Remove invalid characters for most file systems
-        sanitized = sanitized.replace(/[<>:"|?*]/g, '_');
-
-        // Ensure filename is not empty and has reasonable length
-        if (!sanitized || sanitized.length === 0) {
-            sanitized = `file_${Date.now()}`;
-        }
-
-        if (sanitized.length > 255) {
-            const extension = sanitized.substring(sanitized.lastIndexOf('.'));
-            const name = sanitized.substring(0, sanitized.lastIndexOf('.'));
-            sanitized = name.substring(0, 255 - extension.length) + extension;
-        }
-
-        return sanitized;
+        return fileName
+            .replace(/[^a-zA-Z0-9._-]/g, '_')
+            .replace(/_{2,}/g, '_')
+            .replace(/^_+|_+$/g, '')
+            .substring(0, 100);
     }
 
     /**
-     * Get media information from WhatsApp
+     * Get media info (URL) from WhatsApp
      */
     async getMediaInfo(mediaId: string): Promise<{
         success: boolean;
@@ -346,25 +377,32 @@ export class MediaUploadService {
         error?: string;
     }> {
         try {
-            const mediaUrlResponse = await this.whatsappClient.getRawApi().mediaId.mediaIdList({
+            const response = await this.whatsappClient.getRawApi().mediaId.mediaIdList({
                 version: this.version,
                 mediaId
             });
 
+            if (!response.data || !(response.data as any).url) {
+                return {
+                    success: false,
+                    error: 'Failed to get media URL from WhatsApp API'
+                };
+            }
+
             return {
                 success: true,
-                url: (mediaUrlResponse.data as any).url
+                url: (response.data as any).url
             };
         } catch (error) {
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'Failed to get media info'
+                error: error instanceof Error ? error.message : 'Unknown error occurred'
             };
         }
     }
 
     /**
-     * Process media message and store file using UploadThing
+     * Process media message and store file using Convex file storage
      */
     async processMediaMessage(
         mediaId: string,
@@ -376,84 +414,92 @@ export class MediaUploadService {
         storedUrl?: string;
         fileName?: string;
         fileSize?: number;
+        storageId?: string;
         error?: string;
     }> {
-        try {
-            console.log('Processing media message:', {
-                mediaId,
-                fileName,
-                mimeType,
-                sha256,
-                hasSha256: !!sha256
-            });
+        console.log('Processing media message', {
+            mediaId,
+            fileName,
+            mimeType,
+            hasSha256: !!sha256
+        });
 
-            // Generate a unique filename with media ID
-            const uniqueFileName = `${mediaId}_${fileName || 'media'}`;
+        // Download and store the media using Convex file storage
+        const result = await this.downloadAndStoreMedia(mediaId, fileName, mimeType, sha256);
 
-            // Download and store the media using UploadThing
-            const downloadResult = await this.downloadAndStoreMedia(
-                mediaId,
-                uniqueFileName,
-                mimeType,
-                sha256
-            );
+        console.log('Media processing completed', {
+            mediaId,
+            success: result.success,
+            error: result.error,
+            storedUrl: result.storedUrl
+        });
 
-            return downloadResult;
-        } catch (error) {
-            console.error('Error processing media message:', error);
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Media processing failed'
-            };
-        }
+        return result;
     }
 
     /**
-     * Delete file from UploadThing
+     * Delete file from Convex storage
      */
-    async deleteFile(fileKey: string): Promise<{
+    async deleteFile(storageId: string): Promise<{
         success: boolean;
         error?: string;
     }> {
         try {
-            await this.utapi.deleteFiles([fileKey]);
+            // Find the media file by storage ID
+            const mediaFiles = await this.convex.query(api.mediaFiles.listAllMediaFiles, { limit: 1000 });
+            const mediaFile = mediaFiles.find(file => file.storageId === storageId);
+
+            if (mediaFile) {
+                await this.convex.mutation(api.mediaFiles.deleteMediaFile, {
+                    mediaFileId: mediaFile._id
+                });
+            }
+
             return { success: true };
         } catch (error) {
-            console.error('Error deleting file from UploadThing:', error);
+            console.error('Error deleting file from Convex storage:', error);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'File deletion failed'
+                error: error instanceof Error ? error.message : 'Delete failed'
             };
         }
     }
 
     /**
-     * List uploaded files
+     * List files from Convex storage
      */
     async listFiles(): Promise<{
         success: boolean;
-        files?: readonly {
+        files?: Array<{
             readonly name: string;
             readonly key: string;
             readonly size: number;
             readonly customId: string | null;
             readonly id: string;
-            readonly status: "Deletion Pending" | "Failed" | "Uploaded" | "Uploading";
+            readonly status: "uploaded" | "pending" | "failed";
             readonly uploadedAt: number;
-        }[];
+        }>;
         error?: string;
     }> {
         try {
-            const files = await this.utapi.listFiles();
-            return {
-                success: true,
-                files: files.files
-            };
+            const mediaFiles = await this.convex.query(api.mediaFiles.listAllMediaFiles, { limit: 100 });
+
+            const files = mediaFiles.map(file => ({
+                name: file.fileName || 'unknown',
+                key: file.storageId || file._id,
+                size: file.fileSize || 0,
+                customId: file.whatsappMediaId || null,
+                id: file._id,
+                status: (file.uploadStatus as "uploaded" | "pending" | "failed") || "uploaded",
+                uploadedAt: file._creationTime || Date.now()
+            }));
+
+            return { success: true, files };
         } catch (error) {
-            console.error('Error listing files from UploadThing:', error);
+            console.error('Error listing files from Convex storage:', error);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : 'Failed to list files'
+                error: error instanceof Error ? error.message : 'List files failed'
             };
         }
     }
@@ -464,7 +510,9 @@ export class MediaUploadService {
     updateConfig(accessToken?: string): void {
         if (accessToken) {
             this.accessToken = accessToken;
-            this.whatsappClient.updateAccessToken(this.accessToken);
+            this.whatsappClient = new WhatsAppCloudApiClient({
+                accessToken: this.accessToken
+            });
         }
     }
 } 

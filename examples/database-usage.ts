@@ -4,7 +4,7 @@ import { DatabaseService } from '../lib/database-service';
  * Example usage of the DatabaseService
  * 
  * This file demonstrates how to use the database service to query
- * and manipulate WhatsApp conversation data.
+ * and manipulate WhatsApp conversation data using Convex.
  */
 
 async function exampleUsage() {
@@ -25,35 +25,35 @@ async function exampleUsage() {
 
         // 2. Get or create a conversation
         console.log('2. Creating/Getting a conversation...');
-        const conversation = await dbService.getOrCreateConversation(user.id);
+        const conversation = await dbService.getOrCreateConversation(user._id);
         console.log('Conversation:', conversation);
         console.log('');
 
         // 3. Get conversation history
         console.log('3. Getting conversation history...');
-        const messages = await dbService.getConversationHistory(conversation.id, 10);
+        const messages = await dbService.getConversationHistory(conversation._id, 10);
         console.log(`Found ${messages.length} messages in conversation`);
         messages.forEach((message, index) => {
             console.log(`Message ${index + 1}:`, {
-                id: message.id,
+                id: message._id,
                 direction: message.direction,
                 type: message.messageType,
                 content: message.content?.substring(0, 50) + (message.content && message.content.length > 50 ? '...' : ''),
-                timestamp: message.timestamp
+                timestamp: new Date(message.timestamp)
             });
         });
         console.log('');
 
         // 4. Get user conversations
         console.log('4. Getting user conversations...');
-        const userConversations = await dbService.getUserConversations(user.id);
+        const userConversations = await dbService.getUserConversations(user._id);
         console.log(`User has ${userConversations.length} conversations`);
         userConversations.forEach((conv, index) => {
             console.log(`Conversation ${index + 1}:`, {
-                id: conv.id,
+                id: conv._id,
                 status: conv.status,
-                lastMessageAt: conv.lastMessageAt,
-                createdAt: conv.createdAt
+                lastMessageAt: conv.lastMessageAt ? new Date(conv.lastMessageAt) : null,
+                createdAt: new Date(conv._creationTime)
             });
         });
         console.log('');
@@ -64,13 +64,13 @@ async function exampleUsage() {
             user.whatsappId,
             'text',
             'Hello! This is a test message from the bot.',
-            conversation.id
+            conversation._id
         );
         console.log('Stored message:', {
-            id: outgoingMessage.id,
+            id: outgoingMessage._id,
             content: outgoingMessage.content,
             direction: outgoingMessage.direction,
-            timestamp: outgoingMessage.timestamp
+            timestamp: new Date(outgoingMessage.timestamp)
         });
         console.log('');
 
@@ -83,10 +83,10 @@ async function exampleUsage() {
             'DatabaseUsageExample'
         );
         console.log('Log entry:', {
-            id: logEntry.id,
+            id: logEntry._id,
             level: logEntry.level,
             message: logEntry.message,
-            timestamp: logEntry.timestamp
+            timestamp: new Date(logEntry.timestamp)
         });
         console.log('');
 
@@ -106,25 +106,22 @@ async function advancedQueries() {
     try {
         // Example: Find all media messages in the last 24 hours
         console.log('Finding recent media messages...');
-        // Note: This would require custom SQL queries with Drizzle
+        // Note: This would require custom queries with Convex
         // For now, we'll show how to get recent messages and filter
 
         // You can extend the DatabaseService with custom methods like:
         /*
         async getRecentMediaMessages(hours: number = 24): Promise<Message[]> {
-            const cutoffTime = new Date(Date.now() - (hours * 60 * 60 * 1000));
-            return await database
-                .select()
-                .from(messages)
-                .where(and(
-                    gte(messages.timestamp, cutoffTime),
-                    inArray(messages.messageType, ['image', 'audio', 'video', 'document'])
-                ))
-                .orderBy(desc(messages.timestamp));
+            const cutoffTime = Date.now() - (hours * 60 * 60 * 1000);
+            return await fetchQuery(api.messages.getRecentMediaMessages, {
+                hours,
+                limit: 50
+            });
         }
         */
 
         console.log('💡 Tip: Extend the DatabaseService class with custom query methods for your specific needs!');
+        console.log('💡 Convex provides powerful querying capabilities through custom functions!');
 
     } catch (error) {
         console.error('❌ Error in advanced queries:', error);
@@ -135,10 +132,10 @@ async function advancedQueries() {
 if (require.main === module) {
     console.log('Running database usage examples...\n');
 
-    // Check if DATABASE_URL is set
-    if (!process.env.DATABASE_URL) {
-        console.error('❌ DATABASE_URL environment variable is not set');
-        console.log('Please set your DATABASE_URL and try again.');
+    // Check if NEXT_PUBLIC_CONVEX_URL is set
+    if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
+        console.error('❌ NEXT_PUBLIC_CONVEX_URL environment variable is not set');
+        console.log('Please set your NEXT_PUBLIC_CONVEX_URL and try again.');
         process.exit(1);
     }
 

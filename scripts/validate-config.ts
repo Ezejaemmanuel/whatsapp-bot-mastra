@@ -95,26 +95,21 @@ const configChecks: ConfigCheck[] = [
         },
         description: 'Webhook verification token (can be any secure string)'
     },
+
     {
-        name: 'UPLOADTHING_TOKEN',
-        value: process.env.UPLOADTHING_TOKEN,
-        required: true,
-        description: 'UploadThing API token for media file storage'
-    },
-    {
-        name: 'DATABASE_URL',
-        value: process.env.DATABASE_URL,
+        name: 'NEXT_PUBLIC_CONVEX_URL',
+        value: process.env.NEXT_PUBLIC_CONVEX_URL,
         required: true,
         validator: (value: string) => {
-            if (!value.startsWith('postgresql://') && !value.startsWith('postgres://')) {
+            if (!value.startsWith('https://') || !value.includes('.convex.cloud')) {
                 return {
                     valid: false,
-                    message: 'Database URL should start with postgresql:// or postgres://'
+                    message: 'Convex URL should be a valid Convex deployment URL (https://your-deployment.convex.cloud)'
                 };
             }
             return { valid: true };
         },
-        description: 'PostgreSQL database connection string'
+        description: 'Convex deployment URL for real-time database operations'
     },
     {
         name: 'WHATSAPP_WEBHOOK_SECRET',
@@ -195,7 +190,7 @@ function validateConfiguration(): void {
     }
 
     console.log('\n🚀 Next Steps:');
-    console.log('1. Run `pnpm db:setup` to initialize the database');
+    console.log('1. Run `npx convex dev` to start Convex development mode');
     console.log('2. Run `pnpm dev` to start the development server');
     console.log('3. Test your webhook by sending a message to your WhatsApp Business number');
 }

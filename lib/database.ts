@@ -1,11 +1,16 @@
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { fetchQuery, fetchMutation } from "convex/nextjs";
+import { api } from "../convex/_generated/api";
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-    throw new Error("DATABASE_URL is not defined");
-}
+// Export functions for database operations
+export const database = {
+    query: fetchQuery,
+    mutation: fetchMutation,
+    api,
+};
 
-// Disable prefetch as it is not supported for "Transaction" pool mode
-export const client = postgres(connectionString, { prepare: false });
-export const database = drizzle(client); 
+// Helper function to check if Convex URL is configured
+export function checkConvexConfig() {
+    if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
+        throw new Error("NEXT_PUBLIC_CONVEX_URL is not defined");
+    }
+} 

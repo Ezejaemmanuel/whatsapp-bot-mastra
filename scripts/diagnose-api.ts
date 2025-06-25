@@ -108,19 +108,19 @@ async function runDiagnostics(): Promise<void> {
         }
         console.log('');
 
-        // Test 4: UploadThing configuration
-        console.log('Test 4: UploadThing Configuration');
-        console.log('=================================');
+        // Test 4: Convex configuration
+        console.log('Test 4: Convex Configuration');
+        console.log('=============================');
 
-        const uploadThingToken = process.env.UPLOADTHING_TOKEN;
-        if (!uploadThingToken) {
-            console.log('❌ UPLOADTHING_TOKEN not configured');
+        const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+        if (!convexUrl) {
+            console.log('❌ NEXT_PUBLIC_CONVEX_URL not configured');
             console.log('   This will cause media processing to fail');
         } else {
-            console.log('✅ UPLOADTHING_TOKEN is configured');
-            // Basic token format check
-            if (uploadThingToken.length < 20) {
-                console.log('⚠️  UploadThing token seems short - verify it\'s correct');
+            console.log('✅ NEXT_PUBLIC_CONVEX_URL is configured');
+            // Basic URL format check
+            if (!convexUrl.startsWith('https://') || !convexUrl.includes('.convex.cloud')) {
+                console.log('⚠️  Convex URL format seems incorrect - should be https://your-deployment.convex.cloud');
             }
         }
         console.log('');
@@ -137,7 +137,7 @@ async function runDiagnostics(): Promise<void> {
         console.log('');
         console.log('For "Failed to process media file" errors:');
         console.log('- If Media API failed: Check your WHATSAPP_ACCESS_TOKEN permissions');
-        console.log('- If UploadThing not configured: Set UPLOADTHING_TOKEN in your .env.local');
+        console.log('- If Convex not configured: Set NEXT_PUBLIC_CONVEX_URL in your .env.local');
         console.log('- Check that your WhatsApp Business Account has media permissions');
         console.log('');
         console.log('🔧 Next Steps:');

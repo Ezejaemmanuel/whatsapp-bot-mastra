@@ -1,7 +1,7 @@
 import { MediaUploadService } from '@/lib/media-upload-service';
 
 /**
- * Example usage of MediaUploadService with UploadThing
+ * Example usage of MediaUploadService with Convex file storage
  */
 async function exampleMediaUpload() {
     // Initialize the service
@@ -28,8 +28,7 @@ async function exampleMediaUpload() {
         console.log('🔗 CDN URL:', result.storedUrl);
         console.log('📏 File size:', result.fileSize, 'bytes');
 
-        // The storedUrl is now a permanent UploadThing CDN URL like:
-        // https://uploadthing-prod.s3.us-west-2.amazonaws.com/abc123.jpg
+        // The storedUrl is now a permanent Convex file storage URL
 
     } else {
         console.error('❌ Media upload failed:', result.error);
@@ -93,7 +92,7 @@ async function handleWhatsAppMediaWebhook(webhookData: any) {
         );
 
         if (result.success) {
-            console.log('Image uploaded to UploadThing:', result.storedUrl);
+            console.log('Image uploaded to Convex storage:', result.storedUrl);
 
             // Store the CDN URL in your database
             // await saveMediaToDatabase({
@@ -126,7 +125,7 @@ async function handleWhatsAppMediaWebhook(webhookData: any) {
 }
 
 /**
- * Key Benefits of UploadThing Integration:
+ * Key Benefits of Convex File Storage Integration:
  * 
  * 1. 🌐 CDN URLs: Files are served from a global CDN for fast access
  * 2. 🔒 Security: Built-in file validation and security scanning
