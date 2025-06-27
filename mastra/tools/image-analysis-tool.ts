@@ -10,6 +10,54 @@ if (!GOOGLE_GENERATIVE_AI_API_KEY) {
     throw new Error('GOOGLE_GENERATIVE_AI_API_KEY environment variable is required for image analysis');
 }
 
+/**
+ * Enhanced logging utility for image analysis tool
+ */
+function logImageAnalysisEvent(
+    level: 'INFO' | 'ERROR' | 'WARN' | 'SUCCESS',
+    message: string,
+    data?: Record<string, any>
+): void {
+    const timestamp = new Date().toISOString();
+    const logEntry = {
+        timestamp,
+        level,
+        source: 'Image Analysis Tool',
+        message,
+        ...data
+    };
+
+    const levelEmoji = {
+        'INFO': '📋',
+        'ERROR': '❌',
+        'WARN': '⚠️',
+        'SUCCESS': '✅'
+    };
+
+    console.log(`[${timestamp}] ${levelEmoji[level] || '📋'} [${level}] Image Analysis Tool: ${message}`);
+
+    if (data && Object.keys(data).length > 0) {
+        console.log('📊 Analysis Data:', JSON.stringify(data, null, 2));
+    }
+}
+
+function logSuccess(message: string, data?: Record<string, any>): void {
+    logImageAnalysisEvent('SUCCESS', message, data);
+}
+
+function logError(message: string, error?: Error | string, data?: Record<string, any>): void {
+    const errorData = {
+        ...data,
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined
+    };
+    logImageAnalysisEvent('ERROR', message, errorData);
+}
+
+function logInfo(message: string, data?: Record<string, any>): void {
+    logImageAnalysisEvent('INFO', message, data);
+}
+
 // Helper function to determine MIME type from URL
 function getMimeTypeFromUrl(url: string): string {
     const extension = url.toLowerCase().split('.').pop()?.split('?')[0]; // Remove query params
@@ -87,12 +135,32 @@ export const imageAnalysisTool = createTool({
     outputSchema: receiptSchema,
     execute: async ({ context }) => {
         const { imageUrl, context: analysisContext } = context;
+        const startTime = Date.now();
+
+        logInfo('Starting image analysis', {
+            imageUrl: imageUrl ? 'provided' : 'missing',
+            imageUrlLength: imageUrl?.length || 0,
+            hasContext: !!analysisContext,
+            contextLength: analysisContext?.length || 0,
+            operation: 'analyze_image'
+        });
 
         if (!imageUrl) {
+            logError('Image URL is required for analysis', new Error('Missing image URL'), {
+                operation: 'analyze_image',
+                errorType: 'validation_error'
+            });
             throw new Error("Image URL is required for analysis");
         }
 
         const mimeType = getMimeTypeFromUrl(imageUrl);
+
+        logInfo('Image URL validation and preprocessing', {
+            imageUrl: imageUrl.substring(0, 100) + '...', // Log partial URL for security
+            mimeType,
+            urlLength: imageUrl.length,
+            operation: 'analyze_image'
+        });
 
         // Optional validation - uncomment if needed
         // console.log(`🔍 Validating image accessibility...`);
@@ -138,8 +206,12 @@ ${analysisContext ? `\n**Additional Context:** ${analysisContext}` : ''}
 Analyze the image now:`;
 
         try {
-            console.log(`🖼️ Analyzing image with Gemini Vision: ${imageUrl}`);
-            console.log(`📋 MIME type detected: ${mimeType}`);
+            logInfo('Initiating Gemini Vision analysis', {
+                mimeType,
+                promptLength: analysisPrompt.length,
+                hasAdditionalContext: !!analysisContext,
+                operation: 'analyze_image'
+            });
 
             // Use generateObject for structured outputs with AI SDK
             const result = await generateObject({
@@ -162,32 +234,83 @@ Analyze the image now:`;
                 schema: receiptSchema,
             });
 
-            console.log(`🤖 AI Image Analysis completed`);
-            console.log(`📊 Analysis result: ${result.object.isReceipt ? 'Receipt detected' : 'Not a receipt'}`);
-            console.log(`🎯 Confidence: ${result.object.analysisQuality.confidence}`);
-
+            const executionTime = Date.now() - startTime;
             const analysisResult = result.object;
 
+            logSuccess('AI image analysis completed successfully', {
+                isReceipt: analysisResult.isReceipt,
+                imageQuality: analysisResult.analysisQuality?.imageQuality,
+                confidence: analysisResult.analysisQuality?.confidence,
+                hasReceiptDetails: !!analysisResult.receiptDetails,
+                hasImageAnalysis: !!analysisResult.imageAnalysis,
+                hasIssues: !!analysisResult.analysisQuality?.issues && analysisResult.analysisQuality.issues.length > 0,
+                issuesCount: analysisResult.analysisQuality?.issues?.length || 0,
+                executionTimeMs: executionTime,
+                operation: 'analyze_image'
+            });
+
             if (!analysisResult) {
+                logError('AI failed to generate structured analysis', new Error('Empty analysis result'), {
+                    executionTimeMs: executionTime,
+                    operation: 'analyze_image',
+                    errorType: 'ai_processing_error'
+                });
                 throw new Error("AI failed to generate structured analysis. The vision model may not be processing the image correctly.");
             }
 
             // Validate that we got meaningful analysis
             if (!analysisResult.analysisQuality) {
+                logError('AI did not provide quality assessment', new Error('Missing quality assessment'), {
+                    hasReceiptDetails: !!analysisResult.receiptDetails,
+                    hasImageAnalysis: !!analysisResult.imageAnalysis,
+                    executionTimeMs: executionTime,
+                    operation: 'analyze_image',
+                    errorType: 'incomplete_analysis'
+                });
                 throw new Error("AI did not provide quality assessment. This suggests the analysis may be incomplete.");
+            }
+
+            // Log detailed analysis results for debugging
+            if (analysisResult.isReceipt) {
+                logInfo('Receipt analysis details', {
+                    transactionAmount: analysisResult.receiptDetails?.transactionAmount,
+                    currency: analysisResult.receiptDetails?.currency,
+                    hasTransactionId: !!analysisResult.receiptDetails?.transactionId,
+                    hasBankName: !!analysisResult.receiptDetails?.bankName,
+                    hasDate: !!analysisResult.receiptDetails?.date,
+                    paymentMethod: analysisResult.receiptDetails?.paymentMethod,
+                    transactionStatus: analysisResult.receiptDetails?.transactionStatus,
+                    operation: 'analyze_image'
+                });
+            } else {
+                logInfo('General image analysis details', {
+                    description: analysisResult.imageAnalysis?.description?.substring(0, 100),
+                    isRelevantToExchange: analysisResult.imageAnalysis?.isRelevantToExchange,
+                    hasSuggestedAction: !!analysisResult.imageAnalysis?.suggestedAction,
+                    operation: 'analyze_image'
+                });
             }
 
             return analysisResult;
 
         } catch (error) {
+            const executionTime = Date.now() - startTime;
             const errorMessage = error instanceof Error ? error.message : String(error);
 
-            console.error("❌ Image analysis error:", error);
-            console.error("🔧 Error details:", {
-                imageUrl,
+            logError('Image analysis failed', error as Error, {
+                imageUrl: imageUrl.substring(0, 100) + '...', // Log partial URL for security
                 mimeType,
                 errorType: error instanceof Error ? error.constructor.name : typeof error,
-                errorMessage
+                errorMessage,
+                executionTimeMs: executionTime,
+                operation: 'analyze_image',
+                errorDetails: {
+                    name: error instanceof Error ? error.name : 'Unknown',
+                    message: errorMessage,
+                    isGeminiContentError: errorMessage.includes('contents.parts must not be empty'),
+                    isNetworkError: errorMessage.includes('network') || errorMessage.includes('fetch'),
+                    isAuthError: errorMessage.includes('API key') || errorMessage.includes('auth')
+                }
             });
 
             // Return a structured error response instead of throwing

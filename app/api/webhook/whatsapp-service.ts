@@ -151,16 +151,7 @@ export class WhatsAppWebhookService {
                 operation: 'processIncomingMessage'
             });
 
-            // Log error to database
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            await this.databaseService.logWebhookEvent(
-                'ERROR',
-                'Error processing incoming message',
-                { messageId: message.id },
-                'WhatsAppWebhookService',
-                undefined,
-                errorMessage
-            );
+
         }
     }
 
@@ -333,7 +324,7 @@ export class WhatsAppWebhookService {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             const errorDetails = error instanceof Error ? error.stack : undefined;
 
-            logWarning('Failed to mark message as read', {
+            logError('Failed to mark message as read', error as Error, {
                 messageId,
                 operation: 'markMessageAsRead',
                 error: errorMessage,
@@ -344,15 +335,7 @@ export class WhatsAppWebhookService {
                 clientConfigured: !!this.whatsappClient
             });
 
-            // Log to database for tracking
-            await this.databaseService.logWebhookEvent(
-                'WARN',
-                'Failed to mark message as read',
-                { messageId, error: errorMessage },
-                'WhatsAppWebhookService',
-                undefined,
-                errorMessage
-            );
+
 
             // Don't throw error for read receipts as it's not critical
         }
@@ -371,85 +354,42 @@ export class WhatsAppWebhookService {
                 operation: 'handleTextMessage'
             });
 
-            // ✅ VALIDATE MESSAGE CONTENT - Prevent empty content from reaching Gemini API
-            const messageText = messageInfo.text?.trim();
-            if (!messageText) {
-                logWarning('Empty message text received, sending default response', {
-                    messageId: messageInfo.id,
-                    from: messageInfo.from,
-                    operation: 'handleTextMessage'
-                });
-
-                const fallbackResponse = 'Hello! How can I help you with currency exchange today? Please send me a message to get started.';
-
-                // Send fallback response to user
-                await this.sendTextReply(messageInfo.from, fallbackResponse, messageInfo.id);
-
-                // Store the fallback response in database
-                await this.storeValidatedOutgoingMessage(
-                    messageInfo.from,
-                    'text',
-                    fallbackResponse,
-                    conversationId,
-                    messageInfo.id
-                );
-
-                logInfo('Sent fallback response for empty message', {
-                    messageId: messageInfo.id,
-                    from: messageInfo.from,
-                    operation: 'handleTextMessage'
-                });
-                return;
-            }
+            // Get message text for processing
+            const messageText = messageInfo.text?.trim() || '';
 
             let response: string;
 
             try {
-                // ✅ NEW: Create filtered message array to prevent empty content from reaching Gemini
-                const validMessages = [
+                // Use the enhanced WhatsApp Exchange Agent to generate a response
+                const agentResponse = await whatsappAgent.generate([
                     {
                         role: 'user' as const,
-                        content: messageText,
+                        content: messageText || 'Hello',
                     }
-                ].filter(msg => msg.content && msg.content.trim().length > 0);
-
-                // ✅ Double-check that we have valid messages
-                if (validMessages.length === 0) {
-                    logWarning('All messages filtered out as empty, using fallback', {
-                        messageId: messageInfo.id,
-                        from: messageInfo.from,
-                        originalText: messageInfo.text,
-                        operation: 'handleTextMessage'
-                    });
-
-                    response = 'I received your message but couldn\'t process the content. Please try sending your message again.';
-                } else {
-                    // Use the enhanced WhatsApp Exchange Agent to generate a response
-                    const agentResponse = await whatsappAgent.generate(validMessages, {
-                        memory: {
-                            thread: `whatsapp-${messageInfo.from}`, // Use phone number as thread ID for conversation continuity
-                            resource: messageInfo.from, // Use phone number as resource ID
-                        }
-                    });
-
-                    response = agentResponse.text || 'I apologize, but I couldn\'t process your message at the moment. Please try again.';
-
-                    // Check if agent wants to send interactive messages
-                    if (agentResponse.toolCalls && agentResponse.toolCalls.length > 0) {
-                        await this.handleAgentToolCalls(agentResponse.toolCalls, messageInfo.from, messageInfo.id);
+                ], {
+                    memory: {
+                        thread: `whatsapp-${messageInfo.from}`, // Use phone number as thread ID for conversation continuity
+                        resource: messageInfo.from, // Use phone number as resource ID
                     }
+                });
 
-                    logInfo('Generated exchange agent response', {
-                        messageId: messageInfo.id,
-                        from: messageInfo.from,
-                        responseLength: response.length,
-                        threadId: `whatsapp-${messageInfo.from}`,
-                        hasToolCalls: agentResponse.toolCalls && agentResponse.toolCalls.length > 0,
-                        toolCallsCount: agentResponse.toolCalls?.length || 0,
-                        validMessagesCount: validMessages.length,
-                        operation: 'handleTextMessage'
-                    });
+                response = agentResponse.text || 'I apologize, but I couldn\'t process your message at the moment. Please try again.';
+
+                // Check if agent wants to send interactive messages
+                if (agentResponse.toolCalls && agentResponse.toolCalls.length > 0) {
+                    await this.handleAgentToolCalls(agentResponse.toolCalls, messageInfo.from, messageInfo.id);
                 }
+
+                logInfo('Generated exchange agent response', {
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    responseLength: response.length,
+                    threadId: `whatsapp-${messageInfo.from}`,
+                    hasToolCalls: agentResponse.toolCalls && agentResponse.toolCalls.length > 0,
+                    toolCallsCount: agentResponse.toolCalls?.length || 0,
+                    messageTextLength: messageText.length,
+                    operation: 'handleTextMessage'
+                });
 
             } catch (agentError) {
                 const agentErrorMessage = agentError instanceof Error ? agentError.message : 'Unknown agent error';
@@ -457,7 +397,7 @@ export class WhatsAppWebhookService {
                 logError('Exchange agent failed to process text message', agentError as Error, {
                     messageId: messageInfo.id,
                     from: messageInfo.from,
-                    text: messageText, // ✅ Use validated text for logging
+                    text: messageText,
                     threadId: `whatsapp-${messageInfo.from}`,
                     agentErrorMessage,
                     operation: 'handleTextMessage',
@@ -468,25 +408,6 @@ export class WhatsAppWebhookService {
                         isGeminiContentError: agentErrorMessage.includes('contents.parts must not be empty')
                     }
                 });
-
-                // Log to database for tracking agent failures
-                await this.databaseService.logWebhookEvent(
-                    'ERROR',
-                    'Exchange agent failed to process text message',
-                    {
-                        messageId: messageInfo.id,
-                        from: messageInfo.from,
-                        text: messageText, // ✅ Use validated text
-                        agentErrorMessage,
-                        error: agentError instanceof Error ? agentError.message : 'Unknown error',
-                        stack: agentError instanceof Error ? agentError.stack : undefined,
-                        threadId: `whatsapp-${messageInfo.from}`,
-                        isGeminiContentError: agentErrorMessage.includes('contents.parts must not be empty')
-                    },
-                    'WhatsAppWebhookService',
-                    undefined,
-                    agentErrorMessage
-                );
 
                 // Fallback response when agent fails
                 response = 'I apologize, but I encountered an issue processing your message. Please try again in a moment, or contact support if the problem persists.';
@@ -675,21 +596,7 @@ Please extract relevant payment information including transaction amount, curren
                         fallbackUsed: true
                     });
 
-                    // Log to database for tracking agent failures
-                    await this.databaseService.logWebhookEvent(
-                        'ERROR',
-                        'Exchange agent failed to process image message',
-                        {
-                            messageId: messageInfo.id,
-                            from: messageInfo.from,
-                            hasImageUrl: !!imageUrl,
-                            agentError: agentErrorMessage,
-                            threadId: `whatsapp-${messageInfo.from}`
-                        },
-                        'WhatsAppWebhookService',
-                        undefined,
-                        agentErrorMessage
-                    );
+
 
                     // Fallback response when agent fails for images
                     response = imageUrl ?
@@ -1031,20 +938,7 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                     operation: 'processAndStoreMedia'
                 });
 
-                // Log to database for tracking
-                await this.databaseService.logWebhookEvent(
-                    'ERROR',
-                    'Failed to process media file',
-                    {
-                        messageId,
-                        mediaId: mediaInfo.id,
-                        error: errorMessage,
-                        uploadResult: uploadResult
-                    },
-                    'WhatsAppWebhookService',
-                    undefined,
-                    errorMessage
-                );
+
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -1058,19 +952,7 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                 errorStack
             });
 
-            // Log to database for tracking
-            await this.databaseService.logWebhookEvent(
-                'ERROR',
-                'Error processing media file',
-                {
-                    messageId,
-                    mediaType: message.type,
-                    error: errorMessage
-                },
-                'WhatsAppWebhookService',
-                undefined,
-                errorMessage
-            );
+
         }
     }
 
@@ -1186,7 +1068,7 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
     }
 
     /**
-     * Store outgoing message with validation
+     * Store outgoing message
      */
     private async storeValidatedOutgoingMessage(
         to: string,
@@ -1196,25 +1078,11 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
         whatsappMessageId?: string,
         replyToMessageId?: string
     ): Promise<void> {
-        // ✅ Validate content before storing - prevent empty messages in database
-        const validatedContent = content?.trim();
-
-        if (!validatedContent || validatedContent.length === 0) {
-            logWarning('Attempted to store empty outgoing message - skipping storage', {
-                to,
-                messageType,
-                originalContent: content,
-                conversationId,
-                operation: 'storeValidatedOutgoingMessage'
-            });
-            return;
-        }
-
         try {
             await this.databaseService.storeOutgoingMessage(
                 to,
                 messageType,
-                validatedContent,
+                content,
                 conversationId,
                 whatsappMessageId,
                 replyToMessageId
@@ -1223,7 +1091,7 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
             logInfo('Outgoing message stored successfully', {
                 to,
                 messageType,
-                contentLength: validatedContent.length,
+                contentLength: content.length,
                 conversationId,
                 operation: 'storeValidatedOutgoingMessage'
             });
@@ -1231,7 +1099,7 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
             logError('Failed to store outgoing message', error as Error, {
                 to,
                 messageType,
-                contentLength: validatedContent.length,
+                contentLength: content.length,
                 conversationId,
                 operation: 'storeValidatedOutgoingMessage'
             });
