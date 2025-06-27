@@ -53,9 +53,10 @@ const upstashVector = new UpstashVector({
 const memory = new Memory({
     storage: upstashStorage, // Redis for general storage
     vector: upstashVector, // Vector database for embeddings
-    embedder: google.textEmbeddingModel('gemini-embedding-004', {
-        // outputDimensionality: 256
-    }), // Google's latest embedding model - serverless-friendly!
+    embedder: google.textEmbeddingModel('gemini-embedding-exp', {
+        outputDimensionality: 768, // Optional: adjust dimensions
+        // taskType: 'SEMANTIC_SIMILARITY', // Optional: specify task type
+    }),
     options: {
         lastMessages: 15, // Keep more messages for complex exchange conversations
         semanticRecall: {
