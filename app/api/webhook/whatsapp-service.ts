@@ -389,6 +389,11 @@ export class WhatsAppWebhookService {
 
                 response = agentResponse.text || 'I apologize, but I couldn\'t process your message at the moment. Please try again.';
 
+                // Check if agent wants to send interactive messages
+                if (agentResponse.toolCalls && agentResponse.toolCalls.length > 0) {
+                    await this.handleAgentToolCalls(agentResponse.toolCalls, messageInfo.from, messageInfo.id);
+                }
+
                 logInfo('Generated exchange agent response', {
                     messageId: messageInfo.id,
                     from: messageInfo.from,
@@ -587,6 +592,11 @@ Please extract relevant payment information including transaction amount, curren
 
                     response = agentResponse.text || 'Got your receipt! 📸 Let me analyze the details...';
 
+                    // Check if agent wants to send interactive messages
+                    if (agentResponse.toolCalls && agentResponse.toolCalls.length > 0) {
+                        await this.handleAgentToolCalls(agentResponse.toolCalls, messageInfo.from, messageInfo.id);
+                    }
+
                     logInfo('Generated exchange agent response for image', {
                         messageId: messageInfo.id,
                         from: messageInfo.from,
@@ -725,138 +735,12 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
     }
 
     /**
-     * Handle interactive messages (button/list replies) with exchange bot logic
-     */
+ * Handle interactive messages (button/list replies) - treat them as regular text messages
+ */
     private async handleInteractiveMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: Id<"conversations">): Promise<void> {
-        try {
-            logInfo('Interactive message received for processing', {
-                messageId: messageInfo.id,
-                from: messageInfo.from,
-                text: messageInfo.text,
-                messageType: messageInfo.type,
-                operation: 'handleInteractiveMessage'
-            });
-
-            let response: string;
-
-            try {
-                // Process interactive message with exchange agent
-                const agentResponse = await whatsappAgent.generate([
-                    {
-                        role: 'user',
-                        content: `User selected: ${messageInfo.text || 'interactive option'}`,
-                    }
-                ], {
-                    memory: {
-                        thread: `whatsapp-${messageInfo.from}`,
-                        resource: messageInfo.from,
-                    }
-                });
-
-                response = agentResponse.text || `Thanks for your selection! Let me help you with that.`;
-
-                logInfo('Generated exchange agent response for interactive message', {
-                    messageId: messageInfo.id,
-                    from: messageInfo.from,
-                    selection: messageInfo.text,
-                    responseLength: response.length,
-                    threadId: `whatsapp-${messageInfo.from}`,
-                    hasToolCalls: agentResponse.toolCalls && agentResponse.toolCalls.length > 0,
-                    toolCallsCount: agentResponse.toolCalls?.length || 0,
-                    operation: 'handleInteractiveMessage'
-                });
-
-            } catch (agentError) {
-                const agentErrorMessage = agentError instanceof Error ? agentError.message : 'Unknown agent error';
-
-                logError('Exchange agent failed to process interactive message', agentError as Error, {
-                    messageId: messageInfo.id,
-                    from: messageInfo.from,
-                    selection: messageInfo.text,
-                    threadId: `whatsapp-${messageInfo.from}`,
-                    agentErrorMessage,
-                    operation: 'handleInteractiveMessage',
-                    fallbackUsed: true
-                });
-
-                // Log to database for tracking agent failures
-                await this.databaseService.logWebhookEvent(
-                    'ERROR',
-                    'Exchange agent failed to process interactive message',
-                    {
-                        messageId: messageInfo.id,
-                        from: messageInfo.from,
-                        selection: messageInfo.text,
-                        agentError: agentErrorMessage,
-                        threadId: `whatsapp-${messageInfo.from}`
-                    },
-                    'WhatsAppWebhookService',
-                    undefined,
-                    agentErrorMessage
-                );
-
-                // Fallback response when agent fails for interactive messages
-                response = 'I received your selection but had trouble processing it. Please try again or send me a text message.';
-            }
-
-            await this.sendTextReply(
-                messageInfo.from,
-                response,
-                messageInfo.id
-            );
-
-            // Store outgoing message in database
-            await this.databaseService.storeOutgoingMessage(
-                messageInfo.from,
-                'text',
-                response,
-                conversationId,
-                undefined,
-                messageInfo.id
-            );
-
-            logSuccess('Interactive message processed successfully', {
-                messageId: messageInfo.id,
-                from: messageInfo.from,
-                selection: messageInfo.text,
-                operation: 'handleInteractiveMessage'
-            });
-
-        } catch (error) {
-            logError('Error in interactive message handling (non-agent error)', error as Error, {
-                messageId: messageInfo.id,
-                from: messageInfo.from,
-                text: messageInfo.text,
-                operation: 'handleInteractiveMessage',
-                errorType: 'non_agent_error'
-            });
-
-            // This catch block handles non-agent errors (database, network, etc.)
-            const systemErrorResponse = 'I received your selection but encountered a system issue. Please try again in a moment.';
-
-            try {
-                await this.sendTextReply(
-                    messageInfo.from,
-                    systemErrorResponse,
-                    messageInfo.id
-                );
-
-                await this.databaseService.storeOutgoingMessage(
-                    messageInfo.from,
-                    'text',
-                    systemErrorResponse,
-                    conversationId,
-                    undefined,
-                    messageInfo.id
-                );
-            } catch (fallbackError) {
-                logError('Failed to send interactive system error response', fallbackError as Error, {
-                    messageId: messageInfo.id,
-                    from: messageInfo.from,
-                    operation: 'handleInteractiveMessage'
-                });
-            }
-        }
+        // Interactive messages are just user selections - treat them as text messages
+        // The agent will understand the context naturally
+        await this.handleTextMessage(messageInfo, conversationId);
     }
 
     /**
@@ -1153,6 +1037,103 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
             case 'document': return message.document;
             case 'sticker': return message.sticker;
             default: return null;
+        }
+    }
+
+    /**
+     * Handle agent tool calls for interactive messages
+     */
+    private async handleAgentToolCalls(toolCalls: any[], to: string, replyToMessageId?: string): Promise<void> {
+        try {
+            for (const toolCall of toolCalls) {
+                const { name, result } = toolCall;
+
+                // Handle interactive button messages
+                if (name === 'send_interactive_buttons' && result?.success && result?.action === 'SEND_INTERACTIVE_BUTTONS') {
+                    const { data } = result;
+                    await this.sendButtonMessage(
+                        to,
+                        data.bodyText,
+                        data.buttons,
+                        data.headerText,
+                        data.footerText
+                    );
+
+                    logInfo('Sent interactive button message', {
+                        to,
+                        buttonCount: data.buttons?.length || 0,
+                        operation: 'handleAgentToolCalls'
+                    });
+                }
+
+                // Handle interactive list messages
+                else if (name === 'send_interactive_list' && result?.success && result?.action === 'SEND_INTERACTIVE_LIST') {
+                    const { data } = result;
+                    await this.sendListMessage(
+                        to,
+                        data.bodyText,
+                        data.buttonText,
+                        data.sections,
+                        data.headerText,
+                        data.footerText
+                    );
+
+                    logInfo('Sent interactive list message', {
+                        to,
+                        sectionsCount: data.sections?.length || 0,
+                        operation: 'handleAgentToolCalls'
+                    });
+                }
+            }
+        } catch (error) {
+            logError('Error handling agent tool calls', error as Error, {
+                to,
+                toolCallsCount: toolCalls.length,
+                operation: 'handleAgentToolCalls'
+            });
+        }
+    }
+
+    /**
+     * Send an interactive list message
+     */
+    async sendListMessage(
+        to: string,
+        bodyText: string,
+        buttonText: string,
+        sections: Array<{
+            title: string;
+            rows: Array<{ id: string; title: string; description?: string }>;
+        }>,
+        headerText?: string,
+        footerText?: string
+    ): Promise<void> {
+        try {
+            await this.whatsappClient.messages.sendInteractiveList({
+                to,
+                bodyText,
+                buttonText,
+                sections,
+                headerText,
+                footerText
+            });
+
+            logSuccess('List message sent successfully', {
+                to,
+                bodyText: bodyText.substring(0, 50),
+                buttonText,
+                sectionsCount: sections.length,
+                hasHeader: !!headerText,
+                hasFooter: !!footerText,
+                operation: 'sendListMessage'
+            });
+        } catch (error) {
+            logError('Failed to send list message', error as Error, {
+                to,
+                sectionsCount: sections.length,
+                operation: 'sendListMessage'
+            });
+            throw error;
         }
     }
 } 

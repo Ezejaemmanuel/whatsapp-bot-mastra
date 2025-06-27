@@ -3,10 +3,10 @@ import { Agent } from '@mastra/core/agent';
 import { Memory } from '@mastra/memory';
 import { UpstashStore, UpstashVector } from '@mastra/upstash';
 import { google } from '@ai-sdk/google';
-import { fastembed } from '@mastra/fastembed';
 import { WHATSAPP_AGENT_NAME, WHATSAPP_AGENT_INSTRUCTIONS, GEMINI_MODEL } from './agent-instructions';
-import {  getCurrentRatesTool, validateRateTool, getConversationStateTool, updateConversationStateTool, createTransactionTool, updateTransactionStatusTool, checkDuplicateTool, getUserTransactionsTool, generateDuplicateHashTool, calculateExchangeAmountTool, suggestCounterOfferTool } from '../tools/exchange-tools';
+import { getCurrentRatesTool, validateRateTool, getConversationStateTool, updateConversationStateTool, createTransactionTool, updateTransactionStatusTool, checkDuplicateTool, getUserTransactionsTool, generateDuplicateHashTool, calculateExchangeAmountTool, suggestCounterOfferTool } from '../tools/exchange-tools';
 import { imageAnalysisTool } from '../tools/image-analysis-tool';
+import { sendInteractiveButtonsTool, sendInteractiveListTool } from '../tools/whatsapp-interactive-tool';
 
 const GOOGLE_GENERATIVE_AI_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 console.log("GOOGLE_GENERATIVE_AI_API_KEY", GOOGLE_GENERATIVE_AI_API_KEY);
@@ -53,7 +53,9 @@ const upstashVector = new UpstashVector({
 const memory = new Memory({
     storage: upstashStorage, // Redis for general storage
     vector: upstashVector, // Vector database for embeddings
-    embedder: fastembed, // Local FastEmbed - free, fast, and private!
+    embedder: google.textEmbeddingModel('text-embedding-004', {
+        outputDimensionality: 256
+    }), // Google's latest embedding model - serverless-friendly!
     options: {
         lastMessages: 15, // Keep more messages for complex exchange conversations
         semanticRecall: {
@@ -122,5 +124,7 @@ export const whatsappAgent = new Agent({
         calculateExchangeAmountTool,
         suggestCounterOfferTool,
         imageAnalysisTool,
+        sendInteractiveButtonsTool,
+        sendInteractiveListTool,
     },
 }); 

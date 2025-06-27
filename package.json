@@ -24,7 +24,6 @@
     "@convex-dev/react-query": "0.0.0-alpha.11",
     "@google/genai": "^1.6.0",
     "@mastra/core": "^0.10.6",
-    "@mastra/fastembed": "^0.10.0",
     "@mastra/libsql": "^0.10.3",
     "@mastra/loggers": "^0.10.2",
     "@mastra/memory": "^0.10.4",
