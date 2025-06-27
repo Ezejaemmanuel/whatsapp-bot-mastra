@@ -386,12 +386,11 @@ export class WhatsAppWebhookService {
                 await this.sendTextReply(messageInfo.from, fallbackResponse, messageInfo.id);
 
                 // Store the fallback response in database
-                await this.databaseService.storeOutgoingMessage(
+                await this.storeValidatedOutgoingMessage(
                     messageInfo.from,
                     'text',
                     fallbackResponse,
                     conversationId,
-                    undefined,
                     messageInfo.id
                 );
 
@@ -406,35 +405,51 @@ export class WhatsAppWebhookService {
             let response: string;
 
             try {
-                // Use the enhanced WhatsApp Exchange Agent to generate a response
-                const agentResponse = await whatsappAgent.generate([
+                // ✅ NEW: Create filtered message array to prevent empty content from reaching Gemini
+                const validMessages = [
                     {
-                        role: 'user',
-                        content: messageText, // ✅ Use validated text instead of potentially empty messageInfo.text
+                        role: 'user' as const,
+                        content: messageText,
                     }
-                ], {
-                    memory: {
-                        thread: `whatsapp-${messageInfo.from}`, // Use phone number as thread ID for conversation continuity
-                        resource: messageInfo.from, // Use phone number as resource ID
+                ].filter(msg => msg.content && msg.content.trim().length > 0);
+
+                // ✅ Double-check that we have valid messages
+                if (validMessages.length === 0) {
+                    logWarning('All messages filtered out as empty, using fallback', {
+                        messageId: messageInfo.id,
+                        from: messageInfo.from,
+                        originalText: messageInfo.text,
+                        operation: 'handleTextMessage'
+                    });
+
+                    response = 'I received your message but couldn\'t process the content. Please try sending your message again.';
+                } else {
+                    // Use the enhanced WhatsApp Exchange Agent to generate a response
+                    const agentResponse = await whatsappAgent.generate(validMessages, {
+                        memory: {
+                            thread: `whatsapp-${messageInfo.from}`, // Use phone number as thread ID for conversation continuity
+                            resource: messageInfo.from, // Use phone number as resource ID
+                        }
+                    });
+
+                    response = agentResponse.text || 'I apologize, but I couldn\'t process your message at the moment. Please try again.';
+
+                    // Check if agent wants to send interactive messages
+                    if (agentResponse.toolCalls && agentResponse.toolCalls.length > 0) {
+                        await this.handleAgentToolCalls(agentResponse.toolCalls, messageInfo.from, messageInfo.id);
                     }
-                });
 
-                response = agentResponse.text || 'I apologize, but I couldn\'t process your message at the moment. Please try again.';
-
-                // Check if agent wants to send interactive messages
-                if (agentResponse.toolCalls && agentResponse.toolCalls.length > 0) {
-                    await this.handleAgentToolCalls(agentResponse.toolCalls, messageInfo.from, messageInfo.id);
+                    logInfo('Generated exchange agent response', {
+                        messageId: messageInfo.id,
+                        from: messageInfo.from,
+                        responseLength: response.length,
+                        threadId: `whatsapp-${messageInfo.from}`,
+                        hasToolCalls: agentResponse.toolCalls && agentResponse.toolCalls.length > 0,
+                        toolCallsCount: agentResponse.toolCalls?.length || 0,
+                        validMessagesCount: validMessages.length,
+                        operation: 'handleTextMessage'
+                    });
                 }
-
-                logInfo('Generated exchange agent response', {
-                    messageId: messageInfo.id,
-                    from: messageInfo.from,
-                    responseLength: response.length,
-                    threadId: `whatsapp-${messageInfo.from}`,
-                    hasToolCalls: agentResponse.toolCalls && agentResponse.toolCalls.length > 0,
-                    toolCallsCount: agentResponse.toolCalls?.length || 0,
-                    operation: 'handleTextMessage'
-                });
 
             } catch (agentError) {
                 const agentErrorMessage = agentError instanceof Error ? agentError.message : 'Unknown agent error';
@@ -446,7 +461,12 @@ export class WhatsAppWebhookService {
                     threadId: `whatsapp-${messageInfo.from}`,
                     agentErrorMessage,
                     operation: 'handleTextMessage',
-                    fallbackUsed: true
+                    fallbackUsed: true,
+                    errorDetails: {
+                        name: agentError instanceof Error ? agentError.name : 'Unknown',
+                        message: agentErrorMessage,
+                        isGeminiContentError: agentErrorMessage.includes('contents.parts must not be empty')
+                    }
                 });
 
                 // Log to database for tracking agent failures
@@ -460,7 +480,8 @@ export class WhatsAppWebhookService {
                         agentErrorMessage,
                         error: agentError instanceof Error ? agentError.message : 'Unknown error',
                         stack: agentError instanceof Error ? agentError.stack : undefined,
-                        threadId: `whatsapp-${messageInfo.from}`
+                        threadId: `whatsapp-${messageInfo.from}`,
+                        isGeminiContentError: agentErrorMessage.includes('contents.parts must not be empty')
                     },
                     'WhatsAppWebhookService',
                     undefined,
@@ -479,12 +500,11 @@ export class WhatsAppWebhookService {
             );
 
             // Store outgoing message in database
-            await this.databaseService.storeOutgoingMessage(
+            await this.storeValidatedOutgoingMessage(
                 messageInfo.from,
                 'text',
                 response,
                 conversationId,
-                undefined,
                 messageInfo.id
             );
 
@@ -516,12 +536,11 @@ export class WhatsAppWebhookService {
                     messageInfo.id
                 );
 
-                await this.databaseService.storeOutgoingMessage(
+                await this.storeValidatedOutgoingMessage(
                     messageInfo.from,
                     'text',
                     systemErrorResponse,
                     conversationId,
-                    undefined,
                     messageInfo.id
                 );
             } catch (fallbackError) {
@@ -685,12 +704,11 @@ Please extract relevant payment information including transaction amount, curren
                 );
 
                 // Store outgoing message in database
-                await this.databaseService.storeOutgoingMessage(
+                await this.storeValidatedOutgoingMessage(
                     messageInfo.from,
                     'text',
                     response,
                     conversationId,
-                    undefined,
                     messageInfo.id
                 );
 
@@ -714,12 +732,11 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                 );
 
                 // Store outgoing message in database
-                await this.databaseService.storeOutgoingMessage(
+                await this.storeValidatedOutgoingMessage(
                     messageInfo.from,
                     'text',
                     response,
                     conversationId,
-                    undefined,
                     messageInfo.id
                 );
 
@@ -750,12 +767,11 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                     messageInfo.id
                 );
 
-                await this.databaseService.storeOutgoingMessage(
+                await this.storeValidatedOutgoingMessage(
                     messageInfo.from,
                     'text',
                     systemErrorResponse,
                     conversationId,
-                    undefined,
                     messageInfo.id
                 );
             } catch (fallbackError) {
@@ -790,12 +806,11 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
         );
 
         // Store outgoing message in database
-        await this.databaseService.storeOutgoingMessage(
+        await this.storeValidatedOutgoingMessage(
             messageInfo.from,
             'text',
             response,
             conversationId,
-            undefined,
             messageInfo.id
         );
     }
@@ -813,12 +828,11 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
         );
 
         // Store outgoing message in database
-        await this.databaseService.storeOutgoingMessage(
+        await this.storeValidatedOutgoingMessage(
             messageInfo.from,
             'text',
             response,
             conversationId,
-            undefined,
             messageInfo.id
         );
     }
@@ -1166,6 +1180,60 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                 to,
                 sectionsCount: sections.length,
                 operation: 'sendListMessage'
+            });
+            throw error;
+        }
+    }
+
+    /**
+     * Store outgoing message with validation
+     */
+    private async storeValidatedOutgoingMessage(
+        to: string,
+        messageType: string,
+        content: string,
+        conversationId: Id<"conversations">,
+        whatsappMessageId?: string,
+        replyToMessageId?: string
+    ): Promise<void> {
+        // ✅ Validate content before storing - prevent empty messages in database
+        const validatedContent = content?.trim();
+
+        if (!validatedContent || validatedContent.length === 0) {
+            logWarning('Attempted to store empty outgoing message - skipping storage', {
+                to,
+                messageType,
+                originalContent: content,
+                conversationId,
+                operation: 'storeValidatedOutgoingMessage'
+            });
+            return;
+        }
+
+        try {
+            await this.databaseService.storeOutgoingMessage(
+                to,
+                messageType,
+                validatedContent,
+                conversationId,
+                whatsappMessageId,
+                replyToMessageId
+            );
+
+            logInfo('Outgoing message stored successfully', {
+                to,
+                messageType,
+                contentLength: validatedContent.length,
+                conversationId,
+                operation: 'storeValidatedOutgoingMessage'
+            });
+        } catch (error) {
+            logError('Failed to store outgoing message', error as Error, {
+                to,
+                messageType,
+                contentLength: validatedContent.length,
+                conversationId,
+                operation: 'storeValidatedOutgoingMessage'
             });
             throw error;
         }

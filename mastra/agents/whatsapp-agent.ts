@@ -1,5 +1,4 @@
-
-import { Agent } from '@mastra/core/agent';
+import { Agent } from '@mastra/core';
 import { Memory } from '@mastra/memory';
 import { UpstashStore, UpstashVector } from '@mastra/upstash';
 import { google } from '@ai-sdk/google';
@@ -58,10 +57,10 @@ const memory = new Memory({
         taskType: 'SEMANTIC_SIMILARITY', // Optional: specify task type
     }),
     options: {
-        lastMessages: 10, // ✅ Reduced to minimize risk of empty messages
+        lastMessages: 5, // ✅ Further reduced to minimize risk of empty messages
         semanticRecall: {
-            topK: 3, // ✅ Reduced to minimize risk of empty messages
-            messageRange: 2, // ✅ Reduced context range
+            topK: 2, // ✅ Further reduced to minimize empty message risk
+            messageRange: 1, // ✅ Reduced context range
             scope: 'thread', // Search within current thread
         },
         workingMemory: {
