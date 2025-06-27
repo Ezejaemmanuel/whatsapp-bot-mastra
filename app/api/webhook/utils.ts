@@ -186,6 +186,26 @@ export function processWebhookData(body: unknown): ProcessedWebhookData {
 }
 
 /**
+ * Sanitize text content to ensure it's not empty or just whitespace
+ */
+export function sanitizeTextContent(text: string | null | undefined): string | null {
+    if (!text) {
+        return null;
+    }
+
+    const trimmed = text.trim();
+    return trimmed.length > 0 ? trimmed : null;
+}
+
+/**
+ * Validate that message content is suitable for AI processing
+ */
+export function validateMessageContent(text: string | null | undefined): boolean {
+    const sanitized = sanitizeTextContent(text);
+    return sanitized !== null && sanitized.length > 0;
+}
+
+/**
  * Extract text content from a webhook message
  */
 export function extractMessageText(message: WebhookMessage): string | null {
@@ -195,7 +215,7 @@ export function extractMessageText(message: WebhookMessage): string | null {
 
     switch (message.type) {
         case 'text':
-            return message.text?.body || null;
+            return sanitizeTextContent(message.text?.body);
         case 'interactive':
             // Handle interactive button and list replies
             if (message.interactive?.button_reply) {
