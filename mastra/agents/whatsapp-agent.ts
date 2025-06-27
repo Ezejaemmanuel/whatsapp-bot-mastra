@@ -106,6 +106,7 @@ const memory = new Memory({
 
 // Create the enhanced WhatsApp Exchange Agent
 export const whatsappAgent = new Agent({
+    
     name: WHATSAPP_AGENT_NAME,
     description: 'An intelligent WhatsApp exchange bot for KhalidWid Exchange, specializing in currency exchange with smart negotiation, transaction processing, fraud prevention, and receipt processing through specialized tools.',
     instructions: WHATSAPP_AGENT_INSTRUCTIONS,
