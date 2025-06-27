@@ -371,30 +371,66 @@ export class WhatsAppWebhookService {
                 operation: 'handleTextMessage'
             });
 
-            // Use the enhanced WhatsApp Exchange Agent to generate a response
-            const agentResponse = await whatsappAgent.generate([
-                {
-                    role: 'user',
-                    content: messageInfo.text || '',
-                }
-            ], {
-                memory: {
-                    thread: `whatsapp-${messageInfo.from}`, // Use phone number as thread ID for conversation continuity
-                    resource: messageInfo.from, // Use phone number as resource ID
-                }
-            });
+            let response: string;
 
-            const response = agentResponse.text || 'I apologize, but I couldn\'t process your message at the moment. Please try again.';
+            try {
+                // Use the enhanced WhatsApp Exchange Agent to generate a response
+                const agentResponse = await whatsappAgent.generate([
+                    {
+                        role: 'user',
+                        content: messageInfo.text || '',
+                    }
+                ], {
+                    memory: {
+                        thread: `whatsapp-${messageInfo.from}`, // Use phone number as thread ID for conversation continuity
+                        resource: messageInfo.from, // Use phone number as resource ID
+                    }
+                });
 
-            logInfo('Generated exchange agent response', {
-                messageId: messageInfo.id,
-                from: messageInfo.from,
-                responseLength: response.length,
-                threadId: `whatsapp-${messageInfo.from}`,
-                hasToolCalls: agentResponse.toolCalls && agentResponse.toolCalls.length > 0,
-                toolCallsCount: agentResponse.toolCalls?.length || 0,
-                operation: 'handleTextMessage'
-            });
+                response = agentResponse.text || 'I apologize, but I couldn\'t process your message at the moment. Please try again.';
+
+                logInfo('Generated exchange agent response', {
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    responseLength: response.length,
+                    threadId: `whatsapp-${messageInfo.from}`,
+                    hasToolCalls: agentResponse.toolCalls && agentResponse.toolCalls.length > 0,
+                    toolCallsCount: agentResponse.toolCalls?.length || 0,
+                    operation: 'handleTextMessage'
+                });
+
+            } catch (agentError) {
+                const agentErrorMessage = agentError instanceof Error ? agentError.message : 'Unknown agent error';
+
+                logError('Exchange agent failed to process text message', agentError as Error, {
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    text: messageInfo.text,
+                    threadId: `whatsapp-${messageInfo.from}`,
+                    agentErrorMessage,
+                    operation: 'handleTextMessage',
+                    fallbackUsed: true
+                });
+
+                // Log to database for tracking agent failures
+                await this.databaseService.logWebhookEvent(
+                    'ERROR',
+                    'Exchange agent failed to process text message',
+                    {
+                        messageId: messageInfo.id,
+                        from: messageInfo.from,
+                        text: messageInfo.text,
+                        agentError: agentErrorMessage,
+                        threadId: `whatsapp-${messageInfo.from}`
+                    },
+                    'WhatsAppWebhookService',
+                    undefined,
+                    agentErrorMessage
+                );
+
+                // Fallback response when agent fails
+                response = 'I apologize, but I encountered an issue processing your message. Please try again in a moment, or contact support if the problem persists.';
+            }
 
             // Send response to user
             await this.sendTextReply(
@@ -422,35 +458,35 @@ export class WhatsAppWebhookService {
             });
 
         } catch (error) {
-            logError('Error processing text message with exchange agent', error as Error, {
+            logError('Error in text message handling (non-agent error)', error as Error, {
                 messageId: messageInfo.id,
                 from: messageInfo.from,
                 text: messageInfo.text,
                 conversationId,
-                operation: 'handleTextMessage'
+                operation: 'handleTextMessage',
+                errorType: 'non_agent_error'
             });
 
-            // Fallback to generic response if agent fails
-            const fallbackResponse = 'I apologize, but I encountered an issue processing your message. Please try again in a moment, or contact support if the problem persists.';
+            // This catch block handles non-agent errors (database, network, etc.)
+            const systemErrorResponse = 'I apologize, but I encountered a system issue. Please try again in a moment.';
 
             try {
                 await this.sendTextReply(
                     messageInfo.from,
-                    fallbackResponse,
+                    systemErrorResponse,
                     messageInfo.id
                 );
 
-                // Store fallback message in database
                 await this.databaseService.storeOutgoingMessage(
                     messageInfo.from,
                     'text',
-                    fallbackResponse,
+                    systemErrorResponse,
                     conversationId,
                     undefined,
                     messageInfo.id
                 );
             } catch (fallbackError) {
-                logError('Failed to send fallback response', fallbackError as Error, {
+                logError('Failed to send system error response', fallbackError as Error, {
                     messageId: messageInfo.id,
                     from: messageInfo.from,
                     operation: 'handleTextMessage'
@@ -533,20 +569,70 @@ ${messageInfo.mediaInfo?.caption ? `Caption provided by customer: ${messageInfo.
 Please extract relevant payment information including transaction amount, currency, ID, date, bank details, and verify if it matches any pending exchange transactions.`
                     : `I received a receipt image but couldn't access it for analysis. ${messageInfo.mediaInfo?.caption ? `Caption: ${messageInfo.mediaInfo.caption}` : ''} Please try sending the image again or provide the transaction details manually.`;
 
-                // Process image with exchange agent for receipt analysis
-                const agentResponse = await whatsappAgent.generate([
-                    {
-                        role: 'user',
-                        content: agentContent,
-                    }
-                ], {
-                    memory: {
-                        thread: `whatsapp-${messageInfo.from}`,
-                        resource: messageInfo.from,
-                    }
-                });
+                let response: string;
 
-                const response = agentResponse.text || 'Got your receipt! 📸 Let me analyze the details...';
+                try {
+                    // Process image with exchange agent for receipt analysis
+                    const agentResponse = await whatsappAgent.generate([
+                        {
+                            role: 'user',
+                            content: agentContent,
+                        }
+                    ], {
+                        memory: {
+                            thread: `whatsapp-${messageInfo.from}`,
+                            resource: messageInfo.from,
+                        }
+                    });
+
+                    response = agentResponse.text || 'Got your receipt! 📸 Let me analyze the details...';
+
+                    logInfo('Generated exchange agent response for image', {
+                        messageId: messageInfo.id,
+                        from: messageInfo.from,
+                        responseLength: response.length,
+                        threadId: `whatsapp-${messageInfo.from}`,
+                        hasImageUrl: !!imageUrl,
+                        hasToolCalls: agentResponse.toolCalls && agentResponse.toolCalls.length > 0,
+                        toolCallsCount: agentResponse.toolCalls?.length || 0,
+                        operation: 'handleMediaMessage'
+                    });
+
+                } catch (agentError) {
+                    const agentErrorMessage = agentError instanceof Error ? agentError.message : 'Unknown agent error';
+
+                    logError('Exchange agent failed to process image message', agentError as Error, {
+                        messageId: messageInfo.id,
+                        from: messageInfo.from,
+                        hasImageUrl: !!imageUrl,
+                        imageUrl: imageUrl ? 'provided' : 'missing',
+                        threadId: `whatsapp-${messageInfo.from}`,
+                        agentErrorMessage,
+                        operation: 'handleMediaMessage',
+                        fallbackUsed: true
+                    });
+
+                    // Log to database for tracking agent failures
+                    await this.databaseService.logWebhookEvent(
+                        'ERROR',
+                        'Exchange agent failed to process image message',
+                        {
+                            messageId: messageInfo.id,
+                            from: messageInfo.from,
+                            hasImageUrl: !!imageUrl,
+                            agentError: agentErrorMessage,
+                            threadId: `whatsapp-${messageInfo.from}`
+                        },
+                        'WhatsAppWebhookService',
+                        undefined,
+                        agentErrorMessage
+                    );
+
+                    // Fallback response when agent fails for images
+                    response = imageUrl ?
+                        'I received your receipt image but had trouble analyzing it. Could you try sending it again or provide the transaction details as text?' :
+                        'I had trouble processing your image. Could you try sending it again or send me the transaction details as text?';
+                }
 
                 await this.sendTextReply(
                     messageInfo.from,
@@ -602,33 +688,34 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
             }
 
         } catch (error) {
-            logError('Error processing media message', error as Error, {
+            logError('Error in media message handling (non-agent error)', error as Error, {
                 messageType: messageInfo.type,
                 messageId: messageInfo.id,
                 from: messageInfo.from,
-                operation: 'handleMediaMessage'
+                operation: 'handleMediaMessage',
+                errorType: 'non_agent_error'
             });
 
-            // Fallback response for media processing errors
-            const fallbackResponse = 'I had trouble processing your image. Could you try sending it again or send me the transaction details as text?';
+            // This catch block handles non-agent errors (database, storage, network, etc.)
+            const systemErrorResponse = 'I had trouble processing your image due to a system issue. Could you try sending it again in a moment?';
 
             try {
                 await this.sendTextReply(
                     messageInfo.from,
-                    fallbackResponse,
+                    systemErrorResponse,
                     messageInfo.id
                 );
 
                 await this.databaseService.storeOutgoingMessage(
                     messageInfo.from,
                     'text',
-                    fallbackResponse,
+                    systemErrorResponse,
                     conversationId,
                     undefined,
                     messageInfo.id
                 );
             } catch (fallbackError) {
-                logError('Failed to send media fallback response', fallbackError as Error, {
+                logError('Failed to send media system error response', fallbackError as Error, {
                     messageId: messageInfo.id,
                     from: messageInfo.from,
                     operation: 'handleMediaMessage'
@@ -650,20 +737,67 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                 operation: 'handleInteractiveMessage'
             });
 
-            // Process interactive message with exchange agent
-            const agentResponse = await whatsappAgent.generate([
-                {
-                    role: 'user',
-                    content: `User selected: ${messageInfo.text || 'interactive option'}`,
-                }
-            ], {
-                memory: {
-                    thread: `whatsapp-${messageInfo.from}`,
-                    resource: messageInfo.from,
-                }
-            });
+            let response: string;
 
-            const response = agentResponse.text || `Thanks for your selection! Let me help you with that.`;
+            try {
+                // Process interactive message with exchange agent
+                const agentResponse = await whatsappAgent.generate([
+                    {
+                        role: 'user',
+                        content: `User selected: ${messageInfo.text || 'interactive option'}`,
+                    }
+                ], {
+                    memory: {
+                        thread: `whatsapp-${messageInfo.from}`,
+                        resource: messageInfo.from,
+                    }
+                });
+
+                response = agentResponse.text || `Thanks for your selection! Let me help you with that.`;
+
+                logInfo('Generated exchange agent response for interactive message', {
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    selection: messageInfo.text,
+                    responseLength: response.length,
+                    threadId: `whatsapp-${messageInfo.from}`,
+                    hasToolCalls: agentResponse.toolCalls && agentResponse.toolCalls.length > 0,
+                    toolCallsCount: agentResponse.toolCalls?.length || 0,
+                    operation: 'handleInteractiveMessage'
+                });
+
+            } catch (agentError) {
+                const agentErrorMessage = agentError instanceof Error ? agentError.message : 'Unknown agent error';
+
+                logError('Exchange agent failed to process interactive message', agentError as Error, {
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    selection: messageInfo.text,
+                    threadId: `whatsapp-${messageInfo.from}`,
+                    agentErrorMessage,
+                    operation: 'handleInteractiveMessage',
+                    fallbackUsed: true
+                });
+
+                // Log to database for tracking agent failures
+                await this.databaseService.logWebhookEvent(
+                    'ERROR',
+                    'Exchange agent failed to process interactive message',
+                    {
+                        messageId: messageInfo.id,
+                        from: messageInfo.from,
+                        selection: messageInfo.text,
+                        agentError: agentErrorMessage,
+                        threadId: `whatsapp-${messageInfo.from}`
+                    },
+                    'WhatsAppWebhookService',
+                    undefined,
+                    agentErrorMessage
+                );
+
+                // Fallback response when agent fails for interactive messages
+                response = 'I received your selection but had trouble processing it. Please try again or send me a text message.';
+            }
 
             await this.sendTextReply(
                 messageInfo.from,
@@ -689,33 +823,34 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
             });
 
         } catch (error) {
-            logError('Error processing interactive message', error as Error, {
+            logError('Error in interactive message handling (non-agent error)', error as Error, {
                 messageId: messageInfo.id,
                 from: messageInfo.from,
                 text: messageInfo.text,
-                operation: 'handleInteractiveMessage'
+                operation: 'handleInteractiveMessage',
+                errorType: 'non_agent_error'
             });
 
-            // Fallback response for interactive message errors
-            const fallbackResponse = 'I received your selection but had trouble processing it. Please try again or send me a text message.';
+            // This catch block handles non-agent errors (database, network, etc.)
+            const systemErrorResponse = 'I received your selection but encountered a system issue. Please try again in a moment.';
 
             try {
                 await this.sendTextReply(
                     messageInfo.from,
-                    fallbackResponse,
+                    systemErrorResponse,
                     messageInfo.id
                 );
 
                 await this.databaseService.storeOutgoingMessage(
                     messageInfo.from,
                     'text',
-                    fallbackResponse,
+                    systemErrorResponse,
                     conversationId,
                     undefined,
                     messageInfo.id
                 );
             } catch (fallbackError) {
-                logError('Failed to send interactive fallback response', fallbackError as Error, {
+                logError('Failed to send interactive system error response', fallbackError as Error, {
                     messageId: messageInfo.id,
                     from: messageInfo.from,
                     operation: 'handleInteractiveMessage'
