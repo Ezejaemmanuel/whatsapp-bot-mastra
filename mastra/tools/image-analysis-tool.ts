@@ -81,7 +81,7 @@ export const imageAnalysisTool = createTool({
     id: "analyze_image",
     description: "Analyze receipt images to extract transaction details or provide general image analysis if it's not a receipt. This tool can identify if an image is a payment receipt and extract relevant financial information, or provide a summary of any other type of image.",
     inputSchema: z.object({
-        imageUrl: z.string().url().describe("URL of the image to analyze"),
+        imageUrl: z.string().describe("URL of the image to analyze"),
         context: z.string().optional().describe("Additional context about what type of analysis is expected")
     }),
     outputSchema: receiptSchema,

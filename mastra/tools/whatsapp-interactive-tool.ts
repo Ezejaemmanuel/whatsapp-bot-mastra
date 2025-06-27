@@ -11,7 +11,7 @@ export const sendInteractiveButtonsTool = createTool({
         bodyText: z.string().describe('Main message body text'),
         buttons: z.array(z.object({
             id: z.string().describe('Button ID for tracking clicks'),
-            title: z.string().max(20).describe('Button text (max 20 chars)')
+            title: z.string().describe('Button text (max 20 chars)')
         })).min(1).max(3).describe('Array of buttons (1-3 buttons)'),
         headerText: z.string().optional().describe('Optional header text'),
         footerText: z.string().optional().describe('Optional footer text'),
@@ -44,8 +44,8 @@ export const sendInteractiveListTool = createTool({
             title: z.string().describe('Section title'),
             rows: z.array(z.object({
                 id: z.string().describe('Row ID for tracking selection'),
-                title: z.string().max(24).describe('Row title (max 24 chars)'),
-                description: z.string().max(72).optional().describe('Row description (max 72 chars)')
+                title: z.string().describe('Row title (max 24 chars)'),
+                description: z.string().optional().describe('Row description (max 72 chars)')
             })).min(1).max(10).describe('Rows in this section (1-10 per section)')
         })).min(1).max(10).describe('Sections in the list (1-10 sections)'),
         headerText: z.string().optional().describe('Optional header text'),
