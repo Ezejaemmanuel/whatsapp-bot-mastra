@@ -1,6 +1,6 @@
 import { WhatsAppCloudApiClient } from '@/whatsapp/whatsapp-client';
 import { WebhookMessage, WebhookMessageStatus, WebhookPayload } from './types';
-import { logWebhookEvent, logSuccess, logError, logWarning, logInfo, extractMessageInfo, extractStatusInfo, validateMessageContent } from './utils';
+import { logWebhookEvent, logSuccess, logError, logWarning, logInfo, extractMessageInfo, extractStatusInfo } from './utils';
 import { DatabaseService } from '@/lib/database-service';
 import { MediaUploadService } from '@/lib/media-upload-service';
 import { Id } from '@/convex/_generated/dataModel';
@@ -374,38 +374,11 @@ export class WhatsAppWebhookService {
             let response: string;
 
             try {
-                // Ensure we have valid text content before sending to agent
-                if (!validateMessageContent(messageInfo.text)) {
-                    logWarning('Received empty text message, using fallback response', {
-                        messageId: messageInfo.id,
-                        from: messageInfo.from,
-                        originalText: messageInfo.text,
-                        operation: 'handleTextMessage'
-                    });
-
-                    response = 'I received your message, but it appears to be empty. Could you please send your message again?';
-
-                    // Send response and store in database
-                    await this.sendTextReply(messageInfo.from, response, messageInfo.id);
-                    await this.databaseService.storeOutgoingMessage(
-                        messageInfo.from,
-                        'text',
-                        response,
-                        conversationId,
-                        undefined,
-                        messageInfo.id
-                    );
-                    return;
-                }
-
-                // Get the validated text content - we know it's valid because validateMessageContent passed
-                const textContent = messageInfo.text!.trim();
-
                 // Use the enhanced WhatsApp Exchange Agent to generate a response
                 const agentResponse = await whatsappAgent.generate([
                     {
                         role: 'user',
-                        content: textContent,
+                        content: messageInfo.text || '',
                     }
                 ], {
                     memory: {
@@ -434,69 +407,15 @@ export class WhatsAppWebhookService {
             } catch (agentError) {
                 const agentErrorMessage = agentError instanceof Error ? agentError.message : 'Unknown agent error';
 
-                // Check for specific Google API content empty error
-                const isContentEmptyError = agentErrorMessage.includes('contents.parts must not be empty') ||
-                    agentErrorMessage.includes('GenerateContentRequest.contents');
-
-                if (isContentEmptyError) {
-                    logError('Google API content empty error - clearing conversation memory', agentError as Error, {
-                        messageId: messageInfo.id,
-                        from: messageInfo.from,
-                        text: messageInfo.text,
-                        threadId: `whatsapp-${messageInfo.from}`,
-                        agentErrorMessage,
-                        operation: 'handleTextMessage',
-                        fallbackUsed: true,
-                        errorType: 'content_empty_error'
-                    });
-
-                    // Try again without memory context to avoid corrupted conversation history
-                    try {
-                        // Get the validated text content for fallback
-                        const fallbackTextContent = messageInfo.text!.trim();
-
-                        const fallbackResponse = await whatsappAgent.generate([
-                            {
-                                role: 'user',
-                                content: fallbackTextContent,
-                            }
-                        ], {
-                            // Skip memory to avoid corrupted conversation history
-                            maxSteps: 1
-                        });
-
-                        response = fallbackResponse.text || 'I apologize, but I encountered an issue with our conversation history. I\'ve reset our conversation context. How can I help you today?';
-
-                        logInfo('Successfully recovered from content empty error using fallback', {
-                            messageId: messageInfo.id,
-                            from: messageInfo.from,
-                            operation: 'handleTextMessage',
-                            fallbackResponseLength: response.length
-                        });
-
-                    } catch (fallbackError) {
-                        logError('Fallback response also failed', fallbackError as Error, {
-                            messageId: messageInfo.id,
-                            from: messageInfo.from,
-                            operation: 'handleTextMessage'
-                        });
-                        response = 'I apologize, but I\'m experiencing technical difficulties. Please try sending your message again, or contact support if the issue persists.';
-                    }
-                } else {
-                    logError('Exchange agent failed to process text message', agentError as Error, {
-                        messageId: messageInfo.id,
-                        from: messageInfo.from,
-                        text: messageInfo.text,
-                        threadId: `whatsapp-${messageInfo.from}`,
-                        agentErrorMessage,
-                        operation: 'handleTextMessage',
-                        fallbackUsed: true,
-                        errorType: 'general_agent_error'
-                    });
-
-                    // Fallback response when agent fails
-                    response = 'I apologize, but I encountered an issue processing your message. Please try again in a moment, or contact support if the problem persists.';
-                }
+                logError('Exchange agent failed to process text message', agentError as Error, {
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    text: messageInfo.text,
+                    threadId: `whatsapp-${messageInfo.from}`,
+                    agentErrorMessage,
+                    operation: 'handleTextMessage',
+                    fallbackUsed: true
+                });
 
                 // Log to database for tracking agent failures
                 await this.databaseService.logWebhookEvent(
@@ -507,13 +426,15 @@ export class WhatsAppWebhookService {
                         from: messageInfo.from,
                         text: messageInfo.text,
                         agentError: agentErrorMessage,
-                        threadId: `whatsapp-${messageInfo.from}`,
-                        errorType: isContentEmptyError ? 'content_empty_error' : 'general_agent_error'
+                        threadId: `whatsapp-${messageInfo.from}`
                     },
                     'WhatsAppWebhookService',
                     undefined,
                     agentErrorMessage
                 );
+
+                // Fallback response when agent fails
+                response = 'I apologize, but I encountered an issue processing your message. Please try again in a moment, or contact support if the problem persists.';
             }
 
             // Send response to user

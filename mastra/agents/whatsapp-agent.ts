@@ -58,10 +58,10 @@ const memory = new Memory({
         taskType: 'SEMANTIC_SIMILARITY', // Optional: specify task type
     }),
     options: {
-        lastMessages: 10, // Reduced from 15 to avoid memory corruption issues
+        lastMessages: 15, // Keep more messages for complex exchange conversations
         semanticRecall: {
-            topK: 3, // Reduced from 5 to be more conservative
-            messageRange: 2, // Reduced from 3 to include less context around matches
+            topK: 5, // Retrieve more similar messages for better context
+            messageRange: 3, // Include more context around matches
             scope: 'thread', // Search within current thread
         },
         workingMemory: {
