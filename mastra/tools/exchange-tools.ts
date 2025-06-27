@@ -7,7 +7,7 @@ import crypto from 'crypto';
 import { imageAnalysisTool } from './image-analysis-tool';
 
 /**
- * Enhanced logging utility for exchange tools
+ * Enhanced logging utility for exchange tools with detailed tool call tracking
  */
 function logExchangeEvent(
     level: 'INFO' | 'ERROR' | 'WARN' | 'SUCCESS',
@@ -37,6 +37,34 @@ function logExchangeEvent(
     }
 }
 
+function logToolCall(toolId: string, parameters: any): void {
+    logExchangeEvent('INFO', `🚀 TOOL CALL STARTED: ${toolId}`, {
+        toolId,
+        parameters: JSON.stringify(parameters, null, 2),
+        callStartTime: new Date().toISOString()
+    });
+}
+
+function logToolResult(toolId: string, result: any, executionTimeMs: number): void {
+    logExchangeEvent('SUCCESS', `✅ TOOL CALL COMPLETED: ${toolId}`, {
+        toolId,
+        result: JSON.stringify(result, null, 2),
+        executionTimeMs,
+        callEndTime: new Date().toISOString()
+    });
+}
+
+function logToolError(toolId: string, error: Error, executionTimeMs: number, parameters?: any): void {
+    logExchangeEvent('ERROR', `❌ TOOL CALL FAILED: ${toolId}`, {
+        toolId,
+        error: error.message,
+        stack: error.stack,
+        parameters: parameters ? JSON.stringify(parameters, null, 2) : undefined,
+        executionTimeMs,
+        callEndTime: new Date().toISOString()
+    });
+}
+
 function logSuccess(message: string, data?: Record<string, any>): void {
     logExchangeEvent('SUCCESS', message, data);
 }
@@ -55,221 +83,60 @@ function logInfo(message: string, data?: Record<string, any>): void {
 }
 
 /**
- * Tool to get current exchange rates
+ * Tool to get current exchange rates - NO PARAMETERS ACCEPTED
+ * Always returns all active rates from the database
  */
 export const getCurrentRatesTool = createTool({
     id: 'get_current_rates',
-    description: 'Get current exchange rates for currency pairs. If no currency pair is specified, returns all active rates.',
-    inputSchema: z.object({
-        currencyPair: z.string().optional().describe('Currency pair like USD_NGN, GBP_NGN, EUR_NGN'),
-    }),
+    description: 'Get ALL current exchange rates from the database. This tool does not accept any parameters and always returns all active currency pair rates.',
+    inputSchema: z.object({}), // No parameters accepted
     execute: async ({ context }) => {
         const startTime = Date.now();
+        const toolId = 'get_current_rates';
 
-        logInfo('Getting current exchange rates', {
-            currencyPair: context.currencyPair,
-            operation: 'get_current_rates'
-        });
+        logToolCall(toolId, {});
 
         try {
-            const rates = await fetchQuery(api.exchangeRates.getCurrentRates, { currencyPair: context.currencyPair });
-
-            const executionTime = Date.now() - startTime;
-            logSuccess('Exchange rates retrieved successfully', {
-                currencyPair: context.currencyPair,
-                ratesCount: Array.isArray(rates) ? rates.length : 1,
-                executionTimeMs: executionTime,
-                operation: 'get_current_rates'
+            logInfo('Getting ALL current exchange rates from database', {
+                operation: toolId,
+                note: 'No currency pair filter applied - fetching all rates'
             });
 
-            return {
+            // Always call without currencyPair to get all rates
+            const rates = await fetchQuery(api.exchangeRates.getCurrentRates, {});
+
+            const executionTime = Date.now() - startTime;
+
+            const result = {
                 success: true,
                 data: rates,
+                totalRates: Array.isArray(rates) ? rates.length : 1,
+                message: 'All exchange rates retrieved successfully'
             };
+
+            logSuccess('All exchange rates retrieved successfully', {
+                totalRates: result.totalRates,
+                executionTimeMs: executionTime,
+                operation: toolId,
+                ratesData: rates
+            });
+
+            logToolResult(toolId, result, executionTime);
+            return result;
+
         } catch (error) {
             const executionTime = Date.now() - startTime;
+            const errorMessage = `Failed to get exchange rates: ${error instanceof Error ? error.message : 'Unknown error'}`;
+
             logError('Failed to get exchange rates', error as Error, {
-                currencyPair: context.currencyPair,
                 executionTimeMs: executionTime,
-                operation: 'get_current_rates'
+                operation: toolId
             });
 
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to get exchange rates',
-            };
-        }
-    },
-});
+            logToolError(toolId, error as Error, executionTime, {});
 
-/**
- * Tool to validate if a negotiated rate is acceptable
- */
-export const validateRateTool = createTool({
-    id: 'validate_negotiated_rate',
-    description: 'Check if a proposed/negotiated rate is within acceptable business boundaries',
-    inputSchema: z.object({
-        currencyPair: z.string().describe('Currency pair like USD_NGN'),
-        proposedRate: z.number().describe('The rate proposed by customer or to offer'),
-    }),
-    execute: async ({ context }) => {
-        const startTime = Date.now();
-
-        logInfo('Validating negotiated rate', {
-            currencyPair: context.currencyPair,
-            proposedRate: context.proposedRate,
-            operation: 'validate_negotiated_rate'
-        });
-
-        try {
-            const validation = await fetchQuery(api.exchangeRates.validateNegotiatedRate, {
-                currencyPair: context.currencyPair,
-                proposedRate: context.proposedRate,
-            });
-
-            const executionTime = Date.now() - startTime;
-            logSuccess('Rate validation completed', {
-                currencyPair: context.currencyPair,
-                proposedRate: context.proposedRate,
-                isValid: validation.valid,
-                withinBounds: validation.reason,
-                executionTimeMs: executionTime,
-                operation: 'validate_negotiated_rate'
-            });
-
-            return {
-                success: true,
-                data: validation,
-            };
-        } catch (error) {
-            const executionTime = Date.now() - startTime;
-            logError('Failed to validate rate', error as Error, {
-                currencyPair: context.currencyPair,
-                proposedRate: context.proposedRate,
-                executionTimeMs: executionTime,
-                operation: 'validate_negotiated_rate'
-            });
-
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to validate rate',
-            };
-        }
-    },
-});
-
-/**
- * Tool to get conversation state
- */
-export const getConversationStateTool = createTool({
-    id: 'get_conversation_state',
-    description: 'Get the current conversation state to understand where the user is in the exchange flow',
-    inputSchema: z.object({
-        conversationId: z.string().describe('The conversation ID'),
-    }),
-    execute: async ({ context }) => {
-        const startTime = Date.now();
-
-        logInfo('Getting conversation state', {
-            conversationId: context.conversationId,
-            operation: 'get_conversation_state'
-        });
-
-        try {
-            const state = await fetchQuery(api.conversationStates.getConversationState, {
-                conversationId: context.conversationId as Id<"conversations">,
-            });
-
-            const executionTime = Date.now() - startTime;
-            logSuccess('Conversation state retrieved successfully', {
-                conversationId: context.conversationId,
-                currentFlow: state?.currentFlow,
-                lastInteraction: state?.lastInteraction,
-                awaitingResponse: state?.awaitingResponse,
-                executionTimeMs: executionTime,
-                operation: 'get_conversation_state'
-            });
-
-            return {
-                success: true,
-                data: state,
-            };
-        } catch (error) {
-            const executionTime = Date.now() - startTime;
-            logError('Failed to get conversation state', error as Error, {
-                conversationId: context.conversationId,
-                executionTimeMs: executionTime,
-                operation: 'get_conversation_state'
-            });
-
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to get conversation state',
-            };
-        }
-    },
-});
-
-/**
- * Tool to update conversation state
- */
-export const updateConversationStateTool = createTool({
-    id: 'update_conversation_state',
-    description: 'Update the conversation flow state to track user progress',
-    inputSchema: z.object({
-        conversationId: z.string().describe('The conversation ID'),
-        currentFlow: z.string().describe('Current flow: welcome, currency_selection, rate_inquiry, negotiation, account_details, payment, verification, completed'),
-        lastInteraction: z.string().describe('Last interaction type: text, button, list, image'),
-        awaitingResponse: z.string().optional().describe('What type of response we are awaiting'),
-        contextData: z.record(z.unknown()).optional().describe('Additional context data as key-value pairs'),
-    }),
-    execute: async ({ context }) => {
-        const startTime = Date.now();
-
-        logInfo('Updating conversation state', {
-            conversationId: context.conversationId,
-            currentFlow: context.currentFlow,
-            lastInteraction: context.lastInteraction,
-            awaitingResponse: context.awaitingResponse,
-            hasContextData: !!context.contextData && Object.keys(context.contextData).length > 0,
-            operation: 'update_conversation_state'
-        });
-
-        try {
-            await fetchMutation(api.conversationStates.updateConversationFlow, {
-                conversationId: context.conversationId as Id<"conversations">,
-                currentFlow: context.currentFlow,
-                lastInteraction: context.lastInteraction,
-                awaitingResponse: context.awaitingResponse,
-                contextData: context.contextData,
-            });
-
-            const executionTime = Date.now() - startTime;
-            logSuccess('Conversation state updated successfully', {
-                conversationId: context.conversationId,
-                currentFlow: context.currentFlow,
-                lastInteraction: context.lastInteraction,
-                executionTimeMs: executionTime,
-                operation: 'update_conversation_state'
-            });
-
-            return {
-                success: true,
-                message: 'Conversation state updated successfully',
-            };
-        } catch (error) {
-            const executionTime = Date.now() - startTime;
-            logError('Failed to update conversation state', error as Error, {
-                conversationId: context.conversationId,
-                currentFlow: context.currentFlow,
-                executionTimeMs: executionTime,
-                operation: 'update_conversation_state'
-            });
-
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to update conversation state',
-            };
+            // Throw error instead of returning error object
+            throw new Error(errorMessage);
         }
     },
 });
@@ -301,21 +168,24 @@ export const createTransactionTool = createTool({
     }),
     execute: async ({ context }) => {
         const startTime = Date.now();
+        const toolId = 'create_transaction';
 
-        logInfo('Creating new transaction', {
-            userId: context.userId,
-            conversationId: context.conversationId,
-            currencyFrom: context.currencyFrom,
-            currencyTo: context.currencyTo,
-            amountFrom: context.amountFrom,
-            amountTo: context.amountTo,
-            negotiatedRate: context.negotiatedRate,
-            hasCustomerBank: !!context.customerBankName,
-            hasNegotiationHistory: !!context.negotiationHistory && context.negotiationHistory.length > 0,
-            operation: 'create_transaction'
-        });
+        logToolCall(toolId, context);
 
         try {
+            logInfo('Creating new transaction', {
+                userId: context.userId,
+                conversationId: context.conversationId,
+                currencyFrom: context.currencyFrom,
+                currencyTo: context.currencyTo,
+                amountFrom: context.amountFrom,
+                amountTo: context.amountTo,
+                negotiatedRate: context.negotiatedRate,
+                hasCustomerBank: !!context.customerBankName,
+                hasNegotiationHistory: !!context.negotiationHistory && context.negotiationHistory.length > 0,
+                operation: toolId
+            });
+
             // Generate duplicate check hash
             const duplicateCheckHash = crypto
                 .createHash('sha256')
@@ -338,6 +208,14 @@ export const createTransactionTool = createTool({
             });
 
             const executionTime = Date.now() - startTime;
+
+            const result = {
+                success: true,
+                data: transaction,
+                transactionId: transaction,
+                message: `Transaction created successfully with ID: ${transaction}`
+            };
+
             logSuccess('Transaction created successfully', {
                 transactionId: transaction,
                 userId: context.userId,
@@ -347,16 +225,16 @@ export const createTransactionTool = createTool({
                 negotiatedRate: context.negotiatedRate,
                 duplicateCheckHash,
                 executionTimeMs: executionTime,
-                operation: 'create_transaction'
+                operation: toolId
             });
 
-            return {
-                success: true,
-                data: transaction,
-                transactionId: transaction,
-            };
+            logToolResult(toolId, result, executionTime);
+            return result;
+
         } catch (error) {
             const executionTime = Date.now() - startTime;
+            const errorMessage = `Failed to create transaction for user ${context.userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+
             logError('Failed to create transaction', error as Error, {
                 userId: context.userId,
                 conversationId: context.conversationId,
@@ -364,13 +242,13 @@ export const createTransactionTool = createTool({
                 amountFrom: context.amountFrom,
                 negotiatedRate: context.negotiatedRate,
                 executionTimeMs: executionTime,
-                operation: 'create_transaction'
+                operation: toolId
             });
 
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to create transaction',
-            };
+            logToolError(toolId, error as Error, executionTime, context);
+
+            // Throw error instead of returning error object
+            throw new Error(errorMessage);
         }
     },
 });
@@ -390,17 +268,20 @@ export const updateTransactionStatusTool = createTool({
     }),
     execute: async ({ context }) => {
         const startTime = Date.now();
+        const toolId = 'update_transaction_status';
 
-        logInfo('Updating transaction status', {
-            transactionId: context.transactionId,
-            newStatus: context.status,
-            hasPaymentReference: !!context.paymentReference,
-            hasReceiptImage: !!context.receiptImageUrl,
-            hasExtractedDetails: !!context.extractedDetails && Object.keys(context.extractedDetails).length > 0,
-            operation: 'update_transaction_status'
-        });
+        logToolCall(toolId, context);
 
         try {
+            logInfo('Updating transaction status', {
+                transactionId: context.transactionId,
+                newStatus: context.status,
+                hasPaymentReference: !!context.paymentReference,
+                hasReceiptImage: !!context.receiptImageUrl,
+                hasExtractedDetails: !!context.extractedDetails && Object.keys(context.extractedDetails).length > 0,
+                operation: toolId
+            });
+
             await fetchMutation(api.transactions.updateTransactionStatus, {
                 transactionId: context.transactionId as Id<"transactions">,
                 status: context.status,
@@ -410,31 +291,38 @@ export const updateTransactionStatusTool = createTool({
             });
 
             const executionTime = Date.now() - startTime;
+
+            const result = {
+                success: true,
+                message: `Transaction ${context.transactionId} status updated to ${context.status} successfully`,
+            };
+
             logSuccess('Transaction status updated successfully', {
                 transactionId: context.transactionId,
                 newStatus: context.status,
                 paymentReference: context.paymentReference,
                 executionTimeMs: executionTime,
-                operation: 'update_transaction_status'
+                operation: toolId
             });
 
-            return {
-                success: true,
-                message: `Transaction status updated to ${context.status}`,
-            };
+            logToolResult(toolId, result, executionTime);
+            return result;
+
         } catch (error) {
             const executionTime = Date.now() - startTime;
+            const errorMessage = `Failed to update transaction status for ${context.transactionId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+
             logError('Failed to update transaction status', error as Error, {
                 transactionId: context.transactionId,
                 newStatus: context.status,
                 executionTimeMs: executionTime,
-                operation: 'update_transaction_status'
+                operation: toolId
             });
 
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to update transaction status',
-            };
+            logToolError(toolId, error as Error, executionTime, context);
+
+            // Throw error instead of returning error object
+            throw new Error(errorMessage);
         }
     },
 });
@@ -450,103 +338,56 @@ export const checkDuplicateTool = createTool({
     }),
     execute: async ({ context }) => {
         const startTime = Date.now();
+        const toolId = 'check_duplicate_transaction';
 
-        logInfo('Checking for duplicate transaction', {
-            duplicateCheckHash: context.duplicateCheckHash,
-            operation: 'check_duplicate_transaction'
-        });
+        logToolCall(toolId, context);
 
         try {
+            logInfo('Checking for duplicate transaction', {
+                duplicateCheckHash: context.duplicateCheckHash,
+                operation: toolId
+            });
+
             const duplicate = await fetchQuery(api.transactions.checkDuplicateTransaction, {
                 duplicateCheckHash: context.duplicateCheckHash,
             });
 
             const executionTime = Date.now() - startTime;
+
+            const result = {
+                success: true,
+                isDuplicate: !!duplicate,
+                data: duplicate,
+                message: duplicate ?
+                    `Duplicate transaction found: ${duplicate._id}` :
+                    'No duplicate transaction found'
+            };
+
             logSuccess('Duplicate check completed', {
                 duplicateCheckHash: context.duplicateCheckHash,
                 isDuplicate: !!duplicate,
                 duplicateTransactionId: duplicate?._id,
                 executionTimeMs: executionTime,
-                operation: 'check_duplicate_transaction'
+                operation: toolId
             });
 
-            return {
-                success: true,
-                isDuplicate: !!duplicate,
-                data: duplicate,
-            };
+            logToolResult(toolId, result, executionTime);
+            return result;
+
         } catch (error) {
             const executionTime = Date.now() - startTime;
+            const errorMessage = `Failed to check for duplicates with hash ${context.duplicateCheckHash}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+
             logError('Failed to check for duplicates', error as Error, {
                 duplicateCheckHash: context.duplicateCheckHash,
                 executionTimeMs: executionTime,
-                operation: 'check_duplicate_transaction'
+                operation: toolId
             });
 
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to check for duplicates',
-            };
-        }
-    },
-});
+            logToolError(toolId, error as Error, executionTime, context);
 
-/**
- * Tool to get user's transaction history
- */
-export const getUserTransactionsTool = createTool({
-    id: 'get_user_transactions',
-    description: 'Get transaction history for a user',
-    inputSchema: z.object({
-        userId: z.string().describe('User ID'),
-        limit: z.number().optional().describe('Number of transactions to retrieve'),
-        status: z.string().optional().describe('Filter by status'),
-    }),
-    execute: async ({ context }) => {
-        const startTime = Date.now();
-
-        logInfo('Getting user transaction history', {
-            userId: context.userId,
-            limit: context.limit,
-            statusFilter: context.status,
-            operation: 'get_user_transactions'
-        });
-
-        try {
-            const transactions = await fetchQuery(api.transactions.getUserTransactions, {
-                userId: context.userId as Id<"users">,
-                limit: context.limit,
-                status: context.status,
-            });
-
-            const executionTime = Date.now() - startTime;
-            logSuccess('User transactions retrieved successfully', {
-                userId: context.userId,
-                transactionsCount: transactions.length,
-                limit: context.limit,
-                statusFilter: context.status,
-                executionTimeMs: executionTime,
-                operation: 'get_user_transactions'
-            });
-
-            return {
-                success: true,
-                data: transactions,
-            };
-        } catch (error) {
-            const executionTime = Date.now() - startTime;
-            logError('Failed to get user transactions', error as Error, {
-                userId: context.userId,
-                limit: context.limit,
-                statusFilter: context.status,
-                executionTimeMs: executionTime,
-                operation: 'get_user_transactions'
-            });
-
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to get user transactions',
-            };
+            // Throw error instead of returning error object
+            throw new Error(errorMessage);
         }
     },
 });
@@ -565,231 +406,58 @@ export const generateDuplicateHashTool = createTool({
     }),
     execute: async ({ context }) => {
         const startTime = Date.now();
+        const toolId = 'generate_duplicate_hash';
 
-        logInfo('Generating duplicate detection hash', {
-            userId: context.userId,
-            amount: context.amount,
-            hasReference: !!context.reference,
-            hasTimestamp: !!context.timestamp,
-            operation: 'generate_duplicate_hash'
-        });
+        logToolCall(toolId, context);
 
         try {
+            logInfo('Generating duplicate detection hash', {
+                userId: context.userId,
+                amount: context.amount,
+                hasReference: !!context.reference,
+                hasTimestamp: !!context.timestamp,
+                operation: toolId
+            });
+
             const hashInput = `${context.userId}-${context.amount}-${context.reference || ''}-${context.timestamp || Date.now()}`;
             const hash = crypto.createHash('sha256').update(hashInput).digest('hex');
 
             const executionTime = Date.now() - startTime;
+
+            const result = {
+                success: true,
+                hash,
+                hashInput,
+                message: `Hash generated successfully for user ${context.userId}`
+            };
+
             logSuccess('Duplicate detection hash generated', {
                 userId: context.userId,
                 amount: context.amount,
                 hash: hash.substring(0, 16) + '...', // Log partial hash for security
                 hashLength: hash.length,
                 executionTimeMs: executionTime,
-                operation: 'generate_duplicate_hash'
+                operation: toolId
             });
 
-            return {
-                success: true,
-                hash,
-                hashInput,
-            };
+            logToolResult(toolId, result, executionTime);
+            return result;
+
         } catch (error) {
             const executionTime = Date.now() - startTime;
+            const errorMessage = `Failed to generate hash for user ${context.userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+
             logError('Failed to generate hash', error as Error, {
                 userId: context.userId,
                 amount: context.amount,
                 executionTimeMs: executionTime,
-                operation: 'generate_duplicate_hash'
+                operation: toolId
             });
 
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to generate hash',
-            };
-        }
-    },
-});
+            logToolError(toolId, error as Error, executionTime, context);
 
-/**
- * Tool to calculate exchange amount
- */
-export const calculateExchangeAmountTool = createTool({
-    id: 'calculate_exchange_amount',
-    description: 'Calculate the amount to receive based on exchange rate',
-    inputSchema: z.object({
-        amountFrom: z.number().describe('Amount to exchange from'),
-        rate: z.number().describe('Exchange rate'),
-        currencyFrom: z.string().describe('Source currency'),
-        currencyTo: z.string().describe('Target currency'),
-    }),
-    execute: async ({ context }) => {
-        const startTime = Date.now();
-
-        logInfo('Calculating exchange amount', {
-            amountFrom: context.amountFrom,
-            rate: context.rate,
-            currencyFrom: context.currencyFrom,
-            currencyTo: context.currencyTo,
-            operation: 'calculate_exchange_amount'
-        });
-
-        try {
-            const amountTo = context.amountFrom * context.rate;
-            const formatted = {
-                amountFrom: context.amountFrom,
-                amountTo: Math.round(amountTo * 100) / 100, // Round to 2 decimal places
-                rate: context.rate,
-                currencyFrom: context.currencyFrom,
-                currencyTo: context.currencyTo,
-                calculation: `${context.amountFrom} ${context.currencyFrom} × ${context.rate} = ${amountTo.toLocaleString()} ${context.currencyTo}`,
-            };
-
-            const executionTime = Date.now() - startTime;
-            logSuccess('Exchange amount calculated successfully', {
-                ...formatted,
-                executionTimeMs: executionTime,
-                operation: 'calculate_exchange_amount'
-            });
-
-            return {
-                success: true,
-                data: formatted,
-            };
-        } catch (error) {
-            const executionTime = Date.now() - startTime;
-            logError('Failed to calculate exchange amount', error as Error, {
-                amountFrom: context.amountFrom,
-                rate: context.rate,
-                currencyPair: `${context.currencyFrom}_${context.currencyTo}`,
-                executionTimeMs: executionTime,
-                operation: 'calculate_exchange_amount'
-            });
-
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to calculate exchange amount',
-            };
-        }
-    },
-});
-
-/**
- * Tool to suggest counter offer in negotiation
- */
-export const suggestCounterOfferTool = createTool({
-    id: 'suggest_counter_offer',
-    description: 'Suggest a counter offer during rate negotiation based on business rules',
-    inputSchema: z.object({
-        currencyPair: z.string().describe('Currency pair'),
-        customerProposedRate: z.number().describe('Rate proposed by customer'),
-        transactionAmount: z.number().describe('Transaction amount'),
-        userHistory: z.object({
-            totalTransactions: z.number().optional(),
-            totalVolume: z.number().optional(),
-            averageTransactionSize: z.number().optional(),
-            loyaltyTier: z.string().optional()
-        }).optional().describe('User transaction history for loyalty consideration'),
-    }),
-    execute: async ({ context }) => {
-        const startTime = Date.now();
-
-        logInfo('Suggesting counter offer for rate negotiation', {
-            currencyPair: context.currencyPair,
-            customerProposedRate: context.customerProposedRate,
-            transactionAmount: context.transactionAmount,
-            hasUserHistory: !!context.userHistory,
-            operation: 'suggest_counter_offer'
-        });
-
-        try {
-            // Get current rate boundaries
-            const rateInfo = await fetchQuery(api.exchangeRates.getCurrentRates, { currencyPair: context.currencyPair });
-
-            if (!rateInfo || Array.isArray(rateInfo)) {
-                logError('Currency pair not found for counter offer', new Error('Currency pair not found'), {
-                    currencyPair: context.currencyPair,
-                    operation: 'suggest_counter_offer'
-                });
-
-                return {
-                    success: false,
-                    error: 'Currency pair not found',
-                };
-            }
-
-            const { minRate, maxRate, currentMarketRate } = rateInfo;
-
-            // Business logic for counter offers
-            let counterOffer = context.customerProposedRate;
-            let strategy = 'accept';
-            let reasoning = '';
-
-            if (context.customerProposedRate < minRate) {
-                // Too low - offer minimum or slightly above
-                counterOffer = minRate + (maxRate - minRate) * 0.1; // 10% above minimum
-                strategy = 'counter_low';
-                reasoning = `Your proposed rate is below our minimum. I can offer ${counterOffer}`;
-            } else if (context.customerProposedRate > maxRate) {
-                // Customer asking for too high rate - they might be confused
-                counterOffer = maxRate;
-                strategy = 'clarify_high';
-                reasoning = `I think there might be confusion. Our best rate is ${counterOffer}`;
-            } else if (context.customerProposedRate >= minRate && context.customerProposedRate <= maxRate) {
-                // Within bounds - accept or negotiate based on amount and history
-                if (context.transactionAmount >= 1000) { // Volume bonus
-                    counterOffer = Math.min(context.customerProposedRate, maxRate);
-                    strategy = 'accept_volume';
-                    reasoning = `For ${context.transactionAmount}, I can do ${counterOffer}`;
-                } else {
-                    // Small transaction - meet halfway
-                    counterOffer = (context.customerProposedRate + currentMarketRate) / 2;
-                    strategy = 'meet_halfway';
-                    reasoning = `How about we meet in the middle at ${counterOffer}?`;
-                }
-            }
-
-            const result = {
-                counterOffer: Math.round(counterOffer * 10000) / 10000, // Round to 4 decimal places
-                strategy,
-                reasoning,
-                withinBounds: counterOffer >= minRate && counterOffer <= maxRate,
-                marketInfo: {
-                    minRate,
-                    maxRate,
-                    currentMarketRate,
-                    customerProposedRate: context.customerProposedRate,
-                },
-            };
-
-            const executionTime = Date.now() - startTime;
-            logSuccess('Counter offer suggestion generated', {
-                currencyPair: context.currencyPair,
-                customerProposedRate: context.customerProposedRate,
-                counterOffer: result.counterOffer,
-                strategy: result.strategy,
-                withinBounds: result.withinBounds,
-                executionTimeMs: executionTime,
-                operation: 'suggest_counter_offer'
-            });
-
-            return {
-                success: true,
-                data: result,
-            };
-        } catch (error) {
-            const executionTime = Date.now() - startTime;
-            logError('Failed to suggest counter offer', error as Error, {
-                currencyPair: context.currencyPair,
-                customerProposedRate: context.customerProposedRate,
-                transactionAmount: context.transactionAmount,
-                executionTimeMs: executionTime,
-                operation: 'suggest_counter_offer'
-            });
-
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to suggest counter offer',
-            };
+            // Throw error instead of returning error object
+            throw new Error(errorMessage);
         }
     },
 });
@@ -799,15 +467,9 @@ export const suggestCounterOfferTool = createTool({
  */
 export const exchangeTools = [
     getCurrentRatesTool,
-    validateRateTool,
-    getConversationStateTool,
-    updateConversationStateTool,
     createTransactionTool,
     updateTransactionStatusTool,
     checkDuplicateTool,
-    getUserTransactionsTool,
     generateDuplicateHashTool,
-    calculateExchangeAmountTool,
-    suggestCounterOfferTool,
     imageAnalysisTool,
 ]; 

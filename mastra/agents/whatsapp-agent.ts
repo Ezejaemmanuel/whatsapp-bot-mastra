@@ -3,7 +3,7 @@ import { Memory } from '@mastra/memory';
 import { UpstashStore, UpstashVector } from '@mastra/upstash';
 import { google } from '@ai-sdk/google';
 import { WHATSAPP_AGENT_NAME, WHATSAPP_AGENT_INSTRUCTIONS, GEMINI_MODEL } from './agent-instructions';
-import { getCurrentRatesTool, validateRateTool, getConversationStateTool, updateConversationStateTool, createTransactionTool, updateTransactionStatusTool, checkDuplicateTool, getUserTransactionsTool, generateDuplicateHashTool, calculateExchangeAmountTool, suggestCounterOfferTool } from '../tools/exchange-tools';
+import { getCurrentRatesTool, createTransactionTool, updateTransactionStatusTool, checkDuplicateTool, generateDuplicateHashTool } from '../tools/exchange-tools';
 import { imageAnalysisTool } from '../tools/image-analysis-tool';
 import { sendInteractiveButtonsTool, sendInteractiveListTool } from '../tools/whatsapp-interactive-tool';
 
@@ -57,10 +57,10 @@ const memory = new Memory({
         taskType: 'SEMANTIC_SIMILARITY', // Optional: specify task type
     }),
     options: {
-        lastMessages: 5, // ✅ Further reduced to minimize risk of empty messages
+        lastMessages: 15, // ✅ Further reduced to minimize risk of empty messages
         semanticRecall: {
-            topK: 2, // ✅ Further reduced to minimize empty message risk
-            messageRange: 1, // ✅ Reduced context range
+            topK: 4, // ✅ Further reduced to minimize empty message risk
+            messageRange: 2, // ✅ Reduced context range
             scope: 'thread', // Search within current thread
         },
         workingMemory: {
@@ -113,16 +113,10 @@ export const whatsappAgent = new Agent({
     memory,
     tools: {
         getCurrentRatesTool,
-        validateRateTool,
-        getConversationStateTool,
-        updateConversationStateTool,
         createTransactionTool,
         updateTransactionStatusTool,
         checkDuplicateTool,
-        getUserTransactionsTool,
         generateDuplicateHashTool,
-        calculateExchangeAmountTool,
-        suggestCounterOfferTool,
         imageAnalysisTool,
         sendInteractiveButtonsTool,
         sendInteractiveListTool,
