@@ -559,9 +559,9 @@ Please extract relevant payment information including transaction amount, curren
                             role: 'user',
                             content: agentContent,
                         }
-                        
+
                     ], {
-                       
+
                         memory: {
                             thread: `whatsapp-${messageInfo.from}`,
                             resource: messageInfo.from,
