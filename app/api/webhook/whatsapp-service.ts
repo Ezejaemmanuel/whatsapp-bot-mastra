@@ -4,7 +4,7 @@ import { logWebhookEvent, logSuccess, logError, logWarning, logInfo, extractMess
 import { DatabaseService } from '@/lib/database-service';
 import { MediaUploadService } from '@/lib/media-upload-service';
 import { Id } from '@/convex/_generated/dataModel';
-import { whatsappAgent } from '@/mastra/agents/whatsapp-agent';
+import { mastra } from '@/mastra';
 
 /**
  * WhatsApp Webhook Service
@@ -360,8 +360,9 @@ export class WhatsAppWebhookService {
             let response: string;
 
             try {
+                const agent = mastra.getAgent('whatsappAgent');
                 // Use the enhanced WhatsApp Exchange Agent to generate a response
-                const agentResponse = await whatsappAgent.generate([
+                const agentResponse = await agent.generate([
                     {
                         role: 'user' as const,
                         content: messageText || 'Hello',
@@ -552,12 +553,15 @@ Please extract relevant payment information including transaction amount, curren
 
                 try {
                     // Process image with exchange agent for receipt analysis
-                    const agentResponse = await whatsappAgent.generate([
+                    const agent = mastra.getAgent('whatsappAgent');
+                    const agentResponse = await agent.generate([
                         {
                             role: 'user',
                             content: agentContent,
                         }
+                        
                     ], {
+                       
                         memory: {
                             thread: `whatsapp-${messageInfo.from}`,
                             resource: messageInfo.from,
