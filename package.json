@@ -17,7 +17,9 @@
     "config:validate": "tsx scripts/validate-config.ts",
     "config:check": "tsx scripts/validate-config.ts",
     "diagnose": "tsx scripts/diagnose-api.ts",
-    "debug:api": "tsx scripts/diagnose-api.ts"
+    "debug:api": "tsx scripts/diagnose-api.ts",
+    "db:clear": "tsx scripts/clear-databases.ts",
+    "db:clear:force": "tsx scripts/clear-databases.ts --force"
   },
   "dependencies": {
     "@ai-sdk/google": "^1.2.19",
@@ -33,6 +35,8 @@
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
     "@tanstack/react-query": "^5.81.2",
+    "@upstash/redis": "^1.35.0",
+    "@upstash/vector": "^1.2.1",
     "ai": "^4.3.16",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

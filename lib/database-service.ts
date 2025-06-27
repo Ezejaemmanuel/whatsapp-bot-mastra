@@ -67,11 +67,25 @@ export class DatabaseService {
         contactName?: string
     ): Promise<Message> {
         try {
+            // ✅ VALIDATE MESSAGE CONTENT - Prevent storing completely empty messages
+            const messageContent = webhookMessage.text?.body?.trim();
+
+            // Skip storing completely empty messages (but log them for debugging)
+            if (!messageContent && !this.isMediaMessage(webhookMessage) && !webhookMessage.interactive && !webhookMessage.location && !webhookMessage.contacts) {
+                console.warn('Attempting to store completely empty message - this should be handled upstream', {
+                    messageId: webhookMessage.id,
+                    messageType: webhookMessage.type,
+                    from: webhookMessage.from,
+                    timestamp: webhookMessage.timestamp
+                });
+                throw new Error('Cannot store message with no content, media, interactive elements, location, or contacts');
+            }
+
             const messageData: any = {
                 conversationId,
                 whatsappMessageId: webhookMessage.id,
                 messageType: webhookMessage.type,
-                content: webhookMessage.text?.body,
+                content: messageContent || null, // ✅ Store null instead of empty string
                 caption: this.getMediaCaption(webhookMessage),
                 location: webhookMessage.location ? {
                     latitude: webhookMessage.location.latitude,

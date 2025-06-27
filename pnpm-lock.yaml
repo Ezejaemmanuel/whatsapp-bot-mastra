@@ -47,6 +47,12 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.81.2
         version: 5.81.2(react@19.1.0)
+      '@upstash/redis':
+        specifier: ^1.35.0
+        version: 1.35.0
+      '@upstash/vector':
+        specifier: ^1.2.1
+        version: 1.2.1
       ai:
         specifier: ^4.3.16
         version: 4.3.16(react@19.1.0)(zod@3.25.67)

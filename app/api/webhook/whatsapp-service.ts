@@ -371,6 +371,38 @@ export class WhatsAppWebhookService {
                 operation: 'handleTextMessage'
             });
 
+            // ✅ VALIDATE MESSAGE CONTENT - Prevent empty content from reaching Gemini API
+            const messageText = messageInfo.text?.trim();
+            if (!messageText) {
+                logWarning('Empty message text received, sending default response', {
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    operation: 'handleTextMessage'
+                });
+
+                const fallbackResponse = 'Hello! How can I help you with currency exchange today? Please send me a message to get started.';
+
+                // Send fallback response to user
+                await this.sendTextReply(messageInfo.from, fallbackResponse, messageInfo.id);
+
+                // Store the fallback response in database
+                await this.databaseService.storeOutgoingMessage(
+                    messageInfo.from,
+                    'text',
+                    fallbackResponse,
+                    conversationId,
+                    undefined,
+                    messageInfo.id
+                );
+
+                logInfo('Sent fallback response for empty message', {
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    operation: 'handleTextMessage'
+                });
+                return;
+            }
+
             let response: string;
 
             try {
@@ -378,7 +410,7 @@ export class WhatsAppWebhookService {
                 const agentResponse = await whatsappAgent.generate([
                     {
                         role: 'user',
-                        content: messageInfo.text || '',
+                        content: messageText, // ✅ Use validated text instead of potentially empty messageInfo.text
                     }
                 ], {
                     memory: {
@@ -410,7 +442,7 @@ export class WhatsAppWebhookService {
                 logError('Exchange agent failed to process text message', agentError as Error, {
                     messageId: messageInfo.id,
                     from: messageInfo.from,
-                    text: messageInfo.text,
+                    text: messageText, // ✅ Use validated text for logging
                     threadId: `whatsapp-${messageInfo.from}`,
                     agentErrorMessage,
                     operation: 'handleTextMessage',
@@ -424,8 +456,10 @@ export class WhatsAppWebhookService {
                     {
                         messageId: messageInfo.id,
                         from: messageInfo.from,
-                        text: messageInfo.text,
-                        agentError: agentErrorMessage,
+                        text: messageText, // ✅ Use validated text
+                        agentErrorMessage,
+                        error: agentError instanceof Error ? agentError.message : 'Unknown error',
+                        stack: agentError instanceof Error ? agentError.stack : undefined,
                         threadId: `whatsapp-${messageInfo.from}`
                     },
                     'WhatsAppWebhookService',
