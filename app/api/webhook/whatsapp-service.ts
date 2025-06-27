@@ -475,11 +475,69 @@ export class WhatsAppWebhookService {
 
             // Handle different media types
             if (messageInfo.type === 'image') {
+                // First, get the stored message to find its ID
+                const storedMessage = await this.databaseService.getMessageByWhatsAppId(messageInfo.id);
+
+                if (!storedMessage) {
+                    logWarning('Stored message not found for image processing', {
+                        messageId: messageInfo.id,
+                        from: messageInfo.from,
+                        operation: 'handleMediaMessage'
+                    });
+
+                    // Fallback to basic text response
+                    const fallbackResponse = 'I received your image but couldn\'t process it at the moment. Please try again.';
+                    await this.sendTextReply(messageInfo.from, fallbackResponse, messageInfo.id);
+                    return;
+                }
+
+                // Get the stored media files for this message
+                const mediaFiles = await this.databaseService.getMediaFilesByMessageId(storedMessage._id);
+
+                logInfo('Retrieved stored media files', {
+                    messageId: messageInfo.id,
+                    storedMessageId: storedMessage._id,
+                    mediaFilesCount: mediaFiles.length,
+                    mediaFiles: mediaFiles.map(f => ({ id: f._id, storedUrl: f.storedUrl, fileName: f.fileName })),
+                    operation: 'handleMediaMessage'
+                });
+
+                let imageUrl = null;
+                const imageFile = mediaFiles.find(file => file.mimeType?.startsWith('image/'));
+
+                if (imageFile?.storedUrl) {
+                    imageUrl = imageFile.storedUrl;
+                    logInfo('Found stored image URL for AI analysis', {
+                        messageId: messageInfo.id,
+                        imageUrl,
+                        fileName: imageFile.fileName,
+                        mimeType: imageFile.mimeType,
+                        operation: 'handleMediaMessage'
+                    });
+                } else {
+                    logWarning('No stored image URL found for AI analysis', {
+                        messageId: messageInfo.id,
+                        mediaFilesFound: mediaFiles.length,
+                        hasImageFile: !!imageFile,
+                        imageFileStoredUrl: imageFile?.storedUrl,
+                        operation: 'handleMediaMessage'
+                    });
+                }
+
+                // Prepare text content for agent - the agent will use the image analysis tool
+                const agentContent = imageUrl ?
+                    `I'm sending you a receipt image for payment verification. Please use the image analysis tool to analyze this image: ${imageUrl}
+                    
+${messageInfo.mediaInfo?.caption ? `Caption provided by customer: ${messageInfo.mediaInfo.caption}` : ''}
+
+Please extract relevant payment information including transaction amount, currency, ID, date, bank details, and verify if it matches any pending exchange transactions.`
+                    : `I received a receipt image but couldn't access it for analysis. ${messageInfo.mediaInfo?.caption ? `Caption: ${messageInfo.mediaInfo.caption}` : ''} Please try sending the image again or provide the transaction details manually.`;
+
                 // Process image with exchange agent for receipt analysis
                 const agentResponse = await whatsappAgent.generate([
                     {
                         role: 'user',
-                        content: `I'm sending you a receipt image for payment verification. ${messageInfo.mediaInfo?.caption ? `Caption: ${messageInfo.mediaInfo.caption}` : ''}`,
+                        content: agentContent,
                     }
                 ], {
                     memory: {
@@ -488,7 +546,7 @@ export class WhatsAppWebhookService {
                     }
                 });
 
-                const response = agentResponse.text || 'Got your receipt! 📸 Let me check the details...';
+                const response = agentResponse.text || 'Got your receipt! 📸 Let me analyze the details...';
 
                 await this.sendTextReply(
                     messageInfo.from,
@@ -506,9 +564,11 @@ export class WhatsAppWebhookService {
                     messageInfo.id
                 );
 
-                logSuccess('Image receipt processed successfully', {
+                logSuccess('Image receipt processed successfully with vision analysis', {
                     messageId: messageInfo.id,
                     from: messageInfo.from,
+                    hasImageUrl: !!imageUrl,
+                    imageUrl: imageUrl ? 'provided' : 'missing',
                     operation: 'handleMediaMessage'
                 });
 
@@ -550,7 +610,7 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
             });
 
             // Fallback response for media processing errors
-            const fallbackResponse = 'I had trouble processing your media. Could you try sending it again or contact support if the issue persists?';
+            const fallbackResponse = 'I had trouble processing your image. Could you try sending it again or send me the transaction details as text?';
 
             try {
                 await this.sendTextReply(

@@ -1,9 +1,10 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { fetchQuery, fetchMutation } from "convex/nextjs";
-import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
+import { api } from "../../convex/_generated/api";
+import { Id } from "../../convex/_generated/dataModel";
 import crypto from 'crypto';
+import { imageAnalysisTool } from './image-analysis-tool';
 
 /**
  * Tool to get current exchange rates
@@ -97,7 +98,7 @@ export const updateConversationStateTool = createTool({
         currentFlow: z.string().describe('Current flow: welcome, currency_selection, rate_inquiry, negotiation, account_details, payment, verification, completed'),
         lastInteraction: z.string().describe('Last interaction type: text, button, list, image'),
         awaitingResponse: z.string().optional().describe('What type of response we are awaiting'),
-        contextData: z.any().optional().describe('Additional context data'),
+        contextData: z.record(z.unknown()).optional().describe('Additional context data as key-value pairs'),
     }),
     execute: async ({ context }) => {
         try {
@@ -138,7 +139,13 @@ export const createTransactionTool = createTool({
         customerBankName: z.string().optional().describe('Customer bank name'),
         customerAccountNumber: z.string().optional().describe('Customer account number'),
         customerAccountName: z.string().optional().describe('Customer account name'),
-        negotiationHistory: z.array(z.any()).optional().describe('History of rate negotiations'),
+        negotiationHistory: z.array(z.object({
+            timestamp: z.number().optional(),
+            customerRate: z.number().optional(),
+            counterOffer: z.number().optional(),
+            message: z.string().optional(),
+            strategy: z.string().optional()
+        })).optional().describe('History of rate negotiations'),
     }),
     execute: async ({ context }) => {
         try {
@@ -188,7 +195,7 @@ export const updateTransactionStatusTool = createTool({
         status: z.string().describe('New status: pending, paid, verified, completed, failed, cancelled'),
         paymentReference: z.string().optional().describe('Payment reference number'),
         receiptImageUrl: z.string().optional().describe('URL to receipt image'),
-        extractedDetails: z.any().optional().describe('OCR extracted details from receipt'),
+        extractedDetails: z.record(z.unknown()).optional().describe('OCR extracted details from receipt as key-value pairs'),
     }),
     execute: async ({ context }) => {
         try {
@@ -349,7 +356,12 @@ export const suggestCounterOfferTool = createTool({
         currencyPair: z.string().describe('Currency pair'),
         customerProposedRate: z.number().describe('Rate proposed by customer'),
         transactionAmount: z.number().describe('Transaction amount'),
-        userHistory: z.any().optional().describe('User transaction history for loyalty consideration'),
+        userHistory: z.object({
+            totalTransactions: z.number().optional(),
+            totalVolume: z.number().optional(),
+            averageTransactionSize: z.number().optional(),
+            loyaltyTier: z.string().optional()
+        }).optional().describe('User transaction history for loyalty consideration'),
     }),
     execute: async ({ context }) => {
         try {
@@ -433,4 +445,5 @@ export const exchangeTools = [
     generateDuplicateHashTool,
     calculateExchangeAmountTool,
     suggestCounterOfferTool,
+    imageAnalysisTool,
 ]; 

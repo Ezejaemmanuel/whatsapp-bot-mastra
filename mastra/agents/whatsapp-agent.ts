@@ -5,38 +5,48 @@ import { UpstashStore, UpstashVector } from '@mastra/upstash';
 import { google } from '@ai-sdk/google';
 import { fastembed } from '@mastra/fastembed';
 import { WHATSAPP_AGENT_NAME, WHATSAPP_AGENT_INSTRUCTIONS, GEMINI_MODEL } from './agent-instructions';
-import { exchangeTools } from '../tools/exchange-tools';
+import {  getCurrentRatesTool, validateRateTool, getConversationStateTool, updateConversationStateTool, createTransactionTool, updateTransactionStatusTool, checkDuplicateTool, getUserTransactionsTool, generateDuplicateHashTool, calculateExchangeAmountTool, suggestCounterOfferTool } from '../tools/exchange-tools';
+import { imageAnalysisTool } from '../tools/image-analysis-tool';
 
 const GOOGLE_GENERATIVE_AI_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 console.log("GOOGLE_GENERATIVE_AI_API_KEY", GOOGLE_GENERATIVE_AI_API_KEY);
+const UPSTASH_REDIS_REST_URL = process.env.UPSTASH_REDIS_REST_URL;
+const UPSTASH_REDIS_REST_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const UPSTASH_VECTOR_REST_URL = process.env.UPSTASH_VECTOR_REST_URL;
+const UPSTASH_VECTOR_REST_TOKEN = process.env.UPSTASH_VECTOR_REST_TOKEN;
+//log everything in the environment variables
+console.log("UPSTASH_REDIS_REST_URL", UPSTASH_REDIS_REST_URL);
+console.log("UPSTASH_REDIS_REST_TOKEN", UPSTASH_REDIS_REST_TOKEN);
+console.log("UPSTASH_VECTOR_REST_URL", UPSTASH_VECTOR_REST_URL);
+console.log("UPSTASH_VECTOR_REST_TOKEN", UPSTASH_VECTOR_REST_TOKEN);
+console.log("GOOGLE_GENERATIVE_AI_API_KEY", GOOGLE_GENERATIVE_AI_API_KEY);
 
 
-
-if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+if (!UPSTASH_REDIS_REST_URL || !UPSTASH_REDIS_REST_TOKEN) {
     throw new Error('UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN environment variables are required');
 }
 
 // Validate required environment variables
-if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+if (!GOOGLE_GENERATIVE_AI_API_KEY) {
     throw new Error('GOOGLE_GENERATIVE_AI_API_KEY environment variable is required');
 }
 
 
 
-if (!process.env.UPSTASH_VECTOR_REST_URL || !process.env.UPSTASH_VECTOR_REST_TOKEN) {
+if (!UPSTASH_VECTOR_REST_URL || !UPSTASH_VECTOR_REST_TOKEN) {
     throw new Error('UPSTASH_VECTOR_REST_URL and UPSTASH_VECTOR_REST_TOKEN environment variables are required');
 }
 
 // Configure Upstash Redis storage for general memory storage
 const upstashStorage = new UpstashStore({
-    url: process.env.UPSTASH_REDIS_REST_URL!,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+    url: UPSTASH_REDIS_REST_URL!,
+    token: UPSTASH_REDIS_REST_TOKEN!,
 });
 
 // Configure Upstash Vector database for embeddings and semantic search
 const upstashVector = new UpstashVector({
-    url: process.env.UPSTASH_VECTOR_REST_URL!,
-    token: process.env.UPSTASH_VECTOR_REST_TOKEN!,
+    url: UPSTASH_VECTOR_REST_URL!,
+    token: UPSTASH_VECTOR_REST_TOKEN!,
 });
 
 // Enhanced memory configuration for exchange bot context
@@ -91,18 +101,26 @@ const memory = new Memory({
     },
 });
 
-// Convert tools array to tools object for agent
-const toolsObject = exchangeTools.reduce((acc, tool) => {
-    acc[tool.id] = tool;
-    return acc;
-}, {} as Record<string, any>);
 
-// Create the enhanced WhatsApp Exchange Agent with Google Gemini 2.5 Flash
+// Create the enhanced WhatsApp Exchange Agent
 export const whatsappAgent = new Agent({
     name: WHATSAPP_AGENT_NAME,
-    description: 'An intelligent WhatsApp exchange bot for KhalidWid Exchange, specializing in currency exchange with smart negotiation, transaction processing, and fraud prevention capabilities.',
+    description: 'An intelligent WhatsApp exchange bot for KhalidWid Exchange, specializing in currency exchange with smart negotiation, transaction processing, fraud prevention, and receipt processing through specialized tools.',
     instructions: WHATSAPP_AGENT_INSTRUCTIONS,
     model: google(GEMINI_MODEL), // API key should be set via GOOGLE_GENERATIVE_AI_API_KEY environment variable
     memory,
-    tools: toolsObject,
+    tools: {
+        getCurrentRatesTool,
+        validateRateTool,
+        getConversationStateTool,
+        updateConversationStateTool,
+        createTransactionTool,
+        updateTransactionStatusTool,
+        checkDuplicateTool,
+        getUserTransactionsTool,
+        generateDuplicateHashTool,
+        calculateExchangeAmountTool,
+        suggestCounterOfferTool,
+        imageAnalysisTool,
+    },
 }); 

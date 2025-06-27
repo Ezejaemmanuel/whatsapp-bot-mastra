@@ -350,4 +350,18 @@ export class DatabaseService {
         if (message.document?.caption) return message.document.caption;
         return undefined;
     }
+
+    /**
+     * Get media files by message ID
+     */
+    async getMediaFilesByMessageId(messageId: Id<"messages">) {
+        try {
+            return await fetchQuery(api.mediaFiles.getMediaFilesByMessageId, {
+                messageId
+            });
+        } catch (error) {
+            console.error('Error in getMediaFilesByMessageId:', error);
+            throw error;
+        }
+    }
 }
