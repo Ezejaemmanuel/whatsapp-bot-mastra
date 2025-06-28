@@ -49,7 +49,6 @@ function testWebhookValidation() {
         ],
     };
 
-    // Test validation
     const isValid = client.webhook.isValidWebhookPayload(validPayload);
     console.log('Valid payload test:', isValid ? '✅' : '❌');
 
