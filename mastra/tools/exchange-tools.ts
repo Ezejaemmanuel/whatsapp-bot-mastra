@@ -6,6 +6,14 @@ import { Id } from "../../convex/_generated/dataModel";
 import { imageAnalysisTool } from './image-analysis-tool';
 
 /**
+ * Validation helper to check if a string is a valid Convex document ID
+ */
+function isValidConvexId(id: string): boolean {
+    // Convex IDs are typically 16+ characters long and contain alphanumeric characters
+    return /^[a-zA-Z0-9]{16,}$/.test(id);
+}
+
+/**
  * Enhanced logging utility for exchange tools with detailed tool call tracking
  */
 function logExchangeEvent(
@@ -205,7 +213,8 @@ export const createTransactionTool = createTool({
                 success: true,
                 data: transaction,
                 transactionId: transaction,
-                message: `Transaction created successfully with ID: ${transaction}`
+                message: `Transaction created successfully with ID: ${transaction}`,
+                workingMemoryUpdate: `IMPORTANT: Store this transaction ID in your working memory: ${transaction}. You will need this ID for all future updates to this transaction. Use this exact ID when calling updateTransactionStatusTool or other transaction-related tools.`
             };
 
             logSuccess('Transaction created successfully', {
@@ -248,27 +257,81 @@ export const createTransactionTool = createTool({
 });
 
 /**
- * Tool to update transaction status
+ * Tool to update transaction status with validation
  */
 export const updateTransactionStatusTool = createTool({
     id: 'update_transaction_status',
-    description: 'Update transaction status (pending, paid, verified, completed, failed, cancelled)',
+    description: 'Update transaction status (pending, paid, verified, completed, failed, cancelled). This tool automatically validates the transaction ID before updating. If validation fails, it returns helpful guidance instead of throwing an error.',
     inputSchema: z.object({
-        transactionId: z.string().describe('Transaction ID'),
+        transactionId: z.string().describe('Transaction ID - must be a valid Convex document ID that belongs to the current user'),
         status: z.string().describe('New status: pending, paid, verified, completed, failed, cancelled'),
         paymentReference: z.string().optional().describe('Payment reference number'),
         receiptImageUrl: z.string().optional().describe('URL to receipt image'),
         extractedDetails: z.record(z.unknown()).optional().describe('OCR extracted details from receipt as key-value pairs'),
     }),
-    execute: async ({ context }) => {
+    execute: async ({ context, runtimeContext }) => {
         const startTime = Date.now();
         const toolId = 'update_transaction_status';
 
         logToolCall(toolId, context);
 
         try {
-            logInfo('Updating transaction status', {
+            // Extract userId from memory context
+            const userId = runtimeContext?.get('resourceId');
+
+            if (!userId) {
+                const result = {
+                    success: false,
+                    message: 'Unable to extract userId from agent memory context. Make sure the agent is called with proper memory configuration.',
+                    suggestion: 'Check your agent memory configuration.'
+                };
+                logToolResult(toolId, result, Date.now() - startTime);
+                return result;
+            }
+
+            // First validate the transaction ID format
+            if (!isValidConvexId(context.transactionId)) {
+                const result = {
+                    success: false,
+                    transactionId: context.transactionId,
+                    message: `Invalid transaction ID format: ${context.transactionId}. Expected a valid Convex document ID (16+ alphanumeric characters).`,
+                    suggestion: 'Use validateTransactionTool to check the transaction ID, or use getLatestUserTransactionTool to get the most recent transaction ID, or use getUserTransactionsTool to see all available transaction IDs for this user.'
+                };
+                logToolResult(toolId, result, Date.now() - startTime);
+                return result;
+            }
+
+            // Validate that the transaction exists and belongs to the user
+            const transaction = await fetchQuery(api.transactions.getTransaction, {
+                transactionId: context.transactionId as Id<"transactions">
+            });
+
+            if (!transaction) {
+                const result = {
+                    success: false,
+                    transactionId: context.transactionId,
+                    message: `Transaction ID ${context.transactionId} does not exist in the database. Please check your working memory for the correct transaction ID.`,
+                    suggestion: 'Use getUserTransactionsTool to get all user transactions, or getLatestUserTransactionTool to get the most recent transaction, or check your working memory for the correct transaction ID.'
+                };
+                logToolResult(toolId, result, Date.now() - startTime);
+                return result;
+            }
+
+            // Check if transaction belongs to the current user
+            if (transaction.userId !== userId) {
+                const result = {
+                    success: false,
+                    transactionId: context.transactionId,
+                    message: `Transaction ID ${context.transactionId} exists but belongs to a different user. This transaction cannot be modified by the current user.`,
+                    suggestion: 'Use getUserTransactionsTool to get transactions that belong to the current user.'
+                };
+                logToolResult(toolId, result, Date.now() - startTime);
+                return result;
+            }
+
+            logInfo('Updating transaction status after validation', {
                 transactionId: context.transactionId,
+                currentStatus: transaction.status,
                 newStatus: context.status,
                 hasPaymentReference: !!context.paymentReference,
                 hasReceiptImage: !!context.receiptImageUrl,
@@ -288,11 +351,16 @@ export const updateTransactionStatusTool = createTool({
 
             const result = {
                 success: true,
-                message: `Transaction ${context.transactionId} status updated to ${context.status} successfully`,
+                transactionId: context.transactionId,
+                previousStatus: transaction.status,
+                newStatus: context.status,
+                message: `Transaction ${context.transactionId} status updated from ${transaction.status} to ${context.status} successfully`,
+                workingMemoryUpdate: `Transaction ${context.transactionId} is now in ${context.status} status. Keep this transaction ID in your working memory for future updates.`
             };
 
             logSuccess('Transaction status updated successfully', {
                 transactionId: context.transactionId,
+                previousStatus: transaction.status,
                 newStatus: context.status,
                 paymentReference: context.paymentReference,
                 executionTimeMs: executionTime,
@@ -535,6 +603,199 @@ export const updateUserBankDetailsTool = createTool({
             logError('Failed to update user bank details', error as Error, {
                 userId,
                 bankName: context.bankName,
+                executionTimeMs: executionTime,
+                operation: toolId
+            });
+
+            logToolError(toolId, error as Error, executionTime, context);
+
+            // Throw error instead of returning error object
+            throw new Error(errorMessage);
+        }
+    },
+});
+
+
+/**
+ * Tool to get all transactions for the current user
+ */
+export const getUserTransactionsTool = createTool({
+    id: 'get_user_transactions',
+    description: 'Get all transactions for the current user. Useful for finding valid transaction IDs and transaction history. The userId is automatically extracted from agent memory context.',
+    inputSchema: z.object({
+        limit: z.number().optional().describe('Maximum number of transactions to return (default: 10)'),
+        status: z.string().optional().describe('Filter by transaction status: pending, paid, verified, completed, failed, cancelled'),
+    }),
+    execute: async ({ context, runtimeContext }) => {
+        const startTime = Date.now();
+        const toolId = 'get_user_transactions';
+
+        logToolCall(toolId, context);
+
+        try {
+            // Extract userId from memory context
+            const userId = runtimeContext?.get('resourceId');
+
+            if (!userId) {
+                throw new Error('Unable to extract userId from agent memory context. Make sure the agent is called with proper memory configuration.');
+            }
+
+            logInfo('Getting user transactions', {
+                userId,
+                limit: context.limit || 10,
+                statusFilter: context.status || 'all',
+                operation: toolId
+            });
+
+            const transactions = await fetchQuery(api.transactions.getUserTransactions, {
+                userId: userId as Id<"users">,
+                limit: context.limit || 10,
+                status: context.status,
+            });
+
+            const executionTime = Date.now() - startTime;
+
+            const result = {
+                success: true,
+                data: transactions,
+                totalTransactions: transactions.length,
+                transactions: transactions.map(tx => ({
+                    id: tx._id,
+                    status: tx.status,
+                    currencyFrom: tx.currencyFrom,
+                    currencyTo: tx.currencyTo,
+                    amountFrom: tx.amountFrom,
+                    amountTo: tx.amountTo,
+                    negotiatedRate: tx.negotiatedRate,
+                    createdAt: tx.createdAt,
+                    updatedAt: tx.updatedAt,
+                    paymentReference: tx.paymentReference
+                })),
+                message: `Found ${transactions.length} transaction(s) for the user`,
+                workingMemoryUpdate: transactions.length > 0 ? `Available transaction IDs: ${transactions.map(tx => tx._id).join(', ')}` : 'No transactions found for this user'
+            };
+
+            logSuccess('User transactions retrieved successfully', {
+                userId,
+                totalTransactions: transactions.length,
+                statusFilter: context.status || 'all',
+                executionTimeMs: executionTime,
+                operation: toolId
+            });
+
+            logToolResult(toolId, result, executionTime);
+            return result;
+
+        } catch (error) {
+            const executionTime = Date.now() - startTime;
+            const userId = runtimeContext?.get('resourceId');
+            const errorMessage = `Failed to get user transactions for ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+
+            logError('Failed to get user transactions', error as Error, {
+                userId,
+                executionTimeMs: executionTime,
+                operation: toolId
+            });
+
+            logToolError(toolId, error as Error, executionTime, context);
+
+            // Throw error instead of returning error object
+            throw new Error(errorMessage);
+        }
+    },
+});
+
+/**
+ * Tool to get the latest transaction for the current user
+ */
+export const getLatestUserTransactionTool = createTool({
+    id: 'get_latest_user_transaction',
+    description: 'Get the most recent transaction for the current user. Useful for continuing with the latest transaction. The userId is automatically extracted from agent memory context.',
+    inputSchema: z.object({}), // No parameters needed
+    execute: async ({ context, runtimeContext }) => {
+        const startTime = Date.now();
+        const toolId = 'get_latest_user_transaction';
+
+        logToolCall(toolId, context);
+
+        try {
+            // Extract userId from memory context
+            const userId = runtimeContext?.get('resourceId');
+
+            if (!userId) {
+                throw new Error('Unable to extract userId from agent memory context. Make sure the agent is called with proper memory configuration.');
+            }
+
+            logInfo('Getting latest user transaction', {
+                userId,
+                operation: toolId
+            });
+
+            const transactions = await fetchQuery(api.transactions.getUserTransactions, {
+                userId: userId as Id<"users">,
+                limit: 1, // Get only the latest transaction
+            });
+
+            const executionTime = Date.now() - startTime;
+
+            if (transactions.length === 0) {
+                const result = {
+                    success: true,
+                    hasTransaction: false,
+                    message: 'No transactions found for this user',
+                    workingMemoryUpdate: 'No transaction ID to store - user has no transactions yet'
+                };
+
+                logInfo('No transactions found for user', {
+                    userId,
+                    executionTimeMs: executionTime,
+                    operation: toolId
+                });
+
+                logToolResult(toolId, result, executionTime);
+                return result;
+            }
+
+            const latestTransaction = transactions[0];
+
+            const result = {
+                success: true,
+                hasTransaction: true,
+                data: latestTransaction,
+                transaction: {
+                    id: latestTransaction._id,
+                    status: latestTransaction.status,
+                    currencyFrom: latestTransaction.currencyFrom,
+                    currencyTo: latestTransaction.currencyTo,
+                    amountFrom: latestTransaction.amountFrom,
+                    amountTo: latestTransaction.amountTo,
+                    negotiatedRate: latestTransaction.negotiatedRate,
+                    createdAt: latestTransaction.createdAt,
+                    updatedAt: latestTransaction.updatedAt,
+                    paymentReference: latestTransaction.paymentReference
+                },
+                message: `Latest transaction found with status: ${latestTransaction.status}`,
+                workingMemoryUpdate: `Update your working memory with the latest transaction ID: ${latestTransaction._id}`
+            };
+
+            logSuccess('Latest user transaction retrieved successfully', {
+                userId,
+                transactionId: latestTransaction._id,
+                transactionStatus: latestTransaction.status,
+                executionTimeMs: executionTime,
+                operation: toolId
+            });
+
+            logToolResult(toolId, result, executionTime);
+            return result;
+
+        } catch (error) {
+            const executionTime = Date.now() - startTime;
+            const userId = runtimeContext?.get('resourceId');
+            const errorMessage = `Failed to get latest user transaction for ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+
+            logError('Failed to get latest user transaction', error as Error, {
+                userId,
                 executionTimeMs: executionTime,
                 operation: toolId
             });
