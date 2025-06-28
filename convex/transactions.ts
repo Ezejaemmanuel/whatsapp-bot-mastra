@@ -14,10 +14,6 @@ export const createTransaction = mutation({
         amountFrom: v.number(),
         amountTo: v.number(),
         negotiatedRate: v.number(),
-        customerBankName: v.optional(v.string()),
-        customerAccountNumber: v.optional(v.string()),
-        customerAccountName: v.optional(v.string()),
-        duplicateCheckHash: v.optional(v.string()),
         negotiationHistory: v.optional(v.array(v.any())),
         metadata: v.optional(v.any()),
     },
@@ -32,11 +28,7 @@ export const createTransaction = mutation({
             amountFrom: args.amountFrom,
             amountTo: args.amountTo,
             negotiatedRate: args.negotiatedRate,
-            customerBankName: args.customerBankName,
-            customerAccountNumber: args.customerAccountNumber,
-            customerAccountName: args.customerAccountName,
             status: "pending",
-            duplicateCheckHash: args.duplicateCheckHash,
             negotiationHistory: args.negotiationHistory || [],
             createdAt: now,
             updatedAt: now,
@@ -156,18 +148,7 @@ export const getConversationTransactions = query({
     },
 });
 
-/**
- * Check for duplicate transactions
- */
-export const checkDuplicateTransaction = query({
-    args: { duplicateCheckHash: v.string() },
-    handler: async (ctx, args) => {
-        return await ctx.db
-            .query("transactions")
-            .withIndex("by_duplicate_check_hash", (q) => q.eq("duplicateCheckHash", args.duplicateCheckHash))
-            .first();
-    },
-});
+
 
 /**
  * Get pending transactions (for admin/monitoring)
@@ -188,25 +169,7 @@ export const getPendingTransactions = query({
     },
 });
 
-/**
- * Update customer account details
- */
-export const updateCustomerDetails = mutation({
-    args: {
-        transactionId: v.id("transactions"),
-        customerBankName: v.string(),
-        customerAccountNumber: v.string(),
-        customerAccountName: v.string(),
-    },
-    handler: async (ctx, args) => {
-        return await ctx.db.patch(args.transactionId, {
-            customerBankName: args.customerBankName,
-            customerAccountNumber: args.customerAccountNumber,
-            customerAccountName: args.customerAccountName,
-            updatedAt: Date.now(),
-        });
-    },
-});
+
 
 /**
  * Cancel transaction

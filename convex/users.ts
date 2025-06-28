@@ -97,6 +97,9 @@ export const updateUser = mutation({
         profileName: v.optional(v.string()),
         phoneNumber: v.optional(v.string()),
         isBlocked: v.optional(v.boolean()),
+        bankName: v.optional(v.string()),
+        accountNumber: v.optional(v.string()),
+        accountName: v.optional(v.string()),
         metadata: v.optional(v.any()),
     },
     handler: async (ctx, args) => {
@@ -109,6 +112,26 @@ export const updateUser = mutation({
 
         await ctx.db.patch(userId, cleanUpdates);
         return await ctx.db.get(userId);
+    },
+});
+
+/**
+ * Update user bank details
+ */
+export const updateUserBankDetails = mutation({
+    args: {
+        userId: v.id("users"),
+        bankName: v.string(),
+        accountNumber: v.string(),
+        accountName: v.string(),
+    },
+    handler: async (ctx, args) => {
+        await ctx.db.patch(args.userId, {
+            bankName: args.bankName,
+            accountNumber: args.accountNumber,
+            accountName: args.accountName,
+        });
+        return await ctx.db.get(args.userId);
     },
 });
 

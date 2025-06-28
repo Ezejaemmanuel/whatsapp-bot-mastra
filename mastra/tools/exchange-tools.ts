@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { fetchQuery, fetchMutation } from "convex/nextjs";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-import crypto from 'crypto';
 import { imageAnalysisTool } from './image-analysis-tool';
 
 /**
@@ -146,18 +145,13 @@ export const getCurrentRatesTool = createTool({
  */
 export const createTransactionTool = createTool({
     id: 'create_transaction',
-    description: 'Create a new exchange transaction when user agrees to terms',
+    description: 'Create a new exchange transaction when user agrees to terms. The userId and conversationId are automatically extracted from the agent memory context.',
     inputSchema: z.object({
-        userId: z.string().describe('User ID'),
-        conversationId: z.string().describe('Conversation ID'),
         currencyFrom: z.string().describe('Source currency (USD, GBP, EUR, etc.)'),
         currencyTo: z.string().describe('Target currency (NGN, etc.)'),
         amountFrom: z.number().describe('Amount to exchange from'),
         amountTo: z.number().describe('Amount to receive'),
         negotiatedRate: z.number().describe('Final negotiated rate'),
-        customerBankName: z.string().optional().describe('Customer bank name'),
-        customerAccountNumber: z.string().optional().describe('Customer account number'),
-        customerAccountName: z.string().optional().describe('Customer account name'),
         negotiationHistory: z.array(z.object({
             timestamp: z.number().optional(),
             customerRate: z.number().optional(),
@@ -166,44 +160,42 @@ export const createTransactionTool = createTool({
             strategy: z.string().optional()
         })).optional().describe('History of rate negotiations'),
     }),
-    execute: async ({ context }) => {
+    execute: async ({ context, runtimeContext }) => {
         const startTime = Date.now();
         const toolId = 'create_transaction';
 
         logToolCall(toolId, context);
 
         try {
-            logInfo('Creating new transaction', {
-                userId: context.userId,
-                conversationId: context.conversationId,
+            // Extract userId and conversationId from memory context
+            // resourceId is the userId, threadId is the conversationId
+            const userId = runtimeContext?.get('resourceId'); // This is the userId (from phone number)
+            const conversationId = runtimeContext?.get('threadId'); // This is the conversationId
+
+            if (!userId || !conversationId) {
+                throw new Error('Unable to extract userId and conversationId from agent memory context. Make sure the agent is called with proper memory configuration.');
+            }
+
+            logInfo('Creating new transaction with extracted context', {
+                userId,
+                conversationId,
                 currencyFrom: context.currencyFrom,
                 currencyTo: context.currencyTo,
                 amountFrom: context.amountFrom,
                 amountTo: context.amountTo,
                 negotiatedRate: context.negotiatedRate,
-                hasCustomerBank: !!context.customerBankName,
                 hasNegotiationHistory: !!context.negotiationHistory && context.negotiationHistory.length > 0,
                 operation: toolId
             });
 
-            // Generate duplicate check hash
-            const duplicateCheckHash = crypto
-                .createHash('sha256')
-                .update(`${context.userId}-${context.amountFrom}-${context.negotiatedRate}-${Date.now()}`)
-                .digest('hex');
-
             const transaction = await fetchMutation(api.transactions.createTransaction, {
-                userId: context.userId as Id<"users">,
-                conversationId: context.conversationId as Id<"conversations">,
+                userId: userId as Id<"users">,
+                conversationId: conversationId as Id<"conversations">,
                 currencyFrom: context.currencyFrom,
                 currencyTo: context.currencyTo,
                 amountFrom: context.amountFrom,
                 amountTo: context.amountTo,
                 negotiatedRate: context.negotiatedRate,
-                customerBankName: context.customerBankName,
-                customerAccountNumber: context.customerAccountNumber,
-                customerAccountName: context.customerAccountName,
-                duplicateCheckHash,
                 negotiationHistory: context.negotiationHistory,
             });
 
@@ -218,12 +210,12 @@ export const createTransactionTool = createTool({
 
             logSuccess('Transaction created successfully', {
                 transactionId: transaction,
-                userId: context.userId,
+                userId,
+                conversationId,
                 currencyPair: `${context.currencyFrom}_${context.currencyTo}`,
                 amountFrom: context.amountFrom,
                 amountTo: context.amountTo,
                 negotiatedRate: context.negotiatedRate,
-                duplicateCheckHash,
                 executionTimeMs: executionTime,
                 operation: toolId
             });
@@ -233,11 +225,13 @@ export const createTransactionTool = createTool({
 
         } catch (error) {
             const executionTime = Date.now() - startTime;
-            const errorMessage = `Failed to create transaction for user ${context.userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            const userId = runtimeContext?.get('resourceId');
+            const conversationId = runtimeContext?.get('threadId');
+            const errorMessage = `Failed to create transaction for user ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
 
             logError('Failed to create transaction', error as Error, {
-                userId: context.userId,
-                conversationId: context.conversationId,
+                userId,
+                conversationId,
                 currencyPair: `${context.currencyFrom}_${context.currencyTo}`,
                 amountFrom: context.amountFrom,
                 negotiatedRate: context.negotiatedRate,
@@ -328,45 +322,45 @@ export const updateTransactionStatusTool = createTool({
 });
 
 /**
- * Tool to check for duplicate transactions
+ * Tool to get admin bank details for customer payments
  */
-export const checkDuplicateTool = createTool({
-    id: 'check_duplicate_transaction',
-    description: 'Check if a transaction might be a duplicate based on hash',
-    inputSchema: z.object({
-        duplicateCheckHash: z.string().describe('Hash to check for duplicates'),
-    }),
+export const getAdminBankDetailsTool = createTool({
+    id: 'get_admin_bank_details',
+    description: 'Get admin bank account details where customers should send payments. Returns the default active admin bank account.',
+    inputSchema: z.object({}), // No parameters needed
     execute: async ({ context }) => {
         const startTime = Date.now();
-        const toolId = 'check_duplicate_transaction';
+        const toolId = 'get_admin_bank_details';
 
         logToolCall(toolId, context);
 
         try {
-            logInfo('Checking for duplicate transaction', {
-                duplicateCheckHash: context.duplicateCheckHash,
+            logInfo('Getting admin bank details for customer payment', {
                 operation: toolId
             });
 
-            const duplicate = await fetchQuery(api.transactions.checkDuplicateTransaction, {
-                duplicateCheckHash: context.duplicateCheckHash,
-            });
+            const adminBankDetails = await fetchQuery(api.adminBankDetails.getDefaultAdminBankDetails, {});
+
+            if (!adminBankDetails) {
+                throw new Error('No active admin bank details found. Please contact support.');
+            }
 
             const executionTime = Date.now() - startTime;
 
             const result = {
                 success: true,
-                isDuplicate: !!duplicate,
-                data: duplicate,
-                message: duplicate ?
-                    `Duplicate transaction found: ${duplicate._id}` :
-                    'No duplicate transaction found'
+                data: adminBankDetails,
+                accountNumber: adminBankDetails.accountNumber,
+                accountName: adminBankDetails.accountName,
+                bankName: adminBankDetails.bankName,
+                message: `Admin bank details retrieved successfully`
             };
 
-            logSuccess('Duplicate check completed', {
-                duplicateCheckHash: context.duplicateCheckHash,
-                isDuplicate: !!duplicate,
-                duplicateTransactionId: duplicate?._id,
+            logSuccess('Admin bank details retrieved successfully', {
+                bankName: adminBankDetails.bankName,
+                accountName: adminBankDetails.accountName,
+                // Don't log full account number for security
+                accountNumberMasked: adminBankDetails.accountNumber.slice(0, 4) + '****',
                 executionTimeMs: executionTime,
                 operation: toolId
             });
@@ -376,10 +370,9 @@ export const checkDuplicateTool = createTool({
 
         } catch (error) {
             const executionTime = Date.now() - startTime;
-            const errorMessage = `Failed to check for duplicates with hash ${context.duplicateCheckHash}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            const errorMessage = `Failed to get admin bank details: ${error instanceof Error ? error.message : 'Unknown error'}`;
 
-            logError('Failed to check for duplicates', error as Error, {
-                duplicateCheckHash: context.duplicateCheckHash,
+            logError('Failed to get admin bank details', error as Error, {
                 executionTimeMs: executionTime,
                 operation: toolId
             });
@@ -393,49 +386,61 @@ export const checkDuplicateTool = createTool({
 });
 
 /**
- * Tool to generate duplicate detection hash
+ * Tool to get user information by userId from memory context
  */
-export const generateDuplicateHashTool = createTool({
-    id: 'generate_duplicate_hash',
-    description: 'Generate a hash for duplicate detection based on transaction details',
-    inputSchema: z.object({
-        userId: z.string().describe('User ID'),
-        amount: z.number().describe('Transaction amount'),
-        reference: z.string().optional().describe('Payment reference'),
-        timestamp: z.number().optional().describe('Transaction timestamp'),
-    }),
-    execute: async ({ context }) => {
+export const getUserTool = createTool({
+    id: 'get_user',
+    description: 'Get user information including bank details. The userId is automatically extracted from the agent memory context.',
+    inputSchema: z.object({}), // No parameters needed
+    execute: async ({ context, runtimeContext }) => {
         const startTime = Date.now();
-        const toolId = 'generate_duplicate_hash';
+        const toolId = 'get_user';
 
         logToolCall(toolId, context);
 
         try {
-            logInfo('Generating duplicate detection hash', {
-                userId: context.userId,
-                amount: context.amount,
-                hasReference: !!context.reference,
-                hasTimestamp: !!context.timestamp,
+            // Extract userId from memory context
+            const userId = runtimeContext?.get('resourceId'); // This is the userId
+
+            if (!userId) {
+                throw new Error('Unable to extract userId from agent memory context. Make sure the agent is called with proper memory configuration.');
+            }
+
+            logInfo('Getting user information', {
+                userId,
                 operation: toolId
             });
 
-            const hashInput = `${context.userId}-${context.amount}-${context.reference || ''}-${context.timestamp || Date.now()}`;
-            const hash = crypto.createHash('sha256').update(hashInput).digest('hex');
+            const user = await fetchQuery(api.users.getUserById, {
+                userId: userId as Id<"users">
+            });
+
+            if (!user) {
+                throw new Error(`User not found with ID: ${userId}`);
+            }
 
             const executionTime = Date.now() - startTime;
 
             const result = {
                 success: true,
-                hash,
-                hashInput,
-                message: `Hash generated successfully for user ${context.userId}`
+                data: user,
+                userId: user._id,
+                whatsappId: user.whatsappId,
+                profileName: user.profileName,
+                phoneNumber: user.phoneNumber,
+                bankDetails: {
+                    bankName: user.bankName,
+                    accountNumber: user.accountNumber,
+                    accountName: user.accountName
+                },
+                message: `User information retrieved successfully`
             };
 
-            logSuccess('Duplicate detection hash generated', {
-                userId: context.userId,
-                amount: context.amount,
-                hash: hash.substring(0, 16) + '...', // Log partial hash for security
-                hashLength: hash.length,
+            logSuccess('User information retrieved successfully', {
+                userId: user._id,
+                whatsappId: user.whatsappId,
+                profileName: user.profileName,
+                hasBankDetails: !!(user.bankName && user.accountNumber && user.accountName),
                 executionTimeMs: executionTime,
                 operation: toolId
             });
@@ -445,11 +450,91 @@ export const generateDuplicateHashTool = createTool({
 
         } catch (error) {
             const executionTime = Date.now() - startTime;
-            const errorMessage = `Failed to generate hash for user ${context.userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            const userId = runtimeContext?.get('resourceId');
+            const errorMessage = `Failed to get user information for ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
 
-            logError('Failed to generate hash', error as Error, {
-                userId: context.userId,
-                amount: context.amount,
+            logError('Failed to get user information', error as Error, {
+                userId,
+                executionTimeMs: executionTime,
+                operation: toolId
+            });
+
+            logToolError(toolId, error as Error, executionTime, context);
+
+            // Throw error instead of returning error object
+            throw new Error(errorMessage);
+        }
+    },
+});
+
+/**
+ * Tool to update user bank details
+ */
+export const updateUserBankDetailsTool = createTool({
+    id: 'update_user_bank_details',
+    description: 'Update user bank account details. The userId is automatically extracted from the agent memory context.',
+    inputSchema: z.object({
+        bankName: z.string().describe('Customer bank name'),
+        accountNumber: z.string().describe('Customer account number'),
+        accountName: z.string().describe('Customer account name'),
+    }),
+    execute: async ({ context, runtimeContext }) => {
+        const startTime = Date.now();
+        const toolId = 'update_user_bank_details';
+
+        logToolCall(toolId, context);
+
+        try {
+            // Extract userId from memory context
+            const userId = runtimeContext?.get('resourceId'); // This is the userId
+
+            if (!userId) {
+                throw new Error('Unable to extract userId from agent memory context. Make sure the agent is called with proper memory configuration.');
+            }
+
+            logInfo('Updating user bank details', {
+                userId,
+                bankName: context.bankName,
+                accountName: context.accountName,
+                // Don't log full account number for security
+                accountNumberMasked: context.accountNumber.slice(0, 4) + '****',
+                operation: toolId
+            });
+
+            const updatedUser = await fetchMutation(api.users.updateUserBankDetails, {
+                userId: userId as Id<"users">,
+                bankName: context.bankName,
+                accountNumber: context.accountNumber,
+                accountName: context.accountName,
+            });
+
+            const executionTime = Date.now() - startTime;
+
+            const result = {
+                success: true,
+                data: updatedUser,
+                message: `User bank details updated successfully`
+            };
+
+            logSuccess('User bank details updated successfully', {
+                userId,
+                bankName: context.bankName,
+                accountName: context.accountName,
+                executionTimeMs: executionTime,
+                operation: toolId
+            });
+
+            logToolResult(toolId, result, executionTime);
+            return result;
+
+        } catch (error) {
+            const executionTime = Date.now() - startTime;
+            const userId = runtimeContext?.get('resourceId');
+            const errorMessage = `Failed to update user bank details for ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+
+            logError('Failed to update user bank details', error as Error, {
+                userId,
+                bankName: context.bankName,
                 executionTimeMs: executionTime,
                 operation: toolId
             });
@@ -469,7 +554,8 @@ export const exchangeTools = [
     getCurrentRatesTool,
     createTransactionTool,
     updateTransactionStatusTool,
-    checkDuplicateTool,
-    generateDuplicateHashTool,
+    getAdminBankDetailsTool,
+    getUserTool,
+    updateUserBankDetailsTool,
     imageAnalysisTool,
 ]; 

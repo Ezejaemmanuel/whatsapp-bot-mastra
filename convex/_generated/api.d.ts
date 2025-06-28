@@ -13,6 +13,7 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as adminBankDetails from "../adminBankDetails.js";
 import type * as conversationStates from "../conversationStates.js";
 import type * as conversations from "../conversations.js";
 import type * as duplicateDetection from "../duplicateDetection.js";
@@ -33,6 +34,7 @@ import type * as webhookLogs from "../webhookLogs.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  adminBankDetails: typeof adminBankDetails;
   conversationStates: typeof conversationStates;
   conversations: typeof conversations;
   duplicateDetection: typeof duplicateDetection;

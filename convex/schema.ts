@@ -17,6 +17,9 @@ export default defineSchema({
         phoneNumber: v.optional(v.string()), // Phone number
         profileName: v.optional(v.string()), // Profile name
         isBlocked: v.optional(v.boolean()), // Whether user is blocked
+        bankName: v.optional(v.string()), // Customer's bank name
+        accountNumber: v.optional(v.string()), // Customer's account number
+        accountName: v.optional(v.string()), // Customer's account name
         metadata: v.optional(v.any()), // Additional user metadata
     })
         .index("by_whatsapp_id", ["whatsappId"])
@@ -145,14 +148,10 @@ export default defineSchema({
         amountFrom: v.number(), // Amount to exchange from
         amountTo: v.number(), // Amount to receive
         negotiatedRate: v.number(), // Final negotiated rate
-        customerBankName: v.optional(v.string()), // Customer's bank name
-        customerAccountNumber: v.optional(v.string()), // Customer's account number
-        customerAccountName: v.optional(v.string()), // Customer's account name
         paymentReference: v.optional(v.string()), // Payment reference number
         receiptImageUrl: v.optional(v.string()), // URL to receipt image
         extractedDetails: v.optional(v.any()), // OCR extracted data from receipt
         status: v.string(), // 'pending', 'paid', 'verified', 'completed', 'failed', 'cancelled'
-        duplicateCheckHash: v.optional(v.string()), // Hash for duplicate prevention
         negotiationHistory: v.optional(v.array(v.any())), // History of rate negotiations
         createdAt: v.number(), // Transaction creation timestamp
         updatedAt: v.number(), // Last update timestamp
@@ -161,7 +160,6 @@ export default defineSchema({
         .index("by_user_id", ["userId"])
         .index("by_conversation_id", ["conversationId"])
         .index("by_status", ["status"])
-        .index("by_duplicate_check_hash", ["duplicateCheckHash"])
         .index("by_created_at", ["createdAt"])
         .index("by_updated_at", ["updatedAt"]),
 
@@ -200,4 +198,23 @@ export default defineSchema({
         .index("by_user_id", ["userId"])
         .index("by_detected_at", ["detectedAt"])
         .index("by_status", ["status"]),
+
+    /**
+     * Admin bank details table - stores admin bank account information for receiving payments
+     */
+    adminBankDetails: defineTable({
+        accountNumber: v.string(), // Admin account number
+        accountName: v.string(), // Admin account holder name
+        bankName: v.string(), // Admin bank name
+        isActive: v.boolean(), // Whether this account is currently active for receiving payments
+        isDefault: v.boolean(), // Whether this is the default account
+        description: v.optional(v.string()), // Optional description for the account
+        createdAt: v.number(), // Account creation timestamp
+        updatedAt: v.number(), // Last update timestamp
+        metadata: v.optional(v.any()), // Additional account metadata
+    })
+        .index("by_is_active", ["isActive"])
+        .index("by_is_default", ["isDefault"])
+        .index("by_bank_name", ["bankName"])
+        .index("by_created_at", ["createdAt"]),
 }); 

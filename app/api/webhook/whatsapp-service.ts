@@ -5,6 +5,7 @@ import { DatabaseService } from '@/lib/database-service';
 import { MediaUploadService } from '@/lib/media-upload-service';
 import { Id } from '@/convex/_generated/dataModel';
 import { mastra } from '@/mastra';
+import { RuntimeContext } from '@mastra/core/runtime-context';
 
 /**
  * WhatsApp Webhook Service
@@ -360,6 +361,20 @@ export class WhatsAppWebhookService {
             let response: string;
 
             try {
+                // Get user and conversation for proper memory context
+                const user = await this.databaseService.getOrCreateUser(messageInfo.from);
+                const conversation = await this.databaseService.getOrCreateConversation(user._id);
+
+                // Import RuntimeContext for passing memory context to tools
+
+                // Create runtime context with memory context for tools
+                const runtimeContext = new RuntimeContext<{
+                    resourceId: string;
+                    threadId: string;
+                }>();
+                runtimeContext.set('resourceId', user._id); // ✅ Pass userId as resourceId
+                runtimeContext.set('threadId', conversation._id); // ✅ Pass conversationId as threadId
+
                 const agent = mastra.getAgent('whatsappAgent');
                 // Use the enhanced WhatsApp Exchange Agent to generate a response
                 const agentResponse = await agent.generate([
@@ -371,7 +386,8 @@ export class WhatsAppWebhookService {
                     memory: {
                         thread: `whatsapp-${messageInfo.from}`, // Use phone number as thread ID for conversation continuity
                         resource: messageInfo.from, // Use phone number as resource ID
-                    }
+                    },
+                    runtimeContext, // ✅ Pass userId and conversationId to tools via runtime context
                 });
 
                 response = agentResponse.text || 'I apologize, but I couldn\'t process your message at the moment. Please try again.';
@@ -552,6 +568,18 @@ Please extract relevant payment information including transaction amount, curren
                 let response: string;
 
                 try {
+                    // Get user and conversation for proper memory context
+                    const user = await this.databaseService.getOrCreateUser(messageInfo.from);
+                    const conversation = await this.databaseService.getOrCreateConversation(user._id);
+
+                    // Create runtime context with memory context for tools
+                    const runtimeContext = new RuntimeContext<{
+                        resourceId: string;
+                        threadId: string;
+                    }>();
+                    runtimeContext.set('resourceId', user._id); // ✅ Pass userId as resourceId
+                    runtimeContext.set('threadId', conversation._id); // ✅ Pass conversationId as threadId
+
                     // Process image with exchange agent for receipt analysis
                     const agent = mastra.getAgent('whatsappAgent');
                     const agentResponse = await agent.generate([
@@ -561,11 +589,11 @@ Please extract relevant payment information including transaction amount, curren
                         }
 
                     ], {
-
                         memory: {
                             thread: `whatsapp-${messageInfo.from}`,
                             resource: messageInfo.from,
-                        }
+                        },
+                        runtimeContext, // ✅ Pass userId and conversationId to tools via runtime context
                     });
 
                     response = agentResponse.text || 'Got your receipt! 📸 Let me analyze the details...';

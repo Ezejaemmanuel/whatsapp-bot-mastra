@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mastra } from '@/mastra';
+import { RuntimeContext } from '@mastra/core/runtime-context';
 
 export async function POST(request: NextRequest) {
     try {
@@ -23,7 +24,12 @@ export async function POST(request: NextRequest) {
         }
 
         // Generate response using the agent
-        const response = await agent.generate(message);
+                    const response = await agent.generate(message, {
+                        runtimeContext: new RuntimeContext<{
+                            resourceId: string;
+                            threadId: string;
+                        }>(),
+                    });
 
         return NextResponse.json({
             message: response.text,

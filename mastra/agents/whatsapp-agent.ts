@@ -3,7 +3,7 @@ import { Memory } from '@mastra/memory';
 import { UpstashStore, UpstashVector } from '@mastra/upstash';
 import { google } from '@ai-sdk/google';
 import { WHATSAPP_AGENT_NAME, WHATSAPP_AGENT_INSTRUCTIONS, GEMINI_MODEL } from './agent-instructions';
-import { getCurrentRatesTool, createTransactionTool, updateTransactionStatusTool, checkDuplicateTool, generateDuplicateHashTool } from '../tools/exchange-tools';
+import { getCurrentRatesTool, createTransactionTool, updateTransactionStatusTool, getAdminBankDetailsTool, getUserTool, updateUserBankDetailsTool } from '../tools/exchange-tools';
 import { imageAnalysisTool } from '../tools/image-analysis-tool';
 import { sendInteractiveButtonsTool, sendInteractiveListTool } from '../tools/whatsapp-interactive-tool';
 
@@ -61,40 +61,45 @@ const memory = new Memory({
         semanticRecall: {
             topK: 4, // ✅ Further reduced to minimize empty message risk
             messageRange: 2, // ✅ Reduced context range
-            scope: 'thread', // Search within current thread
+            scope: 'resource', // ✅ Search across all threads for the same user (resourceId)
         },
         workingMemory: {
             enabled: true,
+            scope: 'resource', // ✅ Persist memory across all conversations for the same user
             template: `
-# Customer Information
-- WhatsApp ID: 
-- Phone Number:
-- Profile Name:
-- Customer Status: (new/returning)
-- Preferred Currency Pairs:
-- Transaction History Summary:
+# Customer Profile
+- **WhatsApp ID**: 
+- **Phone Number**: 
+- **Profile Name**: 
+- **Customer Status**: (new/returning)
+- **Preferred Currency Pairs**: 
+- **Trust Level**: (new/verified/trusted)
+- **Total Transaction Volume**: 
+- **Last Transaction Date**: 
 
 # Current Exchange Session
-- Current Flow State: (welcome/currency_selection/rate_inquiry/negotiation/account_details/payment/verification/completed)
-- Selected Currency Pair:
-- Exchange Amount:
-- Negotiated Rate:
-- Transaction ID:
-- Customer Bank Details:
-- Payment Status:
+- **Current Conversation ID**: 
+- **Flow State**: (welcome/currency_selection/rate_inquiry/negotiation/account_details/payment/verification/completed)
+- **Selected Currency Pair**: 
+- **Exchange Amount**: 
+- **Negotiated Rate**: 
+- **Transaction ID**: 
+- **Customer Bank Details**: 
+- **Payment Status**: 
+- **Awaiting Response**: 
 
-# Conversation Context
-- Last Interaction Type: (text/button/list/image)
-- Awaiting Response: 
-- Negotiation History:
-- Important Notes:
-- Security Flags:
+# Transaction History Summary
+- **Recent Transactions**: 
+- **Negotiation Patterns**: 
+- **Payment Reliability**: 
+- **Special Notes**: 
 
 # Business Context
-- Current Market Conditions:
-- Rate Boundaries:
-- Volume Considerations:
-- Special Instructions:
+- **Current Market Conditions**: 
+- **Rate Boundaries Applied**: 
+- **Volume Considerations**: 
+- **Security Flags**: 
+- **Special Instructions**: 
 `,
         },
         threads: {
@@ -116,8 +121,9 @@ export const whatsappAgent = new Agent({
         getCurrentRatesTool,
         createTransactionTool,
         updateTransactionStatusTool,
-        checkDuplicateTool,
-        generateDuplicateHashTool,
+        getAdminBankDetailsTool,
+        getUserTool,
+        updateUserBankDetailsTool,
         imageAnalysisTool,
         sendInteractiveButtonsTool,
         sendInteractiveListTool,
