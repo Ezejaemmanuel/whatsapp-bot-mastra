@@ -9,6 +9,6 @@ export const mastra = new Mastra({
 
   logger: new PinoLogger({
     name: 'KhalidWid-Exchange-Mastra',
-    level: 'debug',
+    level: 'info',
   }),
 });
