@@ -1,5 +1,5 @@
 // AI Model Configuration
-export const GEMINI_MODEL = "gemini-2.5-flash-lite-preview-06-17" as const;
+export const GEMINI_MODEL = "gemini-2.5-flash" as const;
 
 // Agent Configuration
 export const WHATSAPP_AGENT_NAME = "KhalidWid_Exchange_Bot" as const;
