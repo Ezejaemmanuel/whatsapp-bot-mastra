@@ -6,6 +6,35 @@ import { MediaUploadService } from '@/lib/media-upload-service';
 import { Id } from '@/convex/_generated/dataModel';
 import { mastra } from '@/mastra';
 import { RuntimeContext } from '@mastra/core/runtime-context';
+import { TEST_MODE } from '@/constant';
+
+/**
+ * Format error details for test mode
+ */
+function formatErrorForTestMode(error: unknown, context: Record<string, any> = {}): string {
+    if (!TEST_MODE) {
+        return 'I apologize, but I encountered an issue. Please try again in a moment.';
+    }
+
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorName = error instanceof Error ? error.name : 'Unknown Error';
+    const errorStack = error instanceof Error ? error.stack : 'No stack trace available';
+
+    return `🔧 TEST MODE - ERROR DETAILS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ ERROR: ${errorName}
+📝 MESSAGE: ${errorMessage}
+
+📍 CONTEXT:
+${Object.entries(context).map(([key, value]) => `• ${key}: ${JSON.stringify(value)}`).join('\n')}
+
+🔍 STACK TRACE:
+${errorStack}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ This detailed error is only shown in TEST_MODE`;
+}
 
 /**
  * WhatsApp Webhook Service
@@ -426,8 +455,20 @@ export class WhatsAppWebhookService {
                     }
                 });
 
-                // Fallback response when agent fails
-                response = 'I apologize, but I encountered an issue processing your message. Please try again in a moment, or contact support if the problem persists.';
+                // Fallback response when agent fails - use test mode formatting if enabled
+                response = formatErrorForTestMode(agentError, {
+                    operation: 'handleTextMessage',
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    messageText: messageText.substring(0, 100),
+                    threadId: `whatsapp-${messageInfo.from}`,
+                    errorType: 'agent_error'
+                });
+
+                // If not in test mode, use friendly fallback
+                if (!TEST_MODE) {
+                    response = 'I apologize, but I encountered an issue processing your message. Please try again in a moment, or contact support if the problem persists.';
+                }
             }
 
             // Send response to user
@@ -465,7 +506,19 @@ export class WhatsAppWebhookService {
             });
 
             // This catch block handles non-agent errors (database, network, etc.)
-            const systemErrorResponse = 'I apologize, but I encountered a system issue. Please try again in a moment.';
+            let systemErrorResponse = formatErrorForTestMode(error, {
+                operation: 'handleTextMessage',
+                messageId: messageInfo.id,
+                from: messageInfo.from,
+                messageText: messageInfo.text?.substring(0, 100),
+                conversationId,
+                errorType: 'system_error'
+            });
+
+            // If not in test mode, use friendly fallback
+            if (!TEST_MODE) {
+                systemErrorResponse = 'I apologize, but I encountered a system issue. Please try again in a moment.';
+            }
 
             try {
                 await this.sendTextReply(
@@ -628,12 +681,23 @@ Please extract relevant payment information including transaction amount, curren
                         fallbackUsed: true
                     });
 
+                    // Fallback response when agent fails for images - use test mode formatting if enabled
+                    response = formatErrorForTestMode(agentError, {
+                        operation: 'handleMediaMessage',
+                        messageId: messageInfo.id,
+                        from: messageInfo.from,
+                        hasImageUrl: !!imageUrl,
+                        imageUrl: imageUrl ? 'provided' : 'missing',
+                        threadId: `whatsapp-${messageInfo.from}`,
+                        errorType: 'agent_error_media'
+                    });
 
-
-                    // Fallback response when agent fails for images
-                    response = imageUrl ?
-                        'I received your receipt image but had trouble analyzing it. Could you try sending it again or provide the transaction details as text?' :
-                        'I had trouble processing your image. Could you try sending it again or send me the transaction details as text?';
+                    // If not in test mode, use friendly fallback
+                    if (!TEST_MODE) {
+                        response = imageUrl ?
+                            'I received your receipt image but had trouble analyzing it. Could you try sending it again or provide the transaction details as text?' :
+                            'I had trouble processing your image. Could you try sending it again or send me the transaction details as text?';
+                    }
                 }
 
                 await this.sendTextReply(
@@ -697,7 +761,18 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
             });
 
             // This catch block handles non-agent errors (database, storage, network, etc.)
-            const systemErrorResponse = 'I had trouble processing your image due to a system issue. Could you try sending it again in a moment?';
+            let systemErrorResponse = formatErrorForTestMode(error, {
+                operation: 'handleMediaMessage',
+                messageType: messageInfo.type,
+                messageId: messageInfo.id,
+                from: messageInfo.from,
+                errorType: 'system_error_media'
+            });
+
+            // If not in test mode, use friendly fallback
+            if (!TEST_MODE) {
+                systemErrorResponse = 'I had trouble processing your image due to a system issue. Could you try sending it again in a moment?';
+            }
 
             try {
                 await this.sendTextReply(

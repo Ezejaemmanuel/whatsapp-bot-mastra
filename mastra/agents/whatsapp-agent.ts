@@ -65,7 +65,6 @@ const memory = new Memory({
         },
         workingMemory: {
             enabled: true,
-            
             // scope: 'resource', // ✅ Persist memory across all conversations for the same user
             template: `
 # Customer Profile
@@ -119,17 +118,16 @@ export const whatsappAgent = new Agent({
     model: google(GEMINI_MODEL), // API key should be set via GOOGLE_GENERATIVE_AI_API_KEY environment variable
     memory,
     tools: {
-        // getCurrentRatesTool,
-        // createTransactionTool,
-        // updateTransactionStatusTool,
-        // getUserTransactionsTool,
-        // getLatestUserTransactionTool,
-        // getAdminBankDetailsTool,
-        // getUserTool,
-        // updateUserBankDetailsTool,
-        // imageAnalysisTool,
-        // sendInteractiveButtonsTool,
-        // sendInteractiveListTool,
-        
+        getCurrentRatesTool,
+        createTransactionTool,
+        updateTransactionStatusTool,
+        getUserTransactionsTool,
+        getLatestUserTransactionTool,
+        getAdminBankDetailsTool,
+        getUserTool,
+        updateUserBankDetailsTool,
+        imageAnalysisTool,
+        sendInteractiveButtonsTool,
+        sendInteractiveListTool,
     },
 }); 

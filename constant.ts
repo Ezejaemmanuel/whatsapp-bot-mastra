@@ -4,3 +4,10 @@
 
 // export const WHATSAPP_API_VERSION = "v23.0";
 
+/**
+ * Test mode configuration
+ * When true, detailed error information will be sent to WhatsApp messages for debugging
+ * When false, user-friendly error messages will be sent instead
+ */
+export const TEST_MODE = true; // Set to false in production
+
