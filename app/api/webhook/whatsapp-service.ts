@@ -5,6 +5,7 @@ import { DatabaseService } from '@/lib/database-service';
 import { MediaUploadService } from '@/lib/media-upload-service';
 import { Id } from '@/convex/_generated/dataModel';
 import { mastra } from '@/mastra';
+import { validateAndSanitizeContent } from '@/mastra/agents/whatsapp-agent';
 
 /**
  * WhatsApp Webhook Service
@@ -354,18 +355,27 @@ export class WhatsAppWebhookService {
                 operation: 'handleTextMessage'
             });
 
-            // Get message text for processing
-            const messageText = messageInfo.text?.trim() || '';
+            // Get message text for processing with validation
+            const rawMessageText = messageInfo.text?.trim() || '';
+
+            // ✅ CRITICAL: Validate and sanitize content to prevent Gemini "contents.parts must not be empty" error
+            const messageText = validateAndSanitizeContent(rawMessageText);
 
             let response: string;
 
             try {
                 const agent = mastra.getAgent('whatsappAgent');
+
+                // ✅ CRITICAL: Additional validation before sending to agent
+                if (!messageText || messageText.trim().length === 0) {
+                    throw new Error('Empty message content after validation');
+                }
+
                 // Use the enhanced WhatsApp Exchange Agent to generate a response
                 const agentResponse = await agent.generate([
                     {
                         role: 'user' as const,
-                        content: messageText || 'Hello',
+                        content: messageText, // Already validated and sanitized
                     }
                 ], {
                     memory: {
@@ -374,7 +384,11 @@ export class WhatsAppWebhookService {
                     }
                 });
 
-                response = agentResponse.text || 'I apologize, but I couldn\'t process your message at the moment. Please try again.';
+                // ✅ CRITICAL: Validate agent response to prevent empty responses
+                const agentText = agentResponse.text?.trim();
+                response = agentText && agentText.length > 0
+                    ? agentText
+                    : 'I apologize, but I couldn\'t process your message at the moment. Please try again.';
 
                 // Check if agent wants to send interactive messages
                 if (agentResponse.toolCalls && agentResponse.toolCalls.length > 0) {
@@ -389,16 +403,22 @@ export class WhatsAppWebhookService {
                     hasToolCalls: agentResponse.toolCalls && agentResponse.toolCalls.length > 0,
                     toolCallsCount: agentResponse.toolCalls?.length || 0,
                     messageTextLength: messageText.length,
+                    originalTextLength: rawMessageText.length,
+                    wasContentSanitized: rawMessageText !== messageText,
                     operation: 'handleTextMessage'
                 });
 
             } catch (agentError) {
                 const agentErrorMessage = agentError instanceof Error ? agentError.message : 'Unknown agent error';
+                const isGeminiContentError = agentErrorMessage.includes('contents.parts must not be empty') ||
+                    agentErrorMessage.includes('GenerateContentRequest.contents') ||
+                    agentErrorMessage.includes('parts: contents.parts must not be empty');
 
                 logError('Exchange agent failed to process text message', agentError as Error, {
                     messageId: messageInfo.id,
                     from: messageInfo.from,
                     text: messageText,
+                    originalText: rawMessageText,
                     threadId: `whatsapp-${messageInfo.from}`,
                     agentErrorMessage,
                     operation: 'handleTextMessage',
@@ -406,12 +426,19 @@ export class WhatsAppWebhookService {
                     errorDetails: {
                         name: agentError instanceof Error ? agentError.name : 'Unknown',
                         message: agentErrorMessage,
-                        isGeminiContentError: agentErrorMessage.includes('contents.parts must not be empty')
+                        isGeminiContentError,
+                        contentValidationApplied: true,
+                        sanitizedContentLength: messageText.length,
+                        originalContentLength: rawMessageText.length
                     }
                 });
 
-                // Fallback response when agent fails
-                response = 'I apologize, but I encountered an issue processing your message. Please try again in a moment, or contact support if the problem persists.';
+                // Enhanced fallback response based on error type
+                if (isGeminiContentError) {
+                    response = 'I received your message but had trouble processing it. Could you please rephrase your message and try again?';
+                } else {
+                    response = 'I apologize, but I encountered an issue processing your message. Please try again in a moment, or contact support if the problem persists.';
+                }
             }
 
             // Send response to user
@@ -541,7 +568,7 @@ export class WhatsAppWebhookService {
                 }
 
                 // Prepare text content for agent - the agent will use the image analysis tool
-                const agentContent = imageUrl ?
+                const rawAgentContent = imageUrl ?
                     `I'm sending you a receipt image for payment verification. Please use the image analysis tool to analyze this image: ${imageUrl}
                     
 ${messageInfo.mediaInfo?.caption ? `Caption provided by customer: ${messageInfo.mediaInfo.caption}` : ''}
@@ -549,15 +576,24 @@ ${messageInfo.mediaInfo?.caption ? `Caption provided by customer: ${messageInfo.
 Please extract relevant payment information including transaction amount, currency, ID, date, bank details, and verify if it matches any pending exchange transactions.`
                     : `I received a receipt image but couldn't access it for analysis. ${messageInfo.mediaInfo?.caption ? `Caption: ${messageInfo.mediaInfo.caption}` : ''} Please try sending the image again or provide the transaction details manually.`;
 
+                // ✅ CRITICAL: Validate and sanitize content to prevent Gemini "contents.parts must not be empty" error
+                const agentContent = validateAndSanitizeContent(rawAgentContent);
+
                 let response: string;
 
                 try {
                     // Process image with exchange agent for receipt analysis
                     const agent = mastra.getAgent('whatsappAgent');
+
+                    // ✅ CRITICAL: Additional validation before sending to agent
+                    if (!agentContent || agentContent.trim().length === 0) {
+                        throw new Error('Empty image content after validation');
+                    }
+
                     const agentResponse = await agent.generate([
                         {
                             role: 'user',
-                            content: agentContent,
+                            content: agentContent, // Already validated and sanitized
                         }
 
                     ], {
@@ -568,7 +604,11 @@ Please extract relevant payment information including transaction amount, curren
                         }
                     });
 
-                    response = agentResponse.text || 'Got your receipt! 📸 Let me analyze the details...';
+                    // ✅ CRITICAL: Validate agent response to prevent empty responses
+                    const agentText = agentResponse.text?.trim();
+                    response = agentText && agentText.length > 0
+                        ? agentText
+                        : 'Got your receipt! 📸 Let me analyze the details...';
 
                     // Check if agent wants to send interactive messages
                     if (agentResponse.toolCalls && agentResponse.toolCalls.length > 0) {
@@ -583,11 +623,17 @@ Please extract relevant payment information including transaction amount, curren
                         hasImageUrl: !!imageUrl,
                         hasToolCalls: agentResponse.toolCalls && agentResponse.toolCalls.length > 0,
                         toolCallsCount: agentResponse.toolCalls?.length || 0,
+                        contentLength: agentContent.length,
+                        originalContentLength: rawAgentContent.length,
+                        wasContentSanitized: rawAgentContent !== agentContent,
                         operation: 'handleMediaMessage'
                     });
 
                 } catch (agentError) {
                     const agentErrorMessage = agentError instanceof Error ? agentError.message : 'Unknown agent error';
+                    const isGeminiContentError = agentErrorMessage.includes('contents.parts must not be empty') ||
+                        agentErrorMessage.includes('GenerateContentRequest.contents') ||
+                        agentErrorMessage.includes('parts: contents.parts must not be empty');
 
                     logError('Exchange agent failed to process image message', agentError as Error, {
                         messageId: messageInfo.id,
@@ -597,15 +643,25 @@ Please extract relevant payment information including transaction amount, curren
                         threadId: `whatsapp-${messageInfo.from}`,
                         agentErrorMessage,
                         operation: 'handleMediaMessage',
-                        fallbackUsed: true
+                        fallbackUsed: true,
+                        errorDetails: {
+                            isGeminiContentError,
+                            contentValidationApplied: true,
+                            sanitizedContentLength: agentContent.length,
+                            originalContentLength: rawAgentContent.length
+                        }
                     });
 
-
-
-                    // Fallback response when agent fails for images
-                    response = imageUrl ?
-                        'I received your receipt image but had trouble analyzing it. Could you try sending it again or provide the transaction details as text?' :
-                        'I had trouble processing your image. Could you try sending it again or send me the transaction details as text?';
+                    // Enhanced fallback response based on error type for images
+                    if (isGeminiContentError) {
+                        response = imageUrl ?
+                            'I received your receipt image but had trouble processing it due to a technical issue. Could you try sending it again or provide the transaction details as text?' :
+                            'I had trouble processing your image due to a technical issue. Could you try sending it again or send me the transaction details as text?';
+                    } else {
+                        response = imageUrl ?
+                            'I received your receipt image but had trouble analyzing it. Could you try sending it again or provide the transaction details as text?' :
+                            'I had trouble processing your image. Could you try sending it again or send me the transaction details as text?';
+                    }
                 }
 
                 await this.sendTextReply(

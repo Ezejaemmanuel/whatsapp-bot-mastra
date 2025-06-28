@@ -48,7 +48,32 @@ const upstashVector = new UpstashVector({
     token: UPSTASH_VECTOR_REST_TOKEN!,
 });
 
-// Enhanced memory configuration for exchange bot context
+/**
+ * Content validation utility to prevent Gemini "contents.parts must not be empty" error
+ * This ensures all content sent to Gemini API has valid, non-empty parts
+ */
+function validateAndSanitizeContent(content: string): string {
+    // Remove null, undefined, and empty strings
+    if (!content || typeof content !== 'string') {
+        return 'Hello'; // Fallback to simple greeting
+    }
+
+    // Trim whitespace and normalize
+    const sanitized = content.trim();
+
+    // Ensure minimum content length to prevent empty parts
+    if (sanitized.length === 0) {
+        return 'Hello'; // Fallback to simple greeting
+    }
+
+    // Remove any potential problematic characters that might cause parsing issues
+    const cleaned = sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+
+    // Final check - ensure we have actual content
+    return cleaned.length > 0 ? cleaned : 'Hello';
+}
+
+// Enhanced memory configuration for exchange bot context with Gemini-safe settings
 const memory = new Memory({
     storage: upstashStorage, // Redis for general storage
     vector: upstashVector, // Vector database for embeddings
@@ -57,10 +82,11 @@ const memory = new Memory({
         taskType: 'SEMANTIC_SIMILARITY', // Optional: specify task type
     }),
     options: {
-        lastMessages: 15, // ✅ Further reduced to minimize risk of empty messages
+        // ✅ CRITICAL: Reduced settings to prevent empty message accumulation
+        lastMessages: 8, // Significantly reduced from 15 to minimize empty message risk
         semanticRecall: {
-            topK: 4, // ✅ Further reduced to minimize empty message risk
-            messageRange: 2, // ✅ Reduced context range
+            topK: 2, // Reduced from 4 to minimize empty message retrieval
+            messageRange: 1, // Reduced from 2 to prevent context pollution
             scope: 'thread', // Search within current thread
         },
         workingMemory: {
@@ -104,9 +130,9 @@ const memory = new Memory({
 });
 
 
-// Create the enhanced WhatsApp Exchange Agent
+// Create the enhanced WhatsApp Exchange Agent with Gemini-safe configuration
 export const whatsappAgent = new Agent({
-    
+
     name: WHATSAPP_AGENT_NAME,
     description: 'An intelligent WhatsApp exchange bot for KhalidWid Exchange, specializing in currency exchange with smart negotiation, transaction processing, fraud prevention, and receipt processing through specialized tools.',
     instructions: WHATSAPP_AGENT_INSTRUCTIONS,
@@ -122,4 +148,7 @@ export const whatsappAgent = new Agent({
         sendInteractiveButtonsTool,
         sendInteractiveListTool,
     },
-}); 
+});
+
+// ✅ Export the content validation utility for use in other files
+export { validateAndSanitizeContent }; 
