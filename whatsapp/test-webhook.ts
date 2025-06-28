@@ -13,7 +13,6 @@ const client = new WhatsAppCloudApiClient({
     accessToken: 'test-token',
 });
 
-// Test webhook payload validation
 function testWebhookValidation() {
     console.log('Testing webhook payload validation...');
 
