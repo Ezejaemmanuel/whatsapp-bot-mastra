@@ -63,13 +63,6 @@ try {
         });
     }
 
-    logWebhookEvent('INFO', 'WhatsApp environment configuration validated successfully', {
-        configurationStatus: 'complete',
-        accessTokenConfigured: true,
-        phoneNumberIdConfigured: true,
-        businessAccountIdConfigured: true,
-        tokenPrefix: accessToken ? accessToken.substring(0, 3) : 'N/A'
-    });
 } catch (error) {
     logWebhookEvent('ERROR', 'WhatsApp environment configuration validation failed', {
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -104,10 +97,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
         logWebhookEvent('INFO', 'Webhook verification request received', {
             mode,
-            token: token ? '***HIDDEN***' : null,
-            challenge: challenge ? '***HIDDEN***' : null,
-            userAgent: metadata.userAgent,
-            ip: metadata.ip
+            // token: token ? '***HIDDEN***' : null,
         });
 
         // Create verification response
@@ -148,13 +138,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const signature = request.headers.get('x-hub-signature-256') || '';
         const metadata = extractRequestMetadata(request);
 
-        logWebhookEvent('INFO', 'Webhook POST request received', {
-            contentLength: body.length,
-            hasSignature: !!signature,
-            userAgent: metadata.userAgent,
-            ip: metadata.ip,
-            headers: Object.fromEntries(request.headers.entries())
-        });
+        // logWebhookEvent('INFO', 'Webhook POST request received', {
+        //     contentLength: body.length,
+        //     hasSignature: !!signature,
+        //     userAgent: metadata.userAgent,
+        //     ip: metadata.ip,
+        //     headers: Object.fromEntries(request.headers.entries())
+        // });
 
         // Verify webhook signature if secret is configured
         if (WEBHOOK_SECRET && !verifyWebhookSignature(body, signature, WEBHOOK_SECRET)) {
@@ -174,16 +164,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         // Process and log the webhook data
         const processedData = processWebhookData(parsedBody);
 
-        logWebhookEvent('INFO', 'Webhook data processed successfully', {
-            summary: {
-                object: processedData.object,
-                totalEntries: processedData.entries.length,
-                totalMessages: processedData.totalMessages,
-                totalStatuses: processedData.totalStatuses,
-                businessAccounts: processedData.businessAccounts,
-                phoneNumbers: processedData.phoneNumbers
-            }
-        });
+        // logWebhookEvent('INFO', 'Webhook data processed successfully', {
+        //     summary: {
+        //         object: processedData.object,
+        //         totalEntries: processedData.entries.length,
+        //         totalMessages: processedData.totalMessages,
+        //         totalStatuses: processedData.totalStatuses,
+        //         businessAccounts: processedData.businessAccounts,
+        //         phoneNumbers: processedData.phoneNumbers
+        //     }
+        // });
 
         // Process webhook payload with WhatsApp service for auto-responses
         try {
@@ -225,18 +215,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         // Log detailed information about each entry
         for (let i = 0; i < processedData.entries.length; i++) {
             const entry = processedData.entries[i];
-            logWebhookEvent('INFO', `Processing entry ${i + 1}/${processedData.entries.length}`, {
-                entryId: entry.id,
-                changesCount: entry.changes.length
-            });
+            // logWebhookEvent('INFO', `Processing entry ${i + 1}/${processedData.entries.length}`, {
+            //     entryId: entry.id,
+            //     changesCount: entry.changes.length
+            // });
 
             // Log each change in detail
             for (let j = 0; j < entry.changes.length; j++) {
                 const change = entry.changes[j];
-                logWebhookEvent('INFO', `Change ${j + 1}: ${change.field}`, {
-                    field: change.field,
-                    value: change.value
-                });
+                // logWebhookEvent('INFO', `Change ${j + 1}: ${change.field}`, {
+                //     field: change.field,
+                //     value: change.value
+                // });
 
                 // Log specific message details
                 if (change.value?.messages) {
@@ -251,17 +241,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                                 contactName = contact?.profile?.name;
                             }
 
-                            logWebhookEvent('INFO', 'Received message', {
-                                messageId: messageInfo.id,
-                                from: messageInfo.from,
-                                timestamp: messageInfo.timestamp,
-                                type: messageInfo.type,
-                                messagePreview: messageInfo.text?.substring(0, 100) || `${messageInfo.type} message`,
-                                isReply: messageInfo.isReply,
-                                replyToMessageId: messageInfo.replyToMessageId,
-                                isForwarded: messageInfo.isForwarded,
-                                mediaInfo: messageInfo.mediaInfo
-                            });
+                            // logWebhookEvent('INFO', 'Received message', {
+                            //     messageId: messageInfo.id,
+                            //     from: messageInfo.from,
+                            //     timestamp: messageInfo.timestamp,
+                            //     type: messageInfo.type,
+                            //     messagePreview: messageInfo.text?.substring(0, 100) || `${messageInfo.type} message`,
+                            //     isReply: messageInfo.isReply,
+                            //     replyToMessageId: messageInfo.replyToMessageId,
+                            //     isForwarded: messageInfo.isForwarded,
+                            //     mediaInfo: messageInfo.mediaInfo
+                            // });
                         }
                     }
                 }
@@ -271,14 +261,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                     for (const status of change.value.statuses) {
                         if (isWebhookMessageStatus(status)) {
                             const statusInfo = extractStatusInfo(status);
-                            logWebhookEvent('INFO', 'Message status update', {
-                                messageId: statusInfo.messageId,
-                                status: statusInfo.status,
-                                timestamp: statusInfo.timestamp,
-                                recipientId: statusInfo.recipientId,
-                                conversationInfo: statusInfo.conversationInfo,
-                                pricingInfo: statusInfo.pricingInfo
-                            });
+                            // logWebhookEvent('INFO', 'Message status update', {
+                            //     messageId: statusInfo.messageId,
+                            //     status: statusInfo.status,
+                            //     timestamp: statusInfo.timestamp,
+                            //     recipientId: statusInfo.recipientId,
+                            //     conversationInfo: statusInfo.conversationInfo,
+                            //     pricingInfo: statusInfo.pricingInfo
+                            // });
                         }
                     }
                 }
