@@ -22,7 +22,7 @@
     "db:clear:force": "tsx scripts/clear-databases.ts --force"
   },
   "dependencies": {
-    "@ai-sdk/google": "^1.2.19",
+    "@ai-sdk/google": "1.1.27",
     "@convex-dev/react-query": "0.0.0-alpha.11",
     "@google/genai": "^1.7.0",
     "@mastra/core": "0.10.6",
@@ -37,7 +37,7 @@
     "@tanstack/react-query": "^5.81.4",
     "@upstash/redis": "^1.35.0",
     "@upstash/vector": "^1.2.1",
-    "ai": "^4.3.16",
+    "ai": "^4.1.50",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "convex": "^1.18.4",
