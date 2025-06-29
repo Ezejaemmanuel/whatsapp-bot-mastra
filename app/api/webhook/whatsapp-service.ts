@@ -130,7 +130,7 @@ export class WhatsAppWebhookService {
                     operation: 'processIncomingMessage:extract'
                 });
                 // Send error response and return early
-                await this.sendErrorResponse(message.from, 'Sorry, I couldn\'t process your message format. Please try again.');
+                await this.sendErrorResponse(message.from, 'Sorry, I couldn\'t process your message format. Please try again.', extractError);
                 return;
             }
 
@@ -148,7 +148,7 @@ export class WhatsAppWebhookService {
                     operation: 'processIncomingMessage:user_conversation'
                 });
                 // Send error response and return early
-                await this.sendErrorResponse(messageInfo.from, 'I\'m having trouble accessing your account. Please try again in a moment.');
+                await this.sendErrorResponse(messageInfo.from, 'I\'m having trouble accessing your account. Please try again in a moment.', userError);
                 return;
             }
 
@@ -160,15 +160,12 @@ export class WhatsAppWebhookService {
                     contactName
                 );
             } catch (storeError) {
-                logError('Failed to store incoming message - DATABASE ERROR DETECTED', storeError as Error, {
+                logError('Failed to store incoming message', storeError as Error, {
                     messageId: messageInfo.id,
                     from: messageInfo.from,
                     messageType: messageInfo.type,
                     conversationId: conversation._id,
-                    operation: 'processIncomingMessage:store_message',
-                    errorName: storeError instanceof Error ? storeError.name : 'Unknown',
-                    errorMessage: storeError instanceof Error ? storeError.message : String(storeError),
-                    isConvexError: storeError instanceof Error && storeError.message.includes('Server Error')
+                    operation: 'processIncomingMessage:store_message'
                 });
 
                 // Continue processing even if storage fails - we can still respond to user
@@ -259,21 +256,11 @@ export class WhatsAppWebhookService {
                 });
 
                 // Send user-friendly error response
-                const errorResponse = formatErrorForTestMode(processingError, {
-                    operation: 'processIncomingMessage:type_processing',
-                    messageId: messageInfo.id,
-                    messageType: messageInfo.type,
-                    from: messageInfo.from
-                });
-
-                if (!TEST_MODE) {
-                    await this.sendErrorResponse(
-                        messageInfo.from,
-                        'I encountered an issue processing your message. Please try again or contact support if the problem persists.'
-                    );
-                } else {
-                    await this.sendErrorResponse(messageInfo.from, errorResponse);
-                }
+                await this.sendErrorResponse(
+                    messageInfo.from,
+                    'I encountered an issue processing your message. Please try again or contact support if the problem persists.',
+                    processingError
+                );
             }
 
         } catch (error) {
@@ -289,21 +276,11 @@ export class WhatsAppWebhookService {
 
             // Try to send an error response if we have enough info
             try {
-                const errorResponse = formatErrorForTestMode(error, {
-                    operation: 'processIncomingMessage:unexpected',
-                    messageId: message.id,
-                    messageType: message.type,
-                    from: message.from
-                });
-
-                if (!TEST_MODE) {
-                    await this.sendErrorResponse(
-                        message.from,
-                        'I\'m experiencing technical difficulties. Please try again in a few moments.'
-                    );
-                } else {
-                    await this.sendErrorResponse(message.from, errorResponse);
-                }
+                await this.sendErrorResponse(
+                    message.from,
+                    'I\'m experiencing technical difficulties. Please try again in a few moments.',
+                    error
+                );
             } catch (responseError) {
                 logError('Failed to send error response', responseError as Error, {
                     messageId: message.id,
@@ -351,207 +328,6 @@ export class WhatsAppWebhookService {
                 recipientId: status.recipient_id,
                 operation: 'processStatusUpdate'
             });
-        }
-    }
-
-    /**
-     * Send error response to user with proper error handling
-     */
-    private async sendErrorResponse(to: string, message: string): Promise<void> {
-        try {
-            await this.whatsappClient.messages.sendText({
-                to,
-                text: message
-            });
-
-            logInfo('Error response sent successfully', {
-                to,
-                messageLength: message.length,
-                operation: 'sendErrorResponse'
-            });
-        } catch (error) {
-            logError('Failed to send error response', error as Error, {
-                to,
-                messageLength: message.length,
-                operation: 'sendErrorResponse'
-            });
-        }
-    }
-
-    /**
-     * Process and store media with comprehensive error handling and user feedback
-     */
-    private async processAndStoreMediaSafely(message: WebhookMessage, messageId: Id<"messages">, userPhoneNumber: string): Promise<void> {
-        try {
-            logInfo('Starting safe media processing', {
-                messageType: message.type,
-                messageId,
-                userPhoneNumber,
-                operation: 'processAndStoreMediaSafely'
-            });
-
-            // Validate media message structure
-            const mediaInfo = this.getMediaInfo(message);
-            if (!mediaInfo || !mediaInfo.id) {
-                const errorMsg = 'Invalid media message structure - missing media ID';
-                logError(errorMsg, errorMsg, {
-                    messageId,
-                    messageType: message.type,
-                    hasMediaInfo: !!mediaInfo,
-                    mediaInfo: mediaInfo ? Object.keys(mediaInfo) : 'null',
-                    operation: 'processAndStoreMediaSafely'
-                });
-
-                // Send user feedback
-                await this.sendErrorResponse(
-                    userPhoneNumber,
-                    'I received your media but couldn\'t process it due to invalid format. Please try sending it again.'
-                );
-                return;
-            }
-
-            logInfo('Media info extracted successfully', {
-                messageId,
-                mediaId: mediaInfo.id,
-                mimeType: mediaInfo.mime_type,
-                fileName: mediaInfo.filename,
-                sha256: mediaInfo.sha256,
-                operation: 'processAndStoreMediaSafely'
-            });
-
-            // Process media with timeout and comprehensive error handling
-            let uploadResult: any;
-            try {
-                uploadResult = await Promise.race([
-                    this.mediaUploadService.processMediaMessage(
-                        mediaInfo.id,
-                        mediaInfo.filename,
-                        mediaInfo.mime_type,
-                        mediaInfo.sha256,
-                        messageId
-                    ),
-                    // Timeout after 30 seconds
-                    new Promise<any>((_, reject) =>
-                        setTimeout(() => reject(new Error('Media processing timeout after 30 seconds')), 30000)
-                    )
-                ]);
-            } catch (processingError) {
-                const errorMessage = processingError instanceof Error ? processingError.message : 'Unknown processing error';
-
-                logError('Media upload service failed', processingError as Error, {
-                    messageId,
-                    mediaId: mediaInfo.id,
-                    mimeType: mediaInfo.mime_type,
-                    fileName: mediaInfo.filename,
-                    operation: 'processAndStoreMediaSafely',
-                    isTimeout: errorMessage.includes('timeout'),
-                    isNetworkError: errorMessage.includes('network') || errorMessage.includes('fetch'),
-                    isStorageError: errorMessage.includes('storage') || errorMessage.includes('upload'),
-                    isWhatsAppError: errorMessage.includes('whatsapp') || errorMessage.includes('media'),
-                    errorType: this.categorizeMediaError(errorMessage)
-                });
-
-                // Send specific error message based on error type
-                const userErrorMessage = this.getUserFriendlyMediaError(errorMessage);
-                await this.sendErrorResponse(userPhoneNumber, userErrorMessage);
-                return;
-            }
-
-            // Check upload result
-            if (uploadResult.success && uploadResult.storedUrl) {
-                logSuccess('Media processed and stored successfully', {
-                    messageId,
-                    mediaId: mediaInfo.id,
-                    fileName: uploadResult.fileName,
-                    fileSize: uploadResult.fileSize,
-                    storedUrl: uploadResult.storedUrl,
-                    storageId: uploadResult.storageId,
-                    mimeType: mediaInfo.mime_type,
-                    operation: 'processAndStoreMediaSafely'
-                });
-            } else {
-                const errorMessage = uploadResult.error || 'Unknown upload error - no success flag or stored URL';
-                logError('Media processing completed but failed', errorMessage, {
-                    messageId,
-                    mediaId: mediaInfo.id,
-                    mimeType: mediaInfo.mime_type,
-                    fileName: mediaInfo.filename,
-                    uploadResult: uploadResult,
-                    operation: 'processAndStoreMediaSafely'
-                });
-
-                // Send user feedback about the failure
-                const userErrorMessage = this.getUserFriendlyMediaError(errorMessage);
-                await this.sendErrorResponse(userPhoneNumber, userErrorMessage);
-            }
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-            logError('Unexpected error in safe media processing', error as Error, {
-                messageId,
-                operation: 'processAndStoreMediaSafely',
-                mediaType: message.type,
-                errorMessage,
-                userPhoneNumber
-            });
-
-            // Send generic error message to user
-            await this.sendErrorResponse(
-                userPhoneNumber,
-                'I encountered an unexpected issue processing your media. Please try sending it again or contact support if the problem persists.'
-            );
-        }
-    }
-
-    /**
-     * Categorize media processing errors for better debugging
-     */
-    private categorizeMediaError(errorMessage: string): string {
-        const lowerError = errorMessage.toLowerCase();
-
-        if (lowerError.includes('timeout')) return 'TIMEOUT';
-        if (lowerError.includes('network') || lowerError.includes('fetch') || lowerError.includes('connection')) return 'NETWORK';
-        if (lowerError.includes('storage') || lowerError.includes('upload') || lowerError.includes('convex')) return 'STORAGE';
-        if (lowerError.includes('whatsapp') || lowerError.includes('media') || lowerError.includes('download')) return 'WHATSAPP_API';
-        if (lowerError.includes('server error') || lowerError.includes('request id')) return 'SERVER';
-        if (lowerError.includes('unauthorized') || lowerError.includes('forbidden')) return 'AUTH';
-        if (lowerError.includes('not found') || lowerError.includes('404')) return 'NOT_FOUND';
-        if (lowerError.includes('too large') || lowerError.includes('size')) return 'FILE_SIZE';
-        if (lowerError.includes('format') || lowerError.includes('mime') || lowerError.includes('type')) return 'FILE_FORMAT';
-
-        return 'UNKNOWN';
-    }
-
-    /**
-     * Get user-friendly error messages for media processing failures
-     */
-    private getUserFriendlyMediaError(errorMessage: string): string {
-        const errorType = this.categorizeMediaError(errorMessage);
-
-        switch (errorType) {
-            case 'TIMEOUT':
-                return 'Your media is taking too long to process. Please try sending a smaller file or try again later.';
-            case 'NETWORK':
-                return 'I\'m having trouble downloading your media due to network issues. Please try again in a moment.';
-            case 'STORAGE':
-                return 'I couldn\'t save your media due to storage issues. Please try again or contact support.';
-            case 'WHATSAPP_API':
-                return 'I\'m having trouble accessing your media from WhatsApp. Please try sending it again.';
-            case 'SERVER':
-                return 'Our servers are experiencing issues. Please try again in a few minutes.';
-            case 'AUTH':
-                return 'I don\'t have permission to access your media. Please try sending it again.';
-            case 'NOT_FOUND':
-                return 'I couldn\'t find your media file. Please try sending it again.';
-            case 'FILE_SIZE':
-                return 'Your file is too large to process. Please try sending a smaller image or compress it first.';
-            case 'FILE_FORMAT':
-                return 'I can\'t process this file format. Please send images in JPG, PNG, or other common formats.';
-            default:
-                if (TEST_MODE) {
-                    return `🔧 TEST MODE - Media Error Details:\n${errorMessage}`;
-                }
-                return 'I encountered an issue processing your media. Please try sending it again or use a different format.';
         }
     }
 
@@ -870,6 +646,12 @@ export class WhatsAppWebhookService {
                     from: messageInfo.from,
                     operation: 'handleTextMessage'
                 });
+                // Use the new error response system as final fallback
+                await this.sendErrorResponse(
+                    messageInfo.from,
+                    'I apologize, but I\'m experiencing technical difficulties. Please try again later.',
+                    fallbackError
+                );
             }
         }
     }
@@ -900,9 +682,12 @@ export class WhatsAppWebhookService {
                         operation: 'handleMediaMessage'
                     });
 
-                    // Fallback to basic text response
-                    const fallbackResponse = 'I received your image but couldn\'t process it at the moment. Please try again.';
-                    await this.sendTextReply(messageInfo.from, fallbackResponse, messageInfo.id);
+                    // Use enhanced error response system
+                    await this.sendErrorResponse(
+                        messageInfo.from,
+                        'I received your image but couldn\'t process it at the moment. Please try again.',
+                        new Error('Stored message not found for image processing')
+                    );
                     return;
                 }
 
@@ -1124,6 +909,12 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                     from: messageInfo.from,
                     operation: 'handleMediaMessage'
                 });
+                // Use the new error response system as final fallback
+                await this.sendErrorResponse(
+                    messageInfo.from,
+                    'I\'m experiencing technical difficulties with media processing. Please try again later.',
+                    fallbackError
+                );
             }
         }
     }
@@ -1303,89 +1094,15 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
     }
 
     /**
-     * Process and store media files using Convex file storage with enhanced error handling
-     * Downloads media from WhatsApp and uploads to Convex storage
-     * @deprecated Use processAndStoreMediaSafely instead for better error handling
+     * Legacy media processing method - now redirects to safe version
+     * @deprecated Use processAndStoreMediaSafely instead
      */
     private async processAndStoreMedia(message: WebhookMessage, messageId: Id<"messages">): Promise<void> {
-        try {
-            logInfo('Legacy media processing started (consider using processAndStoreMediaSafely)', {
-                messageType: message.type,
-                messageId,
-                operation: 'processAndStoreMedia'
-            });
+        // Extract user phone number from message for error reporting
+        const userPhoneNumber = message.from;
 
-            const mediaInfo = this.getMediaInfo(message);
-            if (!mediaInfo || !mediaInfo.id) {
-                logWarning('No media ID found in message', {
-                    messageId,
-                    operation: 'processAndStoreMedia',
-                    issue: 'missing_media_id',
-                    messageType: message.type,
-                    hasMediaInfo: !!mediaInfo,
-                    rawMessage: JSON.stringify(message).substring(0, 500)
-                });
-                return;
-            }
-
-            logInfo('Starting media processing', {
-                messageId,
-                mediaId: mediaInfo.id,
-                mimeType: mediaInfo.mime_type,
-                fileName: mediaInfo.filename,
-                sha256: mediaInfo.sha256,
-                operation: 'processAndStoreMedia'
-            });
-
-            // Download from WhatsApp and upload to Convex storage
-            const uploadResult = await this.mediaUploadService.processMediaMessage(
-                mediaInfo.id,
-                mediaInfo.filename,
-                mediaInfo.mime_type,
-                mediaInfo.sha256,
-                messageId
-            );
-
-            if (uploadResult.success && uploadResult.storedUrl) {
-                logSuccess('Media file processed and uploaded to Convex storage', {
-                    messageId,
-                    mediaId: mediaInfo.id,
-                    fileName: uploadResult.fileName,
-                    fileSize: uploadResult.fileSize,
-                    storedUrl: uploadResult.storedUrl,
-                    storageId: uploadResult.storageId,
-                    mimeType: mediaInfo.mime_type,
-                    operation: 'processAndStoreMedia'
-                });
-            } else {
-                const errorMessage = uploadResult.error || 'Unknown upload error';
-                logError('Failed to process media file', errorMessage, {
-                    messageId,
-                    mediaId: mediaInfo.id,
-                    mimeType: mediaInfo.mime_type,
-                    fileName: mediaInfo.filename,
-                    uploadResult: uploadResult,
-                    operation: 'processAndStoreMedia',
-                    errorType: this.categorizeMediaError(errorMessage)
-                });
-            }
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            const errorStack = error instanceof Error ? error.stack : undefined;
-
-            logError('Error processing media file', error as Error, {
-                messageId,
-                operation: 'processAndStoreMedia',
-                mediaType: message.type,
-                errorMessage,
-                errorStack,
-                errorType: this.categorizeMediaError(errorMessage),
-                isConvexError: errorMessage.includes('Server Error') || errorMessage.includes('Request ID'),
-                isWhatsAppError: errorMessage.includes('whatsapp') || errorMessage.includes('media'),
-                isNetworkError: errorMessage.includes('network') || errorMessage.includes('fetch'),
-                isStorageError: errorMessage.includes('storage') || errorMessage.includes('upload')
-            });
-        }
+        // Redirect to the safe version with error handling
+        await this.processAndStoreMediaSafely(message, messageId, userPhoneNumber);
     }
 
     /**
@@ -1536,6 +1253,172 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                 operation: 'storeValidatedOutgoingMessage'
             });
             throw error;
+        }
+    }
+
+    /**
+     * Send error response to user with comprehensive error details in test mode
+     */
+    private async sendErrorResponse(to: string, friendlyMessage: string, error?: unknown): Promise<void> {
+        try {
+            let messageToSend = friendlyMessage;
+
+            // In test mode, include detailed error information
+            if (TEST_MODE && error) {
+                const errorDetails = formatErrorForTestMode(error, {
+                    operation: 'sendErrorResponse',
+                    to,
+                    friendlyMessage
+                });
+                messageToSend = errorDetails;
+            }
+
+            await this.whatsappClient.messages.sendText({
+                to,
+                text: messageToSend
+            });
+
+            logInfo('Error response sent successfully', {
+                to,
+                messageLength: messageToSend.length,
+                isTestMode: TEST_MODE,
+                hasErrorDetails: TEST_MODE && !!error,
+                operation: 'sendErrorResponse'
+            });
+        } catch (sendError) {
+            logError('Failed to send error response', sendError as Error, {
+                to,
+                messageLength: friendlyMessage.length,
+                originalError: error instanceof Error ? error.message : String(error),
+                operation: 'sendErrorResponse'
+            });
+        }
+    }
+
+    /**
+     * Safe media processing that doesn't crash the main flow
+     */
+    private async processAndStoreMediaSafely(message: WebhookMessage, messageId: Id<"messages">, userPhoneNumber: string): Promise<void> {
+        try {
+            logInfo('Starting safe media processing', {
+                messageType: message.type,
+                messageId,
+                userPhoneNumber,
+                operation: 'processAndStoreMediaSafely'
+            });
+
+            // Validate media message structure
+            const mediaInfo = this.getMediaInfo(message);
+            if (!mediaInfo || !mediaInfo.id) {
+                const validationError = new Error('Invalid media message structure: missing media info or ID');
+                logError('Media validation failed', validationError, {
+                    messageId,
+                    messageType: message.type,
+                    hasMediaInfo: !!mediaInfo,
+                    mediaInfo: mediaInfo ? Object.keys(mediaInfo) : 'null',
+                    operation: 'processAndStoreMediaSafely'
+                });
+
+                // Send error message to user
+                await this.sendErrorResponse(
+                    userPhoneNumber,
+                    'I had trouble processing your media file. The file format might not be supported. Please try again or send a different file.',
+                    validationError
+                );
+                return;
+            }
+
+            logInfo('Media info extracted successfully', {
+                messageId,
+                mediaId: mediaInfo.id,
+                mimeType: mediaInfo.mime_type,
+                fileName: mediaInfo.filename,
+                sha256: mediaInfo.sha256,
+                operation: 'processAndStoreMediaSafely'
+            });
+
+            // Process media with timeout and comprehensive error handling
+            const uploadResult = await Promise.race([
+                this.mediaUploadService.processMediaMessage(
+                    mediaInfo.id,
+                    mediaInfo.filename,
+                    mediaInfo.mime_type,
+                    mediaInfo.sha256,
+                    messageId
+                ),
+                // Timeout after 45 seconds
+                new Promise<any>((_, reject) =>
+                    setTimeout(() => reject(new Error('Media processing timeout after 45 seconds')), 45000)
+                )
+            ]);
+
+            if (uploadResult.success && uploadResult.storedUrl) {
+                logSuccess('Media processed and stored successfully', {
+                    messageId,
+                    mediaId: mediaInfo.id,
+                    fileName: uploadResult.fileName,
+                    fileSize: uploadResult.fileSize,
+                    storedUrl: uploadResult.storedUrl,
+                    storageId: uploadResult.storageId,
+                    mimeType: mediaInfo.mime_type,
+                    operation: 'processAndStoreMediaSafely'
+                });
+
+                // Send success confirmation to user
+                await this.sendErrorResponse(
+                    userPhoneNumber,
+                    '✅ Your media file has been processed successfully! You can now continue with your request.'
+                );
+            } else {
+                const errorMessage = uploadResult.error || 'Unknown upload error';
+                const uploadError = new Error(`Media upload failed: ${errorMessage}`);
+
+                logError('Media processing failed', uploadError, {
+                    messageId,
+                    mediaId: mediaInfo.id,
+                    mimeType: mediaInfo.mime_type,
+                    fileName: mediaInfo.filename,
+                    uploadResult: uploadResult,
+                    operation: 'processAndStoreMediaSafely'
+                });
+
+                // Send detailed error to user
+                await this.sendErrorResponse(
+                    userPhoneNumber,
+                    'I had trouble processing your media file. This could be due to file size, format, or network issues. Please try again with a smaller file or different format.',
+                    uploadError
+                );
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+            logError('Error in safe media processing', error as Error, {
+                messageId,
+                operation: 'processAndStoreMediaSafely',
+                mediaType: message.type,
+                errorMessage,
+                isTimeout: errorMessage.includes('timeout'),
+                isNetworkError: errorMessage.includes('network') || errorMessage.includes('fetch'),
+                isStorageError: errorMessage.includes('storage') || errorMessage.includes('upload'),
+                isValidationError: errorMessage.includes('validation') || errorMessage.includes('Invalid')
+            });
+
+            // Send comprehensive error message to user
+            let userErrorMessage = 'I encountered an issue processing your media file. ';
+
+            if (errorMessage.includes('timeout')) {
+                userErrorMessage += 'The processing took too long - this might be due to file size or network issues. Please try with a smaller file.';
+            } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+                userErrorMessage += 'There was a network issue. Please check your connection and try again.';
+            } else if (errorMessage.includes('storage') || errorMessage.includes('upload')) {
+                userErrorMessage += 'There was a storage issue on our end. Please try again in a moment.';
+            } else if (errorMessage.includes('validation') || errorMessage.includes('Invalid')) {
+                userErrorMessage += 'The file format or structure is not supported. Please try with a different file.';
+            } else {
+                userErrorMessage += 'Please try again or contact support if the problem persists.';
+            }
+
+            await this.sendErrorResponse(userPhoneNumber, userErrorMessage, error);
         }
     }
 } 
