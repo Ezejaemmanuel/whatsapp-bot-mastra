@@ -54,14 +54,14 @@ const memory = new Memory({
     vector: upstashVector, // Vector database for embeddings
     embedder: google.textEmbeddingModel('text-embedding-004', {
         outputDimensionality: 768, // Optional: adjust dimensions
-        taskType: 'SEMANTIC_SIMILARITY', // Optional: specify task type
+        // taskType: 'SEMANTIC_SIMILARITY', // Optional: specify task type
     }),
     options: {
-        lastMessages: 15, // ✅ Further reduced to minimize risk of empty messages
+        lastMessages: 7, // ✅ Further reduced to minimize risk of empty messages
         semanticRecall: {
             topK: 4, // ✅ Further reduced to minimize empty message risk
             messageRange: 2, // ✅ Reduced context range
-            scope: 'resource', // ✅ Search across all threads for the same user (resourceId)
+            // scope: 'resource', // ✅ Search across all threads for the same user (resourceId)
         },
         workingMemory: {
             enabled: true,
