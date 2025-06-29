@@ -93,95 +93,224 @@ export class WhatsAppWebhookService {
     }
 
     /**
-     * Process incoming webhook message
+     * Process incoming webhook message with comprehensive error handling
      */
     async processIncomingMessage(message: WebhookMessage, contactName?: string): Promise<void> {
+        let messageInfo: ReturnType<typeof extractMessageInfo>;
+        let user: any;
+        let conversation: any;
+        let storedMessage: any;
+
         try {
-            const messageInfo = extractMessageInfo(message);
+            // Step 1: Extract and validate message info
+            try {
+                messageInfo = extractMessageInfo(message);
 
-            logInfo('Processing incoming message', {
-                messageId: messageInfo.id,
-                from: messageInfo.from,
-                messageType: messageInfo.type,
-                text: messageInfo.text,
-                timestamp: messageInfo.timestamp,
-                contactName,
-                hasMediaInfo: !!messageInfo.mediaInfo,
-                isReply: messageInfo.isReply,
-                isForwarded: messageInfo.isForwarded
-            });
+                // Validate essential message data
+                if (!messageInfo.id || !messageInfo.from || !messageInfo.type) {
+                    throw new Error('Invalid message structure: missing required fields');
+                }
 
-            // Get or create user and conversation
-            const user = await this.databaseService.getOrCreateUser(
-                messageInfo.from,
-                contactName
-            );
-
-            const conversation = await this.databaseService.getOrCreateConversation(user._id);
-
-            // Store the incoming message in database
-            const storedMessage = await this.databaseService.storeIncomingMessage(
-                message,
-                conversation._id,
-                contactName
-            );
-
-            // Handle media messages - download and store files
-            if (this.isMediaMessage(message)) {
-                await this.processAndStoreMedia(message, storedMessage._id);
+                logInfo('Processing incoming message', {
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    messageType: messageInfo.type,
+                    text: messageInfo.text,
+                    timestamp: messageInfo.timestamp,
+                    contactName,
+                    hasMediaInfo: !!messageInfo.mediaInfo,
+                    isReply: messageInfo.isReply,
+                    isForwarded: messageInfo.isForwarded
+                });
+            } catch (extractError) {
+                logError('Failed to extract message info', extractError as Error, {
+                    messageId: message.id,
+                    messageType: message.type,
+                    from: message.from,
+                    operation: 'processIncomingMessage:extract'
+                });
+                // Send error response and return early
+                await this.sendErrorResponse(message.from, 'Sorry, I couldn\'t process your message format. Please try again.');
+                return;
             }
 
-            // Mark message as read
-            await this.markMessageAsRead(messageInfo.id);
+            // Step 2: Get or create user and conversation with retry logic
+            try {
+                user = await this.databaseService.getOrCreateUser(
+                    messageInfo.from,
+                    contactName
+                );
+                conversation = await this.databaseService.getOrCreateConversation(user._id);
+            } catch (userError) {
+                logError('Failed to get/create user or conversation', userError as Error, {
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    operation: 'processIncomingMessage:user_conversation'
+                });
+                // Send error response and return early
+                await this.sendErrorResponse(messageInfo.from, 'I\'m having trouble accessing your account. Please try again in a moment.');
+                return;
+            }
 
-            logInfo('Processing message type', {
-                messageType: messageInfo.type,
-                messageId: messageInfo.id,
-                from: messageInfo.from,
-                text: messageInfo.text,
-                timestamp: messageInfo.timestamp
-            });
+            // Step 3: Store incoming message with fallback
+            try {
+                storedMessage = await this.databaseService.storeIncomingMessage(
+                    message,
+                    conversation._id,
+                    contactName
+                );
+            } catch (storeError) {
+                logError('Failed to store incoming message - DATABASE ERROR DETECTED', storeError as Error, {
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    messageType: messageInfo.type,
+                    conversationId: conversation._id,
+                    operation: 'processIncomingMessage:store_message',
+                    errorName: storeError instanceof Error ? storeError.name : 'Unknown',
+                    errorMessage: storeError instanceof Error ? storeError.message : String(storeError),
+                    isConvexError: storeError instanceof Error && storeError.message.includes('Server Error')
+                });
 
-            // Process different message types
-            switch (messageInfo.type) {
+                // Continue processing even if storage fails - we can still respond to user
+                logWarning('Continuing message processing without database storage', {
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    operation: 'processIncomingMessage:fallback_mode'
+                });
 
-                case 'text':
-                    await this.handleTextMessage(messageInfo, conversation._id);
-                    break;
-                case 'image':
-                case 'audio':
-                case 'video':
-                case 'document':
-                    await this.handleMediaMessage(messageInfo, conversation._id);
-                    break;
-                case 'interactive':
-                    await this.handleInteractiveMessage(messageInfo, conversation._id);
-                    break;
-                case 'location':
-                    await this.handleLocationMessage(messageInfo, conversation._id);
-                    break;
-                case 'contacts':
-                    await this.handleContactMessage(messageInfo, conversation._id);
-                    break;
-                default:
-                    logWarning('Unhandled message type received', {
-                        messageType: messageInfo.type,
+                // Create a minimal stored message object for processing
+                storedMessage = {
+                    _id: `fallback_${messageInfo.id}` as any,
+                    whatsappMessageId: messageInfo.id,
+                    messageType: messageInfo.type,
+                    content: messageInfo.text
+                };
+            }
+
+            // Step 4: Handle media processing separately (non-blocking)
+            if (this.isMediaMessage(message) && storedMessage._id && !storedMessage._id.toString().startsWith('fallback_')) {
+                // Process media in background - don't let it block message processing
+                this.processAndStoreMediaSafely(message, storedMessage._id, messageInfo.from).catch(mediaError => {
+                    logError('Media processing failed (non-blocking)', mediaError as Error, {
                         messageId: messageInfo.id,
                         from: messageInfo.from,
-                        needsImplementation: true
+                        messageType: messageInfo.type,
+                        operation: 'processIncomingMessage:media_processing'
                     });
+                });
             }
+
+            // Step 5: Mark message as read (non-blocking)
+            this.markMessageAsRead(messageInfo.id).catch(readError => {
+                logWarning('Failed to mark message as read (non-critical)', {
+                    messageId: messageInfo.id,
+                    error: readError instanceof Error ? readError.message : String(readError),
+                    operation: 'processIncomingMessage:mark_read'
+                });
+            });
+
+            // Step 6: Process message based on type
+            try {
+                logInfo('Processing message type', {
+                    messageType: messageInfo.type,
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    text: messageInfo.text,
+                    timestamp: messageInfo.timestamp
+                });
+
+                switch (messageInfo.type) {
+                    case 'text':
+                        await this.handleTextMessage(messageInfo, conversation._id);
+                        break;
+                    case 'image':
+                    case 'audio':
+                    case 'video':
+                    case 'document':
+                        await this.handleMediaMessage(messageInfo, conversation._id);
+                        break;
+                    case 'interactive':
+                        await this.handleInteractiveMessage(messageInfo, conversation._id);
+                        break;
+                    case 'location':
+                        await this.handleLocationMessage(messageInfo, conversation._id);
+                        break;
+                    case 'contacts':
+                        await this.handleContactMessage(messageInfo, conversation._id);
+                        break;
+                    default:
+                        logWarning('Unhandled message type received', {
+                            messageType: messageInfo.type,
+                            messageId: messageInfo.id,
+                            from: messageInfo.from,
+                            needsImplementation: true
+                        });
+                        await this.sendErrorResponse(
+                            messageInfo.from,
+                            'I can only handle text messages and images right now. Please send me a text or image! 😊'
+                        );
+                }
+            } catch (processingError) {
+                logError('Failed to process message type', processingError as Error, {
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    messageType: messageInfo.type,
+                    operation: 'processIncomingMessage:type_processing'
+                });
+
+                // Send user-friendly error response
+                const errorResponse = formatErrorForTestMode(processingError, {
+                    operation: 'processIncomingMessage:type_processing',
+                    messageId: messageInfo.id,
+                    messageType: messageInfo.type,
+                    from: messageInfo.from
+                });
+
+                if (!TEST_MODE) {
+                    await this.sendErrorResponse(
+                        messageInfo.from,
+                        'I encountered an issue processing your message. Please try again or contact support if the problem persists.'
+                    );
+                } else {
+                    await this.sendErrorResponse(messageInfo.from, errorResponse);
+                }
+            }
+
         } catch (error) {
-            logError('Error processing incoming message', error as Error, {
+            // This is the final catch-all for any unexpected errors
+            logError('Unexpected error in processIncomingMessage', error as Error, {
                 messageId: message.id,
                 messageType: message.type,
                 from: message.from,
                 timestamp: message.timestamp,
                 contactName,
-                operation: 'processIncomingMessage'
+                operation: 'processIncomingMessage:unexpected'
             });
 
+            // Try to send an error response if we have enough info
+            try {
+                const errorResponse = formatErrorForTestMode(error, {
+                    operation: 'processIncomingMessage:unexpected',
+                    messageId: message.id,
+                    messageType: message.type,
+                    from: message.from
+                });
 
+                if (!TEST_MODE) {
+                    await this.sendErrorResponse(
+                        message.from,
+                        'I\'m experiencing technical difficulties. Please try again in a few moments.'
+                    );
+                } else {
+                    await this.sendErrorResponse(message.from, errorResponse);
+                }
+            } catch (responseError) {
+                logError('Failed to send error response', responseError as Error, {
+                    messageId: message.id,
+                    from: message.from,
+                    operation: 'processIncomingMessage:error_response'
+                });
+            }
         }
     }
 
@@ -222,6 +351,207 @@ export class WhatsAppWebhookService {
                 recipientId: status.recipient_id,
                 operation: 'processStatusUpdate'
             });
+        }
+    }
+
+    /**
+     * Send error response to user with proper error handling
+     */
+    private async sendErrorResponse(to: string, message: string): Promise<void> {
+        try {
+            await this.whatsappClient.messages.sendText({
+                to,
+                text: message
+            });
+
+            logInfo('Error response sent successfully', {
+                to,
+                messageLength: message.length,
+                operation: 'sendErrorResponse'
+            });
+        } catch (error) {
+            logError('Failed to send error response', error as Error, {
+                to,
+                messageLength: message.length,
+                operation: 'sendErrorResponse'
+            });
+        }
+    }
+
+    /**
+     * Process and store media with comprehensive error handling and user feedback
+     */
+    private async processAndStoreMediaSafely(message: WebhookMessage, messageId: Id<"messages">, userPhoneNumber: string): Promise<void> {
+        try {
+            logInfo('Starting safe media processing', {
+                messageType: message.type,
+                messageId,
+                userPhoneNumber,
+                operation: 'processAndStoreMediaSafely'
+            });
+
+            // Validate media message structure
+            const mediaInfo = this.getMediaInfo(message);
+            if (!mediaInfo || !mediaInfo.id) {
+                const errorMsg = 'Invalid media message structure - missing media ID';
+                logError(errorMsg, errorMsg, {
+                    messageId,
+                    messageType: message.type,
+                    hasMediaInfo: !!mediaInfo,
+                    mediaInfo: mediaInfo ? Object.keys(mediaInfo) : 'null',
+                    operation: 'processAndStoreMediaSafely'
+                });
+
+                // Send user feedback
+                await this.sendErrorResponse(
+                    userPhoneNumber,
+                    'I received your media but couldn\'t process it due to invalid format. Please try sending it again.'
+                );
+                return;
+            }
+
+            logInfo('Media info extracted successfully', {
+                messageId,
+                mediaId: mediaInfo.id,
+                mimeType: mediaInfo.mime_type,
+                fileName: mediaInfo.filename,
+                sha256: mediaInfo.sha256,
+                operation: 'processAndStoreMediaSafely'
+            });
+
+            // Process media with timeout and comprehensive error handling
+            let uploadResult: any;
+            try {
+                uploadResult = await Promise.race([
+                    this.mediaUploadService.processMediaMessage(
+                        mediaInfo.id,
+                        mediaInfo.filename,
+                        mediaInfo.mime_type,
+                        mediaInfo.sha256,
+                        messageId
+                    ),
+                    // Timeout after 30 seconds
+                    new Promise<any>((_, reject) =>
+                        setTimeout(() => reject(new Error('Media processing timeout after 30 seconds')), 30000)
+                    )
+                ]);
+            } catch (processingError) {
+                const errorMessage = processingError instanceof Error ? processingError.message : 'Unknown processing error';
+
+                logError('Media upload service failed', processingError as Error, {
+                    messageId,
+                    mediaId: mediaInfo.id,
+                    mimeType: mediaInfo.mime_type,
+                    fileName: mediaInfo.filename,
+                    operation: 'processAndStoreMediaSafely',
+                    isTimeout: errorMessage.includes('timeout'),
+                    isNetworkError: errorMessage.includes('network') || errorMessage.includes('fetch'),
+                    isStorageError: errorMessage.includes('storage') || errorMessage.includes('upload'),
+                    isWhatsAppError: errorMessage.includes('whatsapp') || errorMessage.includes('media'),
+                    errorType: this.categorizeMediaError(errorMessage)
+                });
+
+                // Send specific error message based on error type
+                const userErrorMessage = this.getUserFriendlyMediaError(errorMessage);
+                await this.sendErrorResponse(userPhoneNumber, userErrorMessage);
+                return;
+            }
+
+            // Check upload result
+            if (uploadResult.success && uploadResult.storedUrl) {
+                logSuccess('Media processed and stored successfully', {
+                    messageId,
+                    mediaId: mediaInfo.id,
+                    fileName: uploadResult.fileName,
+                    fileSize: uploadResult.fileSize,
+                    storedUrl: uploadResult.storedUrl,
+                    storageId: uploadResult.storageId,
+                    mimeType: mediaInfo.mime_type,
+                    operation: 'processAndStoreMediaSafely'
+                });
+            } else {
+                const errorMessage = uploadResult.error || 'Unknown upload error - no success flag or stored URL';
+                logError('Media processing completed but failed', errorMessage, {
+                    messageId,
+                    mediaId: mediaInfo.id,
+                    mimeType: mediaInfo.mime_type,
+                    fileName: mediaInfo.filename,
+                    uploadResult: uploadResult,
+                    operation: 'processAndStoreMediaSafely'
+                });
+
+                // Send user feedback about the failure
+                const userErrorMessage = this.getUserFriendlyMediaError(errorMessage);
+                await this.sendErrorResponse(userPhoneNumber, userErrorMessage);
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+            logError('Unexpected error in safe media processing', error as Error, {
+                messageId,
+                operation: 'processAndStoreMediaSafely',
+                mediaType: message.type,
+                errorMessage,
+                userPhoneNumber
+            });
+
+            // Send generic error message to user
+            await this.sendErrorResponse(
+                userPhoneNumber,
+                'I encountered an unexpected issue processing your media. Please try sending it again or contact support if the problem persists.'
+            );
+        }
+    }
+
+    /**
+     * Categorize media processing errors for better debugging
+     */
+    private categorizeMediaError(errorMessage: string): string {
+        const lowerError = errorMessage.toLowerCase();
+
+        if (lowerError.includes('timeout')) return 'TIMEOUT';
+        if (lowerError.includes('network') || lowerError.includes('fetch') || lowerError.includes('connection')) return 'NETWORK';
+        if (lowerError.includes('storage') || lowerError.includes('upload') || lowerError.includes('convex')) return 'STORAGE';
+        if (lowerError.includes('whatsapp') || lowerError.includes('media') || lowerError.includes('download')) return 'WHATSAPP_API';
+        if (lowerError.includes('server error') || lowerError.includes('request id')) return 'SERVER';
+        if (lowerError.includes('unauthorized') || lowerError.includes('forbidden')) return 'AUTH';
+        if (lowerError.includes('not found') || lowerError.includes('404')) return 'NOT_FOUND';
+        if (lowerError.includes('too large') || lowerError.includes('size')) return 'FILE_SIZE';
+        if (lowerError.includes('format') || lowerError.includes('mime') || lowerError.includes('type')) return 'FILE_FORMAT';
+
+        return 'UNKNOWN';
+    }
+
+    /**
+     * Get user-friendly error messages for media processing failures
+     */
+    private getUserFriendlyMediaError(errorMessage: string): string {
+        const errorType = this.categorizeMediaError(errorMessage);
+
+        switch (errorType) {
+            case 'TIMEOUT':
+                return 'Your media is taking too long to process. Please try sending a smaller file or try again later.';
+            case 'NETWORK':
+                return 'I\'m having trouble downloading your media due to network issues. Please try again in a moment.';
+            case 'STORAGE':
+                return 'I couldn\'t save your media due to storage issues. Please try again or contact support.';
+            case 'WHATSAPP_API':
+                return 'I\'m having trouble accessing your media from WhatsApp. Please try sending it again.';
+            case 'SERVER':
+                return 'Our servers are experiencing issues. Please try again in a few minutes.';
+            case 'AUTH':
+                return 'I don\'t have permission to access your media. Please try sending it again.';
+            case 'NOT_FOUND':
+                return 'I couldn\'t find your media file. Please try sending it again.';
+            case 'FILE_SIZE':
+                return 'Your file is too large to process. Please try sending a smaller image or compress it first.';
+            case 'FILE_FORMAT':
+                return 'I can\'t process this file format. Please send images in JPG, PNG, or other common formats.';
+            default:
+                if (TEST_MODE) {
+                    return `🔧 TEST MODE - Media Error Details:\n${errorMessage}`;
+                }
+                return 'I encountered an issue processing your media. Please try sending it again or use a different format.';
         }
     }
 
@@ -975,13 +1305,14 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
     /**
      * Process and store media files using Convex file storage with enhanced error handling
      * Downloads media from WhatsApp and uploads to Convex storage
+     * @deprecated Use processAndStoreMediaSafely instead for better error handling
      */
     private async processAndStoreMedia(message: WebhookMessage, messageId: Id<"messages">): Promise<void> {
         try {
-            console.log('Raw webhook message for media processing:', {
+            logInfo('Legacy media processing started (consider using processAndStoreMediaSafely)', {
                 messageType: message.type,
                 messageId,
-                messageContent: message
+                operation: 'processAndStoreMedia'
             });
 
             const mediaInfo = this.getMediaInfo(message);
@@ -991,7 +1322,8 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                     operation: 'processAndStoreMedia',
                     issue: 'missing_media_id',
                     messageType: message.type,
-                    hasMediaInfo: !!mediaInfo
+                    hasMediaInfo: !!mediaInfo,
+                    rawMessage: JSON.stringify(message).substring(0, 500)
                 });
                 return;
             }
@@ -1005,25 +1337,16 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                 operation: 'processAndStoreMedia'
             });
 
-            console.log('Media info from getMediaInfo:', {
-                mediaInfo,
-                hasSha256: !!mediaInfo.sha256,
-                sha256Value: mediaInfo.sha256
-            });
-
             // Download from WhatsApp and upload to Convex storage
-            // The processMediaMessage already handles both file storage AND database record creation
             const uploadResult = await this.mediaUploadService.processMediaMessage(
                 mediaInfo.id,
                 mediaInfo.filename,
                 mediaInfo.mime_type,
                 mediaInfo.sha256,
-                messageId  // Pass messageId to avoid duplicate storage
+                messageId
             );
 
             if (uploadResult.success && uploadResult.storedUrl) {
-                // No need for additional database operations - everything is handled by processMediaMessage
-
                 logSuccess('Media file processed and uploaded to Convex storage', {
                     messageId,
                     mediaId: mediaInfo.id,
@@ -1042,10 +1365,9 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                     mimeType: mediaInfo.mime_type,
                     fileName: mediaInfo.filename,
                     uploadResult: uploadResult,
-                    operation: 'processAndStoreMedia'
+                    operation: 'processAndStoreMedia',
+                    errorType: this.categorizeMediaError(errorMessage)
                 });
-
-
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -1056,10 +1378,13 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                 operation: 'processAndStoreMedia',
                 mediaType: message.type,
                 errorMessage,
-                errorStack
+                errorStack,
+                errorType: this.categorizeMediaError(errorMessage),
+                isConvexError: errorMessage.includes('Server Error') || errorMessage.includes('Request ID'),
+                isWhatsAppError: errorMessage.includes('whatsapp') || errorMessage.includes('media'),
+                isNetworkError: errorMessage.includes('network') || errorMessage.includes('fetch'),
+                isStorageError: errorMessage.includes('storage') || errorMessage.includes('upload')
             });
-
-
         }
     }
 
