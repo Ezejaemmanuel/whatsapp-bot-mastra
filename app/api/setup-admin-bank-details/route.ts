@@ -27,7 +27,7 @@ interface AdminBankDetailsConfig {
 
 // Default admin bank details configuration
 const DEFAULT_ADMIN_BANK_DETAILS: AdminBankDetailsConfig = {
-    accountNumber: "9133363790",
+    accountNumber: "9138853790",
     accountName: "Ezeja Emmanuel Chibuike",
     bankName: "Opay",
     isActive: true,
