@@ -169,39 +169,58 @@ export const imageAnalysisTool = createTool({
         // Create the analysis prompt
         const analysisPrompt = `You are an expert image analyst specializing in financial documents and receipt analysis. 
 
-Your task is to analyze this image and determine:
+Your PRIMARY task is to first determine if this is a genuine payment receipt or transaction confirmation.
 
-1. **Is this a payment receipt or transaction confirmation?**
-   - Look for transaction amounts, bank names, reference numbers, dates
-   - Check for payment confirmations, transfer receipts, bank statements
-   - Identify any financial transaction evidence
+**Receipt Validation Checklist:**
+1. **Visual Structure Check:**
+   - Does it have a structured layout typical of financial documents?
+   - Are there clear sections for amount, date, reference numbers?
+   - Does it use formal banking/payment service formatting?
 
-2. **If it IS a receipt/transaction:**
-   - Extract ALL visible transaction details
-   - Include amounts, currencies, reference numbers, dates, times
-   - Note bank names, sender/receiver information
-   - Identify transaction status and payment method
-   - Extract any other relevant financial information
+2. **Key Elements Check:**
+   - Transaction amount in clear numbers
+   - Currency indicators
+   - Date and timestamp
+   - Transaction/reference numbers
+   - Bank/payment service provider branding
+   - Sender/receiver information
+   - Payment status indicators
 
-3. **If it is NOT a receipt:**
-   - Provide a brief, clear description of what the image shows
-   - Explain why this is not a valid receipt for financial verification
-   - Suggest what the user should send instead if they need to verify a payment
-   - Be helpful but clear about what's needed for exchange verification
+3. **Authenticity Indicators:**
+   - Official banking/payment service formatting
+   - Transaction reference numbers in expected format
+   - Professional financial document layout
+   - Digital receipt markers (QR codes, verification links)
+   - Proper financial institution branding
 
-4. **Quality Assessment:**
-   - Evaluate image quality (excellent/good/fair/poor)
-   - Rate your confidence in the analysis (high/medium/low)
-   - Note any issues that affect readability
+Only if it passes these checks, proceed with detailed analysis:
+
+1. **For Confirmed Receipts:**
+   - Extract ALL transaction details meticulously
+   - Verify all critical fields are present
+   - Note any missing but expected information
+   - Assess receipt quality and completeness
+
+2. **If NOT a Valid Receipt:**
+   - Explain clearly why it's not a valid payment proof
+   - Describe what the image actually shows
+   - Provide specific guidance on what a proper receipt should look like
+   - Be firm but helpful about requirements
+
+3. **Quality Assessment:**
+   - Image clarity and readability
+   - Completeness of visible information
+   - Any signs of manipulation or editing
+   - Overall confidence in authenticity
 
 ${analysisContext ? `\n**Additional Context:** ${analysisContext}` : ''}
 
-**Instructions:**
-- Be thorough in extracting financial information from receipts
-- Be honest about image quality and confidence levels
-- If text is unclear, note specific issues
-- For non-receipts, be polite but clear about requirements
-- Always prioritize accuracy over completeness
+**Critical Instructions:**
+- Be STRICT in receipt validation
+- Flag ANY suspicious or non-standard elements
+- Don't assume it's a receipt just because it has numbers
+- Be direct but professional about invalid submissions
+- Prioritize security and accuracy above all
 
 Analyze the image now:`;
 
