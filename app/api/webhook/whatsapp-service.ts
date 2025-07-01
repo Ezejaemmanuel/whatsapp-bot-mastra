@@ -689,14 +689,10 @@ export class WhatsAppWebhookService {
                     });
                 }
 
-                // Prepare text content for agent - the agent will use the image analysis tool
+                // Prepare text content for agent - let the agent decide how to handle the image
                 const agentContent = imageUrl ?
-                    `I'm sending you a receipt image for payment verification. Please use the image analysis tool to analyze this image: ${imageUrl}
-                    
-${messageInfo.mediaInfo?.caption ? `Caption provided by customer: ${messageInfo.mediaInfo.caption}` : ''}
-
-Please extract relevant payment information including transaction amount, currency, ID, date, bank details, and verify if it matches any pending exchange transactions.`
-                    : `I received a receipt image but couldn't access it for analysis. ${messageInfo.mediaInfo?.caption ? `Caption: ${messageInfo.mediaInfo.caption}` : ''} Please try sending the image again or provide the transaction details manually.`;
+                    `Customer sent a receipt image. Image URL: ${imageUrl}${messageInfo.mediaInfo?.caption ? `\n\nCustomer's caption: ${messageInfo.mediaInfo.caption}` : ''}`
+                    : `Customer sent a receipt image but it couldn't be processed. ${messageInfo.mediaInfo?.caption ? `Caption: ${messageInfo.mediaInfo.caption}` : ''} Please help them resolve this issue.`;
 
                 let response: string;
 
