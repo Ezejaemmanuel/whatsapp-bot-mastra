@@ -31,7 +31,7 @@ async function setupDatabase() {
         console.log('   - messages');
         console.log('   - mediaFiles');
         console.log('   - messageStatuses');
-        console.log('   - webhookLogs');
+
 
         console.log('🎉 Convex setup completed successfully!');
         console.log('');

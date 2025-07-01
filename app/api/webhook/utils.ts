@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import {
     WebhookPayload,
-    WebhookLogData,
+
     ProcessedWebhookData,
     ProcessedWebhookEntry,
     ProcessedWebhookChange,
@@ -20,7 +20,7 @@ import {
 export function logWebhookEvent(
     level: 'INFO' | 'ERROR' | 'WARN' | 'SUCCESS',
     message: string,
-    data?: Partial<WebhookLogData> & Record<string, any>
+    data?: Record<string, any>
 ): void {
     const timestamp = new Date().toISOString();
 

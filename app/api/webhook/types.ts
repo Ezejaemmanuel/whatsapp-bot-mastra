@@ -209,67 +209,7 @@ export interface ProcessedWebhookChange {
     value: WebhookChangeValue;
 }
 
-// Logging interfaces
-export interface WebhookLogData {
-    timestamp?: string;
-    level?: 'INFO' | 'WARN' | 'ERROR';
-    source?: string;
-    message?: string;
-    data?: any;
-    contentLength?: number;
-    hasSignature?: boolean;
-    userAgent?: string | null;
-    ip?: string | null;
-    headers?: Record<string, string>;
-    summary?: {
-        object: string;
-        totalEntries: number;
-        totalMessages: number;
-        totalStatuses: number;
-        businessAccounts: string[];
-        phoneNumbers: string[];
-    };
-    entryId?: string;
-    changesCount?: number;
-    messageId?: string;
-    from?: string;
-    type?: string;
-    text?: string | null;
-    messagePreview?: string;
-    status?: string;
-    statusId?: string;
-    recipientId?: string;
-    to?: string;
-    textPreview?: string;
-    bodyText?: string;
-    buttonCount?: number;
-    templateName?: string;
-    languageCode?: string;
-    processingTimeMs?: number;
-    error?: string;
-    stack?: string;
-    rawBody?: string;
-    mode?: string | null;
-    token?: string | null;
-    challenge?: string | null;
-    expectedMode?: string;
-    receivedMode?: string | null;
-    tokenMatch?: boolean;
-    field?: string;
-    value?: any;
-    isReply?: boolean;
-    replyToMessageId?: string | null;
-    isForwarded?: boolean;
-    mediaInfo?: any;
-    conversationInfo?: any;
-    pricingInfo?: any;
-    errorCode?: number;
-    errorTitle?: string;
-    errorMessage?: string;
-    errorDetails?: string;
-    statusCode?: number;
-    details?: any;
-}
+
 
 // Verification interfaces
 export interface WebhookVerificationParams {

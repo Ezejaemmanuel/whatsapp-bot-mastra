@@ -30,8 +30,7 @@ export default function TestDashboard() {
             : "skip"
     );
 
-    // Query recent webhook logs
-    const webhookLogs = useQuery(api.webhookLogs.getRecentLogs, { limit: 10 });
+
 
     // Mutation to create a test user
     const createTestUser = useMutation(api.users.getOrCreateUser);
@@ -177,8 +176,8 @@ export default function TestDashboard() {
                                             <div
                                                 key={user._id}
                                                 className={`p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md ${selectedUserId === user._id
-                                                        ? "bg-primary/5 border-primary/50"
-                                                        : "border-border/50 hover:border-border"
+                                                    ? "bg-primary/5 border-primary/50"
+                                                    : "border-border/50 hover:border-border"
                                                     }`}
                                                 onClick={() => setSelectedUserId(user._id)}
                                             >
@@ -318,76 +317,7 @@ export default function TestDashboard() {
                     </div>
                 </div>
 
-                {/* Webhook Logs Section */}
-                <Card className="border-border/50">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                            </svg>
-                            Webhook Logs
-                        </CardTitle>
-                        <CardDescription>
-                            Recent webhook activity and system logs
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <ScrollArea className="h-[300px]">
-                            {webhookLogs === undefined ? (
-                                <div className="flex items-center justify-center h-32">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                                </div>
-                            ) : webhookLogs.length === 0 ? (
-                                <div className="text-center py-8 text-muted-foreground">
-                                    <svg className="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                    </svg>
-                                    <p>No webhook logs found</p>
-                                    <p className="text-sm">Logs will appear here when webhooks are received</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {webhookLogs.map((log) => (
-                                        <div
-                                            key={log._id}
-                                            className={`p-4 rounded-lg border-l-4 ${log.level === "ERROR"
-                                                    ? "border-l-red-500 bg-red-500/5"
-                                                    : log.level === "WARN"
-                                                        ? "border-l-yellow-500 bg-yellow-500/5"
-                                                        : "border-l-green-500 bg-green-500/5"
-                                                }`}
-                                        >
-                                            <div className="flex justify-between items-start">
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <Badge
-                                                            variant={
-                                                                log.level === "ERROR" ? "destructive" :
-                                                                    log.level === "WARN" ? "secondary" : "default"
-                                                            }
-                                                            className="text-xs"
-                                                        >
-                                                            {log.level}
-                                                        </Badge>
-                                                        {log.source && (
-                                                            <Badge variant="outline" className="text-xs">
-                                                                {log.source}
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-sm font-medium mb-1">{log.message}</p>
-                                                </div>
-                                                <div className="text-xs text-muted-foreground ml-4">
-                                                    {formatTimestamp(log.timestamp)}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </ScrollArea>
-                    </CardContent>
-                </Card>
+
             </div>
         </div>
     );

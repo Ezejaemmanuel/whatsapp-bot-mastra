@@ -62,7 +62,6 @@ export interface Message extends BaseDocument {
     caption?: string;
     location?: any;
     contacts?: any;
-    interactive?: any;
     context?: any;
     status?: string;
     timestamp: number;
@@ -82,7 +81,6 @@ export interface NewMessage {
     caption?: string;
     location?: any;
     contacts?: any;
-    interactive?: any;
     context?: any;
     status?: string;
     timestamp: number;
@@ -116,17 +114,6 @@ export interface NewMediaFile {
     metadata?: any;
 }
 
-// MessageStatus types
-export interface MessageStatus extends BaseDocument {
-    _id: Id<"messageStatuses">;
-    messageId: Id<"messages">;
-    status: string;
-    timestamp: number;
-    recipientId?: string;
-    conversationInfo?: any;
-    pricingInfo?: any;
-    error?: any;
-}
 
 export interface NewMessageStatus {
     messageId: Id<"messages">;
@@ -138,26 +125,3 @@ export interface NewMessageStatus {
     error?: any;
 }
 
-// WebhookLog types
-export interface WebhookLog extends BaseDocument {
-    _id: Id<"webhookLogs">;
-    level: string;
-    source?: string;
-    message?: string;
-    data?: any;
-    timestamp: number;
-    processingTimeMs?: number;
-    error?: string;
-    stack?: string;
-}
-
-export interface NewWebhookLog {
-    level: string;
-    source?: string;
-    message?: string;
-    data?: any;
-    timestamp?: number;
-    processingTimeMs?: number;
-    error?: string;
-    stack?: string;
-} 

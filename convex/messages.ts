@@ -30,7 +30,6 @@ export const storeIncomingMessage = mutation({
             caption: args.caption,
             location: args.location,
             contacts: args.contacts,
-            interactive: args.interactive,
             context: args.context,
             status: "sent",
             timestamp: args.timestamp,

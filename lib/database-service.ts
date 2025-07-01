@@ -2,7 +2,7 @@ import { fetchQuery, fetchMutation } from "convex/nextjs";
 import { api } from "../convex/_generated/api";
 import {
     User, NewUser, Conversation, NewConversation, Message, NewMessage,
-    MediaFile, NewMediaFile, MessageStatus, NewMessageStatus, WebhookLog, NewWebhookLog
+    MediaFile, NewMediaFile, NewMessageStatus
 } from './schema';
 import { WebhookMessage, WebhookMessageStatus } from '@/app/api/webhook/types';
 import { Id } from "../convex/_generated/dataModel";
@@ -170,42 +170,7 @@ export class DatabaseService {
         }
     }
 
-    /**
-     * Store message status update
-     */
-    async storeMessageStatus(statusUpdate: WebhookMessageStatus): Promise<MessageStatus> {
-        try {
-            // First find the message by WhatsApp ID
-            const message = await fetchQuery(api.messages.getMessageByWhatsAppId, {
-                whatsappMessageId: statusUpdate.id
-            });
 
-            if (!message) {
-                throw new Error(`Message not found for WhatsApp ID: ${statusUpdate.id}`);
-            }
-
-            const statusData = {
-                messageId: message._id,
-                status: statusUpdate.status,
-                timestamp: parseInt(statusUpdate.timestamp) * 1000,
-                recipientId: statusUpdate.recipient_id,
-                conversationInfo: statusUpdate.conversation,
-                pricingInfo: statusUpdate.pricing,
-                error: statusUpdate.errors?.[0]
-            };
-
-            const messageStatus = await fetchMutation(api.messageStatuses.storeMessageStatus, statusData);
-
-            if (!messageStatus) {
-                throw new Error('Failed to store message status');
-            }
-
-            return messageStatus;
-        } catch (error) {
-            console.error('Error in storeMessageStatus:', error);
-            throw error;
-        }
-    }
 
     /**
      * Store media file information
@@ -277,41 +242,7 @@ export class DatabaseService {
         }
     }
 
-    /**
-     * Log webhook event
-     */
-    async logWebhookEvent(
-        level: 'INFO' | 'WARN' | 'ERROR',
-        message: string,
-        data?: any,
-        source?: string,
-        processingTimeMs?: number,
-        error?: string,
-        stack?: string
-    ): Promise<WebhookLog> {
-        try {
-            const logData = {
-                level,
-                message,
-                data,
-                source,
-                processingTimeMs,
-                error,
-                stack
-            };
 
-            const logEntry = await fetchMutation(api.webhookLogs.logWebhookEvent, logData);
-
-            if (!logEntry) {
-                throw new Error('Failed to log webhook event');
-            }
-
-            return logEntry;
-        } catch (error) {
-            console.error('Error in logWebhookEvent:', error);
-            throw error;
-        }
-    }
 
     /**
      * Get message by WhatsApp ID

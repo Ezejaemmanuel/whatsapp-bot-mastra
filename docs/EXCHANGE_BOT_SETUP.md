@@ -8,7 +8,7 @@ The KhalidWid Exchange Bot is a comprehensive WhatsApp-based currency exchange s
 - **Real-time Transaction Processing**: Complete exchange workflow management
 - **Receipt Processing**: Image analysis for payment verification
 - **Fraud Prevention**: Duplicate detection and security measures
-- **Interactive UI**: WhatsApp buttons and lists for better UX
+- **Conversational UI**: Natural text-based interactions
 - **Memory & Context**: Persistent conversation state management
 
 ## 🏗️ Architecture
@@ -125,7 +125,7 @@ The bot's personality and behavior are configured in `mastra/agents/agent-instru
 - **Negotiation Strategy**: Smart bargaining within rate boundaries
 - **Conversation Flow**: Multi-step exchange process
 - **Security Measures**: Fraud prevention and duplicate detection
-- **Interactive Features**: WhatsApp buttons and lists
+- **Conversational Features**: Natural text-based exchanges
 
 ## 🚀 Usage
 
@@ -196,12 +196,12 @@ if (transactionAmount >= 1000) { // Volume bonus threshold
 }
 ```
 
-### Adding Interactive Messages
+### Adding Conversational Features
 
-Extend the WhatsApp service to send interactive buttons/lists:
+Extend the WhatsApp service for enhanced text conversations:
 
 ```typescript
-await this.sendButtonMessage(
+await this.sendTextReply(
   messageInfo.from,
   "Choose your preferred option:",
   [
@@ -218,7 +218,7 @@ await this.sendButtonMessage(
 - **Convex Dashboard**: Database operations and queries
 - **Upstash Console**: Memory and vector operations
 - **Browser Console**: Agent responses and tool calls
-- **Webhook Logs**: WhatsApp API interactions
+- **Console Logs**: WhatsApp API interactions
 
 ### Testing Tools
 

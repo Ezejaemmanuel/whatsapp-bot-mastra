@@ -10,14 +10,13 @@ export function ConvexExample() {
     // Query to get all users
     const users = useQuery(api.users.getAllUsers, { limit: 10 });
 
-    // Query to get recent webhook logs
-    const recentLogs = useQuery(api.webhookLogs.getRecentLogs, { limit: 5 });
+
 
     // Mutation to create a test user
     const createTestUser = useMutation(api.users.getOrCreateUser);
 
     // Mutation to log an event
-    const logEvent = useMutation(api.webhookLogs.logWebhookEvent);
+
 
     const handleCreateUser = async () => {
         setIsCreating(true);
@@ -26,13 +25,6 @@ export function ConvexExample() {
                 whatsappId: `demo_${Date.now()}`,
                 profileName: "Demo User",
                 phoneNumber: "+1234567890"
-            });
-
-            await logEvent({
-                level: "INFO",
-                message: "Demo user created from UI",
-                source: "ConvexExample",
-                data: { action: "create_demo_user" }
             });
         } catch (error) {
             console.error("Failed to create user:", error);
@@ -77,30 +69,7 @@ export function ConvexExample() {
                 )}
             </div>
 
-            {/* Recent Logs Section */}
-            <div>
-                <h4 className="font-medium mb-2">Recent Logs</h4>
-                {recentLogs === undefined ? (
-                    <p className="text-gray-500">Loading logs...</p>
-                ) : recentLogs.length === 0 ? (
-                    <p className="text-gray-500">No recent logs</p>
-                ) : (
-                    <div className="space-y-1">
-                        {recentLogs.slice(0, 3).map((log) => (
-                            <div key={log._id} className={`text-xs p-2 rounded border-l-2 ${log.level === "ERROR" ? "border-red-500 bg-red-50" :
-                                log.level === "WARN" ? "border-yellow-500 bg-yellow-50" :
-                                    "border-green-500 bg-green-50"
-                                }`}>
-                                <span className="font-medium">{log.level}</span>
-                                <span className="ml-2">{log.message}</span>
-                            </div>
-                        ))}
-                        {recentLogs.length > 3 && (
-                            <p className="text-xs text-gray-500">... and {recentLogs.length - 3} more</p>
-                        )}
-                    </div>
-                )}
-            </div>
+
         </div>
     );
 }

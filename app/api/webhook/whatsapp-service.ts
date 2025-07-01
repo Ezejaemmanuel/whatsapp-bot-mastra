@@ -226,9 +226,7 @@ export class WhatsAppWebhookService {
                     case 'document':
                         await this.handleMediaMessage(messageInfo, conversation._id);
                         break;
-                    case 'interactive':
-                        await this.handleInteractiveMessage(messageInfo, conversation._id);
-                        break;
+
                     case 'location':
                         await this.handleLocationMessage(messageInfo, conversation._id);
                         break;
@@ -369,42 +367,7 @@ export class WhatsAppWebhookService {
         }
     }
 
-    /**
-     * Send an interactive button message
-     */
-    async sendButtonMessage(
-        to: string,
-        bodyText: string,
-        buttons: Array<{ id: string; title: string }>,
-        headerText?: string,
-        footerText?: string
-    ): Promise<void> {
-        try {
-            await this.whatsappClient.messages.sendInteractiveButtons({
-                to,
-                bodyText,
-                buttons,
-                headerText,
-                footerText
-            });
 
-            logSuccess('Button message sent successfully', {
-                to,
-                bodyText: bodyText.substring(0, 50),
-                buttonCount: buttons.length,
-                hasHeader: !!headerText,
-                hasFooter: !!footerText,
-                operation: 'sendButtonMessage'
-            });
-        } catch (error) {
-            logError('Failed to send button message', error as Error, {
-                to,
-                buttonCount: buttons.length,
-                operation: 'sendButtonMessage'
-            });
-            throw error;
-        }
-    }
 
     /**
      * Send a template message
@@ -527,10 +490,7 @@ export class WhatsAppWebhookService {
 
                 response = agentResponse.text || 'I apologize, but I couldn\'t process your message at the moment. Please try again.';
 
-                // Check if agent wants to send interactive messages
-                if (agentResponse.toolCalls && agentResponse.toolCalls.length > 0) {
-                    await this.handleAgentToolCalls(agentResponse.toolCalls, messageInfo.from, messageInfo.id);
-                }
+
 
                 logInfo('Generated exchange agent response', {
                     messageId: messageInfo.id,
@@ -766,10 +726,7 @@ Please extract relevant payment information including transaction amount, curren
 
                     response = agentResponse.text || 'Got your receipt! 📸 Let me analyze the details...';
 
-                    // Check if agent wants to send interactive messages
-                    if (agentResponse.toolCalls && agentResponse.toolCalls.length > 0) {
-                        await this.handleAgentToolCalls(agentResponse.toolCalls, messageInfo.from, messageInfo.id);
-                    }
+
 
                     logInfo('Generated exchange agent response for image', {
                         messageId: messageInfo.id,
@@ -919,14 +876,7 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
         }
     }
 
-    /**
- * Handle interactive messages (button/list replies) - treat them as regular text messages
- */
-    private async handleInteractiveMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: Id<"conversations">): Promise<void> {
-        // Interactive messages are just user selections - treat them as text messages
-        // The agent will understand the context naturally
-        await this.handleTextMessage(messageInfo, conversationId);
-    }
+
 
     /**
      * Handle location messages
@@ -1119,102 +1069,7 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
         }
     }
 
-    /**
-     * Handle agent tool calls for interactive messages
-     */
-    private async handleAgentToolCalls(toolCalls: any[], to: string, replyToMessageId?: string): Promise<void> {
-        try {
-            for (const toolCall of toolCalls) {
-                const { name, result } = toolCall;
 
-                // Handle interactive button messages
-                if (name === 'send_interactive_buttons' && result?.success && result?.action === 'SEND_INTERACTIVE_BUTTONS') {
-                    const { data } = result;
-                    await this.sendButtonMessage(
-                        to,
-                        data.bodyText,
-                        data.buttons,
-                        data.headerText,
-                        data.footerText
-                    );
-
-                    logInfo('Sent interactive button message', {
-                        to,
-                        buttonCount: data.buttons?.length || 0,
-                        operation: 'handleAgentToolCalls'
-                    });
-                }
-
-                // Handle interactive list messages
-                else if (name === 'send_interactive_list' && result?.success && result?.action === 'SEND_INTERACTIVE_LIST') {
-                    const { data } = result;
-                    await this.sendListMessage(
-                        to,
-                        data.bodyText,
-                        data.buttonText,
-                        data.sections,
-                        data.headerText,
-                        data.footerText
-                    );
-
-                    logInfo('Sent interactive list message', {
-                        to,
-                        sectionsCount: data.sections?.length || 0,
-                        operation: 'handleAgentToolCalls'
-                    });
-                }
-            }
-        } catch (error) {
-            logError('Error handling agent tool calls', error as Error, {
-                to,
-                toolCallsCount: toolCalls.length,
-                operation: 'handleAgentToolCalls'
-            });
-        }
-    }
-
-    /**
-     * Send an interactive list message
-     */
-    async sendListMessage(
-        to: string,
-        bodyText: string,
-        buttonText: string,
-        sections: Array<{
-            title: string;
-            rows: Array<{ id: string; title: string; description?: string }>;
-        }>,
-        headerText?: string,
-        footerText?: string
-    ): Promise<void> {
-        try {
-            await this.whatsappClient.messages.sendInteractiveList({
-                to,
-                bodyText,
-                buttonText,
-                sections,
-                headerText,
-                footerText
-            });
-
-            logSuccess('List message sent successfully', {
-                to,
-                bodyText: bodyText.substring(0, 50),
-                buttonText,
-                sectionsCount: sections.length,
-                hasHeader: !!headerText,
-                hasFooter: !!footerText,
-                operation: 'sendListMessage'
-            });
-        } catch (error) {
-            logError('Failed to send list message', error as Error, {
-                to,
-                sectionsCount: sections.length,
-                operation: 'sendListMessage'
-            });
-            throw error;
-        }
-    }
 
     /**
      * Store outgoing message
