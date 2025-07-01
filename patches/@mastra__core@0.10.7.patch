@@ -1,0 +1,163 @@
+diff --git a/dist/chunk-SSDOXKZK.js b/dist/chunk-SSDOXKZK.js
+index d13f8a3377770c9c4df9d85a80ce8b738fa8d4f1..520c3e62efd868ac5139217721c0fbe7ef8cb0ee 100644
+--- a/dist/chunk-SSDOXKZK.js
++++ b/dist/chunk-SSDOXKZK.js
+@@ -989,10 +989,10 @@ var Agent = class extends (_a = MastraBase) {
+         }
+         const memory = this.getMemory();
+         const toolEnhancements = [
+-        // toolsets
+-        toolsets && Object.keys(toolsets || {}).length > 0 ? `toolsets present (${Object.keys(toolsets || {}).length} tools)` : void 0,
+-        // memory tools
+-        memory && resourceId ? "memory and resourceId available" : void 0].filter(Boolean).join(", ");
++          // toolsets
++          toolsets && Object.keys(toolsets || {}).length > 0 ? `toolsets present (${Object.keys(toolsets || {}).length} tools)` : void 0,
++          // memory tools
++          memory && resourceId ? "memory and resourceId available" : void 0].filter(Boolean).join(", ");
+         this.logger.debug(`[Agent:${this.name}] - Enhancing tools: ${toolEnhancements}`, {
+           runId,
+           toolsets: toolsets ? Object.keys(toolsets) : void 0,
+@@ -1097,16 +1097,16 @@ var Agent = class extends (_a = MastraBase) {
+ The following messages were remembered from a different conversation:
+ <remembered_from_other_conversation>
+ ${JSON.stringify(
+-          // get v1 since they're closer to CoreMessages (which get sent to the LLM) but also include timestamps
+-          new MessageList().add(resultsFromOtherThreads, "memory").get.all.v1())}
++            // get v1 since they're closer to CoreMessages (which get sent to the LLM) but also include timestamps
++            new MessageList().add(resultsFromOtherThreads, "memory").get.all.v1())}
+ <end_remembered_from_other_conversation>`;
+         }
+         if (memorySystemMessage) {
+           messageList.addSystem(memorySystemMessage, "memory");
+         }
+         messageList.add(memoryMessages.filter(m => m.threadId === threadObject.id),
+-        // filter out messages from other threads. those are added to system message above
+-        "memory").add(messages, "user");
++          // filter out messages from other threads. those are added to system message above
++          "memory").add(messages, "user");
+         const systemMessage = [...messageList.getSystemMessages(), ...messageList.getSystemMessages("memory")]?.map(m => m.content)?.join(`
+ `) ?? void 0;
+         const processedMemoryMessages = memory.processMessages({
+@@ -1121,13 +1121,24 @@ ${JSON.stringify(
+         const processedList = new MessageList({
+           threadId: threadObject.id,
+           resourceId
+-        }).addSystem(instructions || `${this.instructions}.`).addSystem(memorySystemMessage).add(context || [], "context").add(processedMemoryMessages, "memory").add(messageList.get.input.v2(), "user").get.all.prompt();
++        }).addSystem(instructions || `${this.instructions}.`).addSystem(memorySystemMessage).add(context || [], "context").add(processedMemoryMessages, "memory").add(messageList.get.input.v2(), "user");
++        const promptMessages = processedList.get.all.prompt();
++        const filteredMessages = promptMessages.filter(message => {
++          if (Array.isArray(message.content)) {
++            return message.content.length > 0 && message.content.some(part => (part.text && part.text.trim() !== '') || part.type !== 'text');
++          }
++          if (typeof message.content === 'string') {
++            return message.content.trim() !== '';
++          }
++          // Fallback for unknown content structures, keep them by default.
++          return true;
++        });
+         return {
+           convertedTools,
+           thread: threadObject,
+           messageList,
+           // add old processed messages + new input messages
+-          messageObjects: processedList
++          messageObjects: filteredMessages
+         };
+       },
+       after: async ({
+@@ -2279,7 +2290,7 @@ var Machine = class extends EventEmitter {
+         this.logger.debug(`Step ${stepId} completed`);
+       },
+       snapshotStep: assign({
+-        _snapshot: ({}, params) => {
++        _snapshot: ({ }, params) => {
+           const {
+             stepId
+           } = params;
+@@ -3230,8 +3241,8 @@ var WorkflowInstance = class {
+     resumeData,
+     runtimeContext
+   } = {
+-    runtimeContext: new RuntimeContext()
+-  }) {
++      runtimeContext: new RuntimeContext()
++    }) {
+     this.#executionSpan = this.#mastra?.getTelemetry()?.tracer.startSpan(`workflow.${this.name}.execute`, {
+       attributes: {
+         componentName: this.name,
+@@ -3322,7 +3333,8 @@ var WorkflowInstance = class {
+         variables: this.#resultMapping,
+         context: {
+           steps: results,
+-          triggerData}
++          triggerData
++        }
+       });
+     }
+     return result;
+@@ -3508,7 +3520,8 @@ var WorkflowInstance = class {
+     const trigger = prevSnapshot.trigger;
+     delete prevSnapshot.trigger;
+     const snapshot = {
+-      ...trigger};
++      ...trigger
++    };
+     const m = getActivePathsAndStatus(prevSnapshot.value);
+     return {
+       runId: this.runId,
+@@ -3675,7 +3688,7 @@ var WorkflowInstance = class {
+       if (!targetStep) throw new Error(`Step not found`);
+       const {
+         payload = {},
+-        execute = async () => {}
++        execute = async () => { }
+       } = targetStep.step;
+       const mergedData = {
+         ...payload,
+@@ -3811,14 +3824,14 @@ var LegacyWorkflow = class extends MastraBase {
+       }
+     }
+     const step = isWorkflow(next) ?
+-    // @ts-ignore
+-    workflowToStep(next, {
+-      mastra: this.#mastra
+-    }) : isAgent(next) ?
+-    // @ts-ignore
+-    agentToStep(next, {
+-      mastra: this.#mastra
+-    }) : next;
++      // @ts-ignore
++      workflowToStep(next, {
++        mastra: this.#mastra
++      }) : isAgent(next) ?
++        // @ts-ignore
++        agentToStep(next, {
++          mastra: this.#mastra
++        }) : next;
+     const stepKey = this.#makeStepKey(step, config);
+     const when = config?.["#internal"]?.when || config?.when;
+     const graphEntry = {
+@@ -3890,10 +3903,10 @@ var LegacyWorkflow = class extends MastraBase {
+       }
+     }
+     const step = isWorkflow(next) ?
+-    // @ts-ignore
+-    workflowToStep(next, {
+-      mastra: this.#mastra
+-    }) : next;
++      // @ts-ignore
++      workflowToStep(next, {
++        mastra: this.#mastra
++      }) : next;
+     const stepKey = this.#makeStepKey(step, config);
+     const when = config?.["#internal"]?.when || config?.when;
+     const graphEntry = {
+@@ -4530,7 +4543,7 @@ var LegacyWorkflow = class extends MastraBase {
+       if (!targetStep) throw new Error(`Step not found`);
+       const {
+         payload = {},
+-        execute = async () => {}
++        execute = async () => { }
+       } = targetStep.step;
+       const finalAction = this.telemetry ? executeStep(execute, `workflow.${this.name}.action.${stepId}`, {
+         componentName: this.name,
