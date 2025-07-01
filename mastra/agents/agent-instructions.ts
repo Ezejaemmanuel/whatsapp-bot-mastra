@@ -1,4 +1,4 @@
-// AI Model Configuration
+// AI Model Configuration //TODO: MIGHT HAVE TO CHANGE THIS TO GEMINI 2.5 FLASH LITE
 export const GEMINI_MODEL = "gemini-2.5-flash" as const;
 
 // Agent Configuration

@@ -85,7 +85,7 @@ export class DatabaseService {
                 conversationId,
                 whatsappMessageId: webhookMessage.id,
                 messageType: webhookMessage.type,
-                content: messageContent || null, // ✅ Store null instead of empty string
+                content: messageContent ,
                 caption: this.getMediaCaption(webhookMessage),
                 location: webhookMessage.location ? {
                     latitude: webhookMessage.location.latitude,
