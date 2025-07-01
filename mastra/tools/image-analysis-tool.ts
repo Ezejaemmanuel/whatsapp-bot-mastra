@@ -3,12 +3,80 @@ import { z } from "zod";
 import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
 import { IMAGE_EXTRACTION_GEMINI_MODEL, IMAGE_EXTRACTION_TEMPERATURE } from "../agents/agent-instructions";
+import { TEST_MODE } from "../../constant";
+import WhatsAppCloudApiClient from "@/whatsapp/whatsapp-client";
 
 // API key setup
 const GOOGLE_GENERATIVE_AI_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
 if (!GOOGLE_GENERATIVE_AI_API_KEY) {
     throw new Error('GOOGLE_GENERATIVE_AI_API_KEY environment variable is required for image analysis');
+}
+
+/**
+ * Send debug message via WhatsApp when TEST_MODE is enabled
+ */
+async function sendDebugMessage(phoneNumber: string, title: string, data: any): Promise<void> {
+    if (!TEST_MODE) return;
+
+    try {
+        // Dynamically import WhatsApp client to avoid circular dependencies
+
+        const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+        const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+
+        if (!accessToken || !phoneNumberId) {
+            console.log('⚠️ DEBUG: WhatsApp credentials not available for debug messaging');
+            return;
+        }
+
+        const client = new WhatsAppCloudApiClient();
+
+
+        // Format debug message
+        const debugMessage = `🔧 DEBUG - ${title}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⏰ Time: ${new Date().toISOString()}
+📱 Tool: Image Analysis
+
+📊 Data:
+${typeof data === 'string' ? data : JSON.stringify(data, null, 2)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ This is a DEBUG message - only shown in TEST_MODE`;
+
+        // Split long messages if needed (WhatsApp has character limits)
+        const maxLength = 4000;
+        if (debugMessage.length > maxLength) {
+            const chunks = [];
+            for (let i = 0; i < debugMessage.length; i += maxLength) {
+                chunks.push(debugMessage.slice(i, i + maxLength));
+            }
+
+            for (let i = 0; i < chunks.length; i++) {
+                const chunkMessage = `${chunks[i]}${i < chunks.length - 1 ? '\n\n📄 (Continued in next message...)' : ''}`;
+                await client.messages.sendText({
+                    to: phoneNumber,
+                    text: chunkMessage
+                });
+
+                // Small delay between chunks
+                if (i < chunks.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            }
+        } else {
+            await client.messages.sendText({
+                to: phoneNumber,
+                text: debugMessage
+            });
+        }
+
+        console.log(`📱 DEBUG message sent to ${phoneNumber}: ${title}`);
+    } catch (error) {
+        console.error('❌ Failed to send debug message:', error);
+        // Don't throw - debug messaging shouldn't break the main flow
+    }
 }
 
 /**
@@ -120,9 +188,22 @@ export const imageAnalysisTool = createTool({
         context: z.string().optional().describe("Additional context about what type of analysis is expected")
     }),
     outputSchema: receiptSchema,
-    execute: async ({ context }) => {
+    execute: async ({ context, runtimeContext }) => {
         const { imageUrl, context: analysisContext } = context;
         const startTime = Date.now();
+
+        // Extract phone number from runtime context for debug messages
+        const userPhoneNumber = runtimeContext?.get('resourceId') as string; // This should be the phone number
+
+        // Send debug message about tool start
+        if (userPhoneNumber) {
+            await sendDebugMessage(userPhoneNumber, 'IMAGE ANALYSIS TOOL STARTED', {
+                imageUrl: imageUrl ? `${imageUrl.substring(0, 100)}...` : 'missing',
+                hasContext: !!analysisContext,
+                contextLength: analysisContext?.length || 0,
+                startTime: new Date(startTime).toISOString()
+            });
+        }
 
         logInfo('Starting image analysis', {
             imageUrl: imageUrl ? 'provided' : 'missing',
@@ -133,11 +214,20 @@ export const imageAnalysisTool = createTool({
         });
 
         if (!imageUrl) {
-            logError('Image URL is required for analysis', new Error('Missing image URL'), {
+            const errorMsg = 'Image URL is required for analysis';
+            logError(errorMsg, new Error('Missing image URL'), {
                 operation: 'analyze_image',
                 errorType: 'validation_error'
             });
-            throw new Error("Image URL is required for analysis");
+
+            if (userPhoneNumber) {
+                await sendDebugMessage(userPhoneNumber, 'VALIDATION ERROR', {
+                    error: errorMsg,
+                    type: 'Missing image URL'
+                });
+            }
+
+            throw new Error(errorMsg);
         }
 
         const mimeType = getMimeTypeFromUrl(imageUrl);
@@ -149,9 +239,14 @@ export const imageAnalysisTool = createTool({
             operation: 'analyze_image'
         });
 
-        // Optional validation - uncomment if needed
-        // console.log(`🔍 Validating image accessibility...`);
-        // await validateImageUrl(imageUrl);
+        // Send debug message about preprocessing
+        if (userPhoneNumber) {
+            await sendDebugMessage(userPhoneNumber, 'IMAGE PREPROCESSING', {
+                mimeType,
+                urlLength: imageUrl.length,
+                validationComplete: true
+            });
+        }
 
         // Create the analysis prompt
         const analysisPrompt = `You are an expert OCR system focused on precise text extraction. Your task is to:
@@ -185,6 +280,16 @@ Extract all text now, maintaining exact formatting:`;
                 hasAdditionalContext: !!analysisContext,
                 operation: 'analyze_image'
             });
+
+            // Send debug message about AI processing start
+            if (userPhoneNumber) {
+                await sendDebugMessage(userPhoneNumber, 'AI PROCESSING STARTED', {
+                    model: IMAGE_EXTRACTION_GEMINI_MODEL,
+                    temperature: IMAGE_EXTRACTION_TEMPERATURE,
+                    promptLength: analysisPrompt.length,
+                    mimeType
+                });
+            }
 
             // Use generateObject for structured outputs with AI SDK
             const result = await generateObject({
@@ -220,23 +325,72 @@ Extract all text now, maintaining exact formatting:`;
                 operation: 'analyze_image'
             });
 
+            // Send debug message with AI results
+            if (userPhoneNumber) {
+                await sendDebugMessage(userPhoneNumber, 'AI PROCESSING COMPLETED', {
+                    success: true,
+                    executionTimeMs: executionTime,
+                    imageQuality: analysisResult.imageQuality?.quality,
+                    confidence: analysisResult.imageQuality?.confidence,
+                    issuesCount: analysisResult.imageQuality?.issues?.length || 0,
+                    textLinesCount: analysisResult.ocrResults?.formattedText?.lines?.length || 0,
+                    sectionsCount: analysisResult.ocrResults?.formattedText?.sections?.length || 0
+                });
+            }
+
+            // Send extracted OCR results as debug message
+            if (userPhoneNumber && analysisResult.ocrResults) {
+                await sendDebugMessage(userPhoneNumber, 'OCR EXTRACTION RESULTS', {
+                    rawTextLength: analysisResult.ocrResults.rawText?.length || 0,
+                    rawTextPreview: analysisResult.ocrResults.rawText?.substring(0, 500) + (analysisResult.ocrResults.rawText?.length > 500 ? '...' : ''),
+                    linesCount: analysisResult.ocrResults.formattedText?.lines?.length || 0,
+                    sectionsCount: analysisResult.ocrResults.formattedText?.sections?.length || 0,
+                    firstFewLines: analysisResult.ocrResults.formattedText?.lines?.slice(0, 10) || []
+                });
+
+                // Send the complete raw text as a separate message for full OCR visibility
+                if (analysisResult.ocrResults.rawText) {
+                    await sendDebugMessage(userPhoneNumber, 'COMPLETE OCR RAW TEXT', analysisResult.ocrResults.rawText);
+                }
+            }
+
             if (!analysisResult) {
+                const errorMsg = 'AI failed to generate structured analysis. The vision model may not be processing the image correctly.';
                 logError('AI failed to generate structured analysis', new Error('Empty analysis result'), {
                     executionTimeMs: executionTime,
                     operation: 'analyze_image',
                     errorType: 'ai_processing_error'
                 });
-                throw new Error("AI failed to generate structured analysis. The vision model may not be processing the image correctly.");
+
+                if (userPhoneNumber) {
+                    await sendDebugMessage(userPhoneNumber, 'AI PROCESSING FAILED', {
+                        error: errorMsg,
+                        executionTimeMs: executionTime,
+                        type: 'Empty analysis result'
+                    });
+                }
+
+                throw new Error(errorMsg);
             }
 
             // Validate that we got meaningful analysis
             if (!analysisResult.imageQuality) {
+                const errorMsg = 'AI did not provide quality assessment. This suggests the analysis may be incomplete.';
                 logError('AI did not provide quality assessment', new Error('Missing quality assessment'), {
                     executionTimeMs: executionTime,
                     operation: 'analyze_image',
                     errorType: 'incomplete_analysis'
                 });
-                throw new Error("AI did not provide quality assessment. This suggests the analysis may be incomplete.");
+
+                if (userPhoneNumber) {
+                    await sendDebugMessage(userPhoneNumber, 'ANALYSIS VALIDATION FAILED', {
+                        error: errorMsg,
+                        executionTimeMs: executionTime,
+                        type: 'Missing quality assessment'
+                    });
+                }
+
+                throw new Error(errorMsg);
             }
 
             // Log detailed analysis results for debugging
@@ -246,6 +400,17 @@ Extract all text now, maintaining exact formatting:`;
                 hasSuggestedAction: false,
                 operation: 'analyze_image'
             });
+
+            // Send final success debug message
+            if (userPhoneNumber) {
+                await sendDebugMessage(userPhoneNumber, 'IMAGE ANALYSIS COMPLETED SUCCESSFULLY', {
+                    totalExecutionTimeMs: executionTime,
+                    finalQuality: analysisResult.imageQuality.quality,
+                    finalConfidence: analysisResult.imageQuality.confidence,
+                    hasExtractedText: !!analysisResult.ocrResults.rawText,
+                    analysisComplete: true
+                });
+            }
 
             return analysisResult;
 
@@ -268,6 +433,19 @@ Extract all text now, maintaining exact formatting:`;
                     isAuthError: errorMessage.includes('API key') || errorMessage.includes('auth')
                 }
             });
+
+            // Send debug message about the error
+            if (userPhoneNumber) {
+                await sendDebugMessage(userPhoneNumber, 'IMAGE ANALYSIS ERROR', {
+                    error: errorMessage,
+                    errorType: error instanceof Error ? error.constructor.name : typeof error,
+                    executionTimeMs: executionTime,
+                    stack: error instanceof Error ? error.stack : undefined,
+                    isGeminiError: errorMessage.includes('contents.parts must not be empty'),
+                    isNetworkError: errorMessage.includes('network') || errorMessage.includes('fetch'),
+                    isAuthError: errorMessage.includes('API key') || errorMessage.includes('auth')
+                });
+            }
 
             // Return a structured error response instead of throwing
             return {

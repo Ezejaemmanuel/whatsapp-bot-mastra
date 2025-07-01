@@ -3,8 +3,9 @@ import { Memory } from '@mastra/memory';
 import { UpstashStore, UpstashVector } from '@mastra/upstash';
 import { google } from '@ai-sdk/google';
 import { WHATSAPP_AGENT_NAME, WHATSAPP_AGENT_INSTRUCTIONS, GEMINI_MODEL } from './agent-instructions';
-import { getCurrentRatesTool, createTransactionTool, updateTransactionStatusTool, getUserTransactionsTool, getLatestUserTransactionTool, getAdminBankDetailsTool, getUserTool, updateUserBankDetailsTool } from '../tools/exchange-tools';
 import { imageAnalysisTool } from '../tools/image-analysis-tool';
+import { getCurrentRatesTool, createTransactionTool, updateTransactionStatusTool } from '../tools/exchange-tools';
+import { getUserTransactionsTool, getLatestUserTransactionTool, getAdminBankDetailsTool, getUserTool, updateUserBankDetailsTool } from '../tools/exchange-tools-2';
 
 
 const GOOGLE_GENERATIVE_AI_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
