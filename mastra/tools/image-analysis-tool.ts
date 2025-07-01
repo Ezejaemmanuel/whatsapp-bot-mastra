@@ -192,16 +192,20 @@ export const imageAnalysisTool = createTool({
         const { imageUrl, context: analysisContext } = context;
         const startTime = Date.now();
 
-        // Extract phone number from runtime context for debug messages
-        const userPhoneNumber = runtimeContext?.get('resourceId') as string; // This should be the phone number
+        // Extract context data using new consistent naming
+        const phoneNumber = runtimeContext?.get('phoneNumber') as string;
+        const userId = runtimeContext?.get('userId') as string;
+        const conversationId = runtimeContext?.get('conversationId') as string;
 
         // Send debug message about tool start
-        if (userPhoneNumber) {
-            await sendDebugMessage(userPhoneNumber, 'IMAGE ANALYSIS TOOL STARTED', {
+        if (phoneNumber) {
+            await sendDebugMessage(phoneNumber, 'IMAGE ANALYSIS TOOL STARTED', {
                 imageUrl: imageUrl ? `${imageUrl.substring(0, 100)}...` : 'missing',
                 hasContext: !!analysisContext,
                 contextLength: analysisContext?.length || 0,
-                startTime: new Date(startTime).toISOString()
+                startTime: new Date(startTime).toISOString(),
+                userId,
+                conversationId
             });
         }
 
@@ -220,8 +224,8 @@ export const imageAnalysisTool = createTool({
                 errorType: 'validation_error'
             });
 
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'VALIDATION ERROR', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'VALIDATION ERROR', {
                     error: errorMsg,
                     type: 'Missing image URL'
                 });
@@ -240,8 +244,8 @@ export const imageAnalysisTool = createTool({
         });
 
         // Send debug message about preprocessing
-        if (userPhoneNumber) {
-            await sendDebugMessage(userPhoneNumber, 'IMAGE PREPROCESSING', {
+        if (phoneNumber) {
+            await sendDebugMessage(phoneNumber, 'IMAGE PREPROCESSING', {
                 mimeType,
                 urlLength: imageUrl.length,
                 validationComplete: true
@@ -282,8 +286,8 @@ Extract all text now, maintaining exact formatting:`;
             });
 
             // Send debug message about AI processing start
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'AI PROCESSING STARTED', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'AI PROCESSING STARTED', {
                     model: IMAGE_EXTRACTION_GEMINI_MODEL,
                     temperature: IMAGE_EXTRACTION_TEMPERATURE,
                     promptLength: analysisPrompt.length,
@@ -326,8 +330,8 @@ Extract all text now, maintaining exact formatting:`;
             });
 
             // Send debug message with AI results
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'AI PROCESSING COMPLETED', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'AI PROCESSING COMPLETED', {
                     success: true,
                     executionTimeMs: executionTime,
                     imageQuality: analysisResult.imageQuality?.quality,
@@ -339,8 +343,8 @@ Extract all text now, maintaining exact formatting:`;
             }
 
             // Send extracted OCR results as debug message
-            if (userPhoneNumber && analysisResult.ocrResults) {
-                await sendDebugMessage(userPhoneNumber, 'OCR EXTRACTION RESULTS', {
+            if (phoneNumber && analysisResult.ocrResults) {
+                await sendDebugMessage(phoneNumber, 'OCR EXTRACTION RESULTS', {
                     rawTextLength: analysisResult.ocrResults.rawText?.length || 0,
                     rawTextPreview: analysisResult.ocrResults.rawText?.substring(0, 500) + (analysisResult.ocrResults.rawText?.length > 500 ? '...' : ''),
                     linesCount: analysisResult.ocrResults.formattedText?.lines?.length || 0,
@@ -350,7 +354,7 @@ Extract all text now, maintaining exact formatting:`;
 
                 // Send the complete raw text as a separate message for full OCR visibility
                 if (analysisResult.ocrResults.rawText) {
-                    await sendDebugMessage(userPhoneNumber, 'COMPLETE OCR RAW TEXT', analysisResult.ocrResults.rawText);
+                    await sendDebugMessage(phoneNumber, 'COMPLETE OCR RAW TEXT', analysisResult.ocrResults.rawText);
                 }
             }
 
@@ -362,8 +366,8 @@ Extract all text now, maintaining exact formatting:`;
                     errorType: 'ai_processing_error'
                 });
 
-                if (userPhoneNumber) {
-                    await sendDebugMessage(userPhoneNumber, 'AI PROCESSING FAILED', {
+                if (phoneNumber) {
+                    await sendDebugMessage(phoneNumber, 'AI PROCESSING FAILED', {
                         error: errorMsg,
                         executionTimeMs: executionTime,
                         type: 'Empty analysis result'
@@ -382,8 +386,8 @@ Extract all text now, maintaining exact formatting:`;
                     errorType: 'incomplete_analysis'
                 });
 
-                if (userPhoneNumber) {
-                    await sendDebugMessage(userPhoneNumber, 'ANALYSIS VALIDATION FAILED', {
+                if (phoneNumber) {
+                    await sendDebugMessage(phoneNumber, 'ANALYSIS VALIDATION FAILED', {
                         error: errorMsg,
                         executionTimeMs: executionTime,
                         type: 'Missing quality assessment'
@@ -402,8 +406,8 @@ Extract all text now, maintaining exact formatting:`;
             });
 
             // Send final success debug message
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'IMAGE ANALYSIS COMPLETED SUCCESSFULLY', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'IMAGE ANALYSIS COMPLETED SUCCESSFULLY', {
                     totalExecutionTimeMs: executionTime,
                     finalQuality: analysisResult.imageQuality.quality,
                     finalConfidence: analysisResult.imageQuality.confidence,
@@ -435,8 +439,8 @@ Extract all text now, maintaining exact formatting:`;
             });
 
             // Send debug message about the error
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'IMAGE ANALYSIS ERROR', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'IMAGE ANALYSIS ERROR', {
                     error: errorMessage,
                     errorType: error instanceof Error ? error.constructor.name : typeof error,
                     executionTimeMs: executionTime,

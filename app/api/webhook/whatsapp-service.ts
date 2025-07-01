@@ -468,11 +468,14 @@ export class WhatsAppWebhookService {
 
                 // Create runtime context with memory context for tools
                 const runtimeContext = new RuntimeContext<{
-                    resourceId: string;
-                    threadId: string;
+                    userId: string;
+                    conversationId: string;
+                    phoneNumber: string;
                 }>();
-                runtimeContext.set('resourceId', user._id); // ✅ Pass userId as resourceId
-                runtimeContext.set('threadId', conversation._id); // ✅ Pass conversationId as threadId
+                runtimeContext.set('userId', user._id); // ✅ Pass userId as userId (clear and consistent)
+                runtimeContext.set('conversationId', conversation._id); // ✅ Pass conversationId as conversationId (clear and consistent)
+                runtimeContext.set('phoneNumber', messageInfo.from); // ✅ Pass phone number for debug messages
+
 
                 const agent = mastra.getAgent('whatsappAgent');
                 // Use the enhanced WhatsApp Exchange Agent to generate a response
@@ -704,11 +707,13 @@ Please extract relevant payment information including transaction amount, curren
 
                     // Create runtime context with memory context for tools
                     const runtimeContext = new RuntimeContext<{
-                        resourceId: string;
-                        threadId: string;
+                        userId: string;
+                        conversationId: string;
+                        phoneNumber: string;
                     }>();
-                    runtimeContext.set('resourceId', user._id); // ✅ Pass userId as resourceId
-                    runtimeContext.set('threadId', conversation._id); // ✅ Pass conversationId as threadId
+                    runtimeContext.set('userId', user._id); // ✅ Pass userId as userId (clear and consistent)
+                    runtimeContext.set('conversationId', conversation._id); // ✅ Pass conversationId as conversationId (clear and consistent)
+                    runtimeContext.set('phoneNumber', messageInfo.from); // ✅ Pass phone number for debug messages
 
                     // Process image with exchange agent for receipt analysis
                     const agent = mastra.getAgent('whatsappAgent');

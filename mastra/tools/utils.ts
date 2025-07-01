@@ -10,7 +10,7 @@ export async function sendDebugMessage(phoneNumber: string, title: string, data:
     try {
         // Dynamically import WhatsApp client to avoid circular dependencies
 
-    
+
         const client = new WhatsAppCloudApiClient();
 
         // Format debug message

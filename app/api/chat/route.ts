@@ -24,12 +24,13 @@ export async function POST(request: NextRequest) {
         }
 
         // Generate response using the agent
-                    const response = await agent.generate(message, {
-                        runtimeContext: new RuntimeContext<{
-                            resourceId: string;
-                            threadId: string;
-                        }>(),
-                    });
+        const response = await agent.generate(message, {
+            runtimeContext: new RuntimeContext<{
+                userId: string;
+                conversationId: string;
+                phoneNumber: string;
+            }>(),
+        });
 
         return NextResponse.json({
             message: response.text,

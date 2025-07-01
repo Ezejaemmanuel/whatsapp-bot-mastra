@@ -19,15 +19,19 @@ export const getCurrentRatesTool = createTool({
         const startTime = Date.now();
         const toolId = 'get_current_rates';
 
-        // Extract phone number for debug messages
-        const userPhoneNumber = runtimeContext?.get('resourceId') as string;
+        // Extract context data using new consistent naming
+        const phoneNumber = runtimeContext?.get('phoneNumber') as string;
+        const userId = runtimeContext?.get('userId') as string;
+        const conversationId = runtimeContext?.get('conversationId') as string;
 
         // Send debug message about tool start
-        if (userPhoneNumber) {
-            await sendDebugMessage(userPhoneNumber, 'GET CURRENT RATES TOOL STARTED', {
+        if (phoneNumber) {
+            await sendDebugMessage(phoneNumber, 'GET CURRENT RATES TOOL STARTED', {
                 toolId,
                 startTime: new Date(startTime).toISOString(),
-                operation: 'Fetching all exchange rates from database'
+                operation: 'Fetching all exchange rates from database',
+                userId,
+                conversationId
             });
         }
 
@@ -40,8 +44,8 @@ export const getCurrentRatesTool = createTool({
             });
 
             // Send debug message about database query
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'DATABASE QUERY STARTED', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'DATABASE QUERY STARTED', {
                     operation: 'api.exchangeRates.getCurrentRates',
                     parameters: 'No filters - fetching all rates'
                 });
@@ -60,8 +64,8 @@ export const getCurrentRatesTool = createTool({
             };
 
             // Send debug message with results
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'EXCHANGE RATES RETRIEVED', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'EXCHANGE RATES RETRIEVED', {
                     success: true,
                     totalRates: result.totalRates,
                     executionTimeMs: executionTime,
@@ -69,7 +73,7 @@ export const getCurrentRatesTool = createTool({
                 });
 
                 // Send complete rates data
-                await sendDebugMessage(userPhoneNumber, 'COMPLETE RATES DATA', rates);
+                await sendDebugMessage(phoneNumber, 'COMPLETE RATES DATA', rates);
             }
 
             logSuccess('All exchange rates retrieved successfully', {
@@ -87,8 +91,8 @@ export const getCurrentRatesTool = createTool({
             const errorMessage = `Failed to get exchange rates: ${error instanceof Error ? error.message : 'Unknown error'}`;
 
             // Send debug message about error
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'GET RATES ERROR', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'GET RATES ERROR', {
                     error: errorMessage,
                     errorType: error instanceof Error ? error.constructor.name : typeof error,
                     executionTimeMs: executionTime,
@@ -133,12 +137,14 @@ export const createTransactionTool = createTool({
         const startTime = Date.now();
         const toolId = 'create_transaction';
 
-        // Extract phone number for debug messages
-        const userPhoneNumber = runtimeContext?.get('resourceId') as string;
+        // Extract context data using new consistent naming
+        const phoneNumber = runtimeContext?.get('phoneNumber') as string;
+        const userId = runtimeContext?.get('userId') as string;
+        const conversationId = runtimeContext?.get('conversationId') as string;
 
         // Send debug message about tool start
-        if (userPhoneNumber) {
-            await sendDebugMessage(userPhoneNumber, 'CREATE TRANSACTION TOOL STARTED', {
+        if (phoneNumber) {
+            await sendDebugMessage(phoneNumber, 'CREATE TRANSACTION TOOL STARTED', {
                 toolId,
                 startTime: new Date(startTime).toISOString(),
                 currencyFrom: context.currencyFrom,
@@ -146,26 +152,25 @@ export const createTransactionTool = createTool({
                 amountFrom: context.amountFrom,
                 amountTo: context.amountTo,
                 negotiatedRate: context.negotiatedRate,
-                hasNegotiationHistory: !!context.negotiationHistory && context.negotiationHistory.length > 0
+                hasNegotiationHistory: !!context.negotiationHistory && context.negotiationHistory.length > 0,
+                userId,
+                conversationId
             });
         }
 
         logToolCall(toolId, context);
 
         try {
-            // Extract userId and conversationId from memory context
-            // resourceId is the userId, threadId is the conversationId
-            const userId = runtimeContext?.get('resourceId'); // This is the userId (from phone number)
-            const conversationId = runtimeContext?.get('threadId'); // This is the conversationId
-
+            // Validate that we have the required context
             if (!userId || !conversationId) {
-                const errorMsg = 'Unable to extract userId and conversationId from agent memory context. Make sure the agent is called with proper memory configuration.';
+                const errorMsg = 'Unable to extract userId and conversationId from runtime context. Make sure the agent is called with proper context configuration.';
 
-                if (userPhoneNumber) {
-                    await sendDebugMessage(userPhoneNumber, 'CONTEXT EXTRACTION ERROR', {
+                if (phoneNumber) {
+                    await sendDebugMessage(phoneNumber, 'CONTEXT EXTRACTION ERROR', {
                         error: errorMsg,
                         userId: userId || 'missing',
                         conversationId: conversationId || 'missing',
+                        phoneNumber: phoneNumber || 'missing',
                         runtimeContextKeys: runtimeContext ? Object.keys(runtimeContext) : 'No runtime context'
                     });
                 }
@@ -174,10 +179,11 @@ export const createTransactionTool = createTool({
             }
 
             // Send debug message about extracted context
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'CONTEXT EXTRACTED SUCCESSFULLY', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'CONTEXT EXTRACTED SUCCESSFULLY', {
                     userId,
                     conversationId,
+                    phoneNumber,
                     userIdType: typeof userId,
                     conversationIdType: typeof conversationId
                 });
@@ -196,8 +202,8 @@ export const createTransactionTool = createTool({
             });
 
             // Send debug message about database mutation
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'DATABASE MUTATION STARTED', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'DATABASE MUTATION STARTED', {
                     operation: 'api.transactions.createTransaction',
                     parameters: {
                         userId,
@@ -234,8 +240,8 @@ export const createTransactionTool = createTool({
             };
 
             // Send debug message with successful result
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'TRANSACTION CREATED SUCCESSFULLY', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'TRANSACTION CREATED SUCCESSFULLY', {
                     success: true,
                     transactionId: transaction,
                     executionTimeMs: executionTime,
@@ -247,7 +253,7 @@ export const createTransactionTool = createTool({
                 });
 
                 // Send complete transaction result
-                await sendDebugMessage(userPhoneNumber, 'COMPLETE TRANSACTION RESULT', result);
+                await sendDebugMessage(phoneNumber, 'COMPLETE TRANSACTION RESULT', result);
             }
 
             logSuccess('Transaction created successfully', {
@@ -267,13 +273,11 @@ export const createTransactionTool = createTool({
 
         } catch (error) {
             const executionTime = Date.now() - startTime;
-            const userId = runtimeContext?.get('resourceId');
-            const conversationId = runtimeContext?.get('threadId');
             const errorMessage = `Failed to create transaction for user ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
 
             // Send debug message about error
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'CREATE TRANSACTION ERROR', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'CREATE TRANSACTION ERROR', {
                     error: errorMessage,
                     errorType: error instanceof Error ? error.constructor.name : typeof error,
                     executionTimeMs: executionTime,
@@ -324,40 +328,45 @@ export const updateTransactionStatusTool = createTool({
         const startTime = Date.now();
         const toolId = 'update_transaction_status';
 
-        // Extract phone number for debug messages
-        const userPhoneNumber = runtimeContext?.get('resourceId') as string;
+        // Extract context data using new consistent naming
+        const phoneNumber = runtimeContext?.get('phoneNumber') as string;
+        const userId = runtimeContext?.get('userId') as string;
+        const conversationId = runtimeContext?.get('conversationId') as string;
 
         // Send debug message about tool start
-        if (userPhoneNumber) {
-            await sendDebugMessage(userPhoneNumber, 'UPDATE TRANSACTION STATUS TOOL STARTED', {
+        if (phoneNumber) {
+            await sendDebugMessage(phoneNumber, 'UPDATE TRANSACTION STATUS TOOL STARTED', {
                 toolId,
                 startTime: new Date(startTime).toISOString(),
                 transactionId: context.transactionId,
                 newStatus: context.status,
                 hasPaymentReference: !!context.paymentReference,
                 hasReceiptImage: !!context.receiptImageUrl,
-                hasExtractedDetails: !!context.extractedDetails && Object.keys(context.extractedDetails).length > 0
+                hasExtractedDetails: !!context.extractedDetails && Object.keys(context.extractedDetails).length > 0,
+                userId,
+                conversationId
             });
         }
 
         logToolCall(toolId, context);
 
         try {
-            // Extract userId from memory context
-            const userId = runtimeContext?.get('resourceId');
-
+            // Validate that we have the required context
             if (!userId) {
                 const result = {
                     success: false,
-                    message: 'Unable to extract userId from agent memory context. Make sure the agent is called with proper memory configuration.',
-                    suggestion: 'Check your agent memory configuration.'
+                    message: 'Unable to extract userId from runtime context. Make sure the agent is called with proper context configuration.',
+                    suggestion: 'Check your agent context configuration.'
                 };
 
-                if (userPhoneNumber) {
-                    await sendDebugMessage(userPhoneNumber, 'USER ID EXTRACTION FAILED', {
+                if (phoneNumber) {
+                    await sendDebugMessage(phoneNumber, 'USER ID EXTRACTION FAILED', {
                         error: result.message,
                         suggestion: result.suggestion,
-                        runtimeContextAvailable: !!runtimeContext
+                        runtimeContextAvailable: !!runtimeContext,
+                        userId: userId || 'missing',
+                        conversationId: conversationId || 'missing',
+                        phoneNumber: phoneNumber || 'missing'
                     });
                 }
 
@@ -366,8 +375,8 @@ export const updateTransactionStatusTool = createTool({
             }
 
             // Send debug message about validation start
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'TRANSACTION VALIDATION STARTED', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'TRANSACTION VALIDATION STARTED', {
                     transactionId: context.transactionId,
                     userId,
                     operation: 'Validating transaction ID format and ownership'
@@ -383,8 +392,8 @@ export const updateTransactionStatusTool = createTool({
                     suggestion: 'Use validateTransactionTool to check the transaction ID, or use getLatestUserTransactionTool to get the most recent transaction ID, or use getUserTransactionsTool to see all available transaction IDs for this user.'
                 };
 
-                if (userPhoneNumber) {
-                    await sendDebugMessage(userPhoneNumber, 'INVALID TRANSACTION ID FORMAT', {
+                if (phoneNumber) {
+                    await sendDebugMessage(phoneNumber, 'INVALID TRANSACTION ID FORMAT', {
                         transactionId: context.transactionId,
                         expectedFormat: '16+ alphanumeric characters',
                         suggestion: result.suggestion
@@ -434,8 +443,8 @@ export const updateTransactionStatusTool = createTool({
             });
 
             // Send debug message about status update
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'TRANSACTION STATUS UPDATE STARTED', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'TRANSACTION STATUS UPDATE STARTED', {
                     transactionId: context.transactionId,
                     currentStatus: transaction.status,
                     newStatus: context.status,
@@ -465,8 +474,8 @@ export const updateTransactionStatusTool = createTool({
             };
 
             // Send debug message about successful update
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'TRANSACTION STATUS UPDATED SUCCESSFULLY', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'TRANSACTION STATUS UPDATED SUCCESSFULLY', {
                     success: true,
                     transactionId: context.transactionId,
                     previousStatus: transaction.status,
@@ -476,7 +485,7 @@ export const updateTransactionStatusTool = createTool({
                 });
 
                 // Send complete result
-                await sendDebugMessage(userPhoneNumber, 'COMPLETE UPDATE RESULT', result);
+                await sendDebugMessage(phoneNumber, 'COMPLETE UPDATE RESULT', result);
             }
 
             logSuccess('Transaction status updated successfully', {
@@ -496,8 +505,8 @@ export const updateTransactionStatusTool = createTool({
             const errorMessage = `Failed to update transaction status for ${context.transactionId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
 
             // Send debug message about error
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'UPDATE TRANSACTION STATUS ERROR', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'UPDATE TRANSACTION STATUS ERROR', {
                     error: errorMessage,
                     errorType: error instanceof Error ? error.constructor.name : typeof error,
                     transactionId: context.transactionId,

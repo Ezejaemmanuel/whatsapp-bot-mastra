@@ -28,34 +28,39 @@ export const updateUserBankDetailsTool = createTool({
         const startTime = Date.now();
         const toolId = 'update_user_bank_details';
 
-        // Extract phone number for debug messages
-        const userPhoneNumber = runtimeContext?.get('resourceId') as string;
+        // Extract context data using new consistent naming
+        const phoneNumber = runtimeContext?.get('phoneNumber') as string;
+        const userId = runtimeContext?.get('userId') as string;
+        const conversationId = runtimeContext?.get('conversationId') as string;
 
         // Send debug message about tool start
-        if (userPhoneNumber) {
-            await sendDebugMessage(userPhoneNumber, 'UPDATE USER BANK DETAILS TOOL STARTED', {
+        if (phoneNumber) {
+            await sendDebugMessage(phoneNumber, 'UPDATE USER BANK DETAILS TOOL STARTED', {
                 toolId,
                 startTime: new Date(startTime).toISOString(),
                 bankName: context.bankName,
                 accountName: context.accountName,
                 accountNumberMasked: context.accountNumber.slice(0, 4) + '****',
-                operation: 'Updating customer bank account details'
+                operation: 'Updating customer bank account details',
+                userId,
+                conversationId
             });
         }
 
         logToolCall(toolId, context);
 
         try {
-            // Extract userId from memory context
-            const userId = runtimeContext?.get('resourceId'); // This is the userId
-
+            // Validate that we have the required context
             if (!userId) {
-                const errorMsg = 'Unable to extract userId from agent memory context. Make sure the agent is called with proper memory configuration.';
+                const errorMsg = 'Unable to extract userId from runtime context. Make sure the agent is called with proper context configuration.';
 
-                if (userPhoneNumber) {
-                    await sendDebugMessage(userPhoneNumber, 'USER ID EXTRACTION FAILED', {
+                if (phoneNumber) {
+                    await sendDebugMessage(phoneNumber, 'USER ID EXTRACTION FAILED', {
                         error: errorMsg,
-                        runtimeContextAvailable: !!runtimeContext
+                        runtimeContextAvailable: !!runtimeContext,
+                        userId: userId || 'missing',
+                        conversationId: conversationId || 'missing',
+                        phoneNumber: phoneNumber || 'missing'
                     });
                 }
 
@@ -63,26 +68,21 @@ export const updateUserBankDetailsTool = createTool({
             }
 
             // Send debug message about extracted context
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'USER CONTEXT EXTRACTED', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'USER CONTEXT EXTRACTED', {
                     userId,
+                    conversationId,
+                    phoneNumber,
                     userIdType: typeof userId,
                     operation: 'Ready to update bank details'
                 });
             }
 
-            logInfo('Updating user bank details', {
-                userId,
-                bankName: context.bankName,
-                accountName: context.accountName,
-                // Don't log full account number for security
-                accountNumberMasked: context.accountNumber.slice(0, 4) + '****',
-                operation: toolId
-            });
+
 
             // Send debug message about database mutation
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'DATABASE MUTATION STARTED', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'DATABASE MUTATION STARTED', {
                     operation: 'api.users.updateUserBankDetails',
                     userId,
                     bankName: context.bankName,
@@ -107,8 +107,8 @@ export const updateUserBankDetailsTool = createTool({
             };
 
             // Send debug message with successful result
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'BANK DETAILS UPDATED SUCCESSFULLY', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'BANK DETAILS UPDATED SUCCESSFULLY', {
                     success: true,
                     userId,
                     bankName: context.bankName,
@@ -118,7 +118,7 @@ export const updateUserBankDetailsTool = createTool({
                 });
 
                 // Send complete result
-                await sendDebugMessage(userPhoneNumber, 'COMPLETE UPDATE RESULT', result);
+                await sendDebugMessage(phoneNumber, 'COMPLETE UPDATE RESULT', result);
             }
 
             logSuccess('User bank details updated successfully', {
@@ -134,12 +134,11 @@ export const updateUserBankDetailsTool = createTool({
 
         } catch (error) {
             const executionTime = Date.now() - startTime;
-            const userId = runtimeContext?.get('resourceId');
             const errorMessage = `Failed to update user bank details for ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
 
             // Send debug message about error
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'UPDATE BANK DETAILS ERROR', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'UPDATE BANK DETAILS ERROR', {
                     error: errorMessage,
                     errorType: error instanceof Error ? error.constructor.name : typeof error,
                     userId,
@@ -179,33 +178,38 @@ export const getUserTransactionsTool = createTool({
         const startTime = Date.now();
         const toolId = 'get_user_transactions';
 
-        // Extract phone number for debug messages
-        const userPhoneNumber = runtimeContext?.get('resourceId') as string;
+        // Extract context data using new consistent naming
+        const phoneNumber = runtimeContext?.get('phoneNumber') as string;
+        const userId = runtimeContext?.get('userId') as string;
+        const conversationId = runtimeContext?.get('conversationId') as string;
 
         // Send debug message about tool start
-        if (userPhoneNumber) {
-            await sendDebugMessage(userPhoneNumber, 'GET USER TRANSACTIONS TOOL STARTED', {
+        if (phoneNumber) {
+            await sendDebugMessage(phoneNumber, 'GET USER TRANSACTIONS TOOL STARTED', {
                 toolId,
                 startTime: new Date(startTime).toISOString(),
                 limit: context.limit || 10,
                 statusFilter: context.status || 'all',
-                operation: 'Fetching user transaction history'
+                operation: 'Fetching user transaction history',
+                userId,
+                conversationId
             });
         }
 
         logToolCall(toolId, context);
 
         try {
-            // Extract userId from memory context
-            const userId = runtimeContext?.get('resourceId');
-
+            // Validate that we have the required context
             if (!userId) {
-                const errorMsg = 'Unable to extract userId from agent memory context. Make sure the agent is called with proper memory configuration.';
+                const errorMsg = 'Unable to extract userId from runtime context. Make sure the agent is called with proper context configuration.';
 
-                if (userPhoneNumber) {
-                    await sendDebugMessage(userPhoneNumber, 'USER ID EXTRACTION FAILED', {
+                if (phoneNumber) {
+                    await sendDebugMessage(phoneNumber, 'USER ID EXTRACTION FAILED', {
                         error: errorMsg,
-                        runtimeContextAvailable: !!runtimeContext
+                        runtimeContextAvailable: !!runtimeContext,
+                        userId: userId || 'missing',
+                        conversationId: conversationId || 'missing',
+                        phoneNumber: phoneNumber || 'missing'
                     });
                 }
 
@@ -213,8 +217,8 @@ export const getUserTransactionsTool = createTool({
             }
 
             // Send debug message about query parameters
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'TRANSACTION QUERY PARAMETERS', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'TRANSACTION QUERY PARAMETERS', {
                     userId,
                     limit: context.limit || 10,
                     statusFilter: context.status || 'all',
@@ -230,8 +234,8 @@ export const getUserTransactionsTool = createTool({
             });
 
             // Send debug message about database query
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'DATABASE QUERY STARTED', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'DATABASE QUERY STARTED', {
                     operation: 'api.transactions.getUserTransactions',
                     userId,
                     limit: context.limit || 10,
@@ -268,8 +272,8 @@ export const getUserTransactionsTool = createTool({
             };
 
             // Send debug message with results
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'USER TRANSACTIONS RETRIEVED', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'USER TRANSACTIONS RETRIEVED', {
                     success: true,
                     totalTransactions: transactions.length,
                     statusFilter: context.status || 'all',
@@ -279,7 +283,7 @@ export const getUserTransactionsTool = createTool({
                 });
 
                 // Send complete transaction data
-                await sendDebugMessage(userPhoneNumber, 'COMPLETE TRANSACTIONS DATA', result);
+                await sendDebugMessage(phoneNumber, 'COMPLETE TRANSACTIONS DATA', result);
             }
 
             logSuccess('User transactions retrieved successfully', {
@@ -295,12 +299,11 @@ export const getUserTransactionsTool = createTool({
 
         } catch (error) {
             const executionTime = Date.now() - startTime;
-            const userId = runtimeContext?.get('resourceId');
             const errorMessage = `Failed to get user transactions for ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
 
             // Send debug message about error
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'GET USER TRANSACTIONS ERROR', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'GET USER TRANSACTIONS ERROR', {
                     error: errorMessage,
                     errorType: error instanceof Error ? error.constructor.name : typeof error,
                     userId,
@@ -336,31 +339,36 @@ export const getLatestUserTransactionTool = createTool({
         const startTime = Date.now();
         const toolId = 'get_latest_user_transaction';
 
-        // Extract phone number for debug messages
-        const userPhoneNumber = runtimeContext?.get('resourceId') as string;
+        // Extract context data using new consistent naming
+        const phoneNumber = runtimeContext?.get('phoneNumber') as string;
+        const userId = runtimeContext?.get('userId') as string;
+        const conversationId = runtimeContext?.get('conversationId') as string;
 
         // Send debug message about tool start
-        if (userPhoneNumber) {
-            await sendDebugMessage(userPhoneNumber, 'GET LATEST USER TRANSACTION TOOL STARTED', {
+        if (phoneNumber) {
+            await sendDebugMessage(phoneNumber, 'GET LATEST USER TRANSACTION TOOL STARTED', {
                 toolId,
                 startTime: new Date(startTime).toISOString(),
-                operation: 'Fetching most recent user transaction'
+                operation: 'Fetching most recent user transaction',
+                userId,
+                conversationId
             });
         }
 
         logToolCall(toolId, context);
 
         try {
-            // Extract userId from memory context
-            const userId = runtimeContext?.get('resourceId');
-
+            // Validate that we have the required context
             if (!userId) {
-                const errorMsg = 'Unable to extract userId from agent memory context. Make sure the agent is called with proper memory configuration.';
+                const errorMsg = 'Unable to extract userId from runtime context. Make sure the agent is called with proper context configuration.';
 
-                if (userPhoneNumber) {
-                    await sendDebugMessage(userPhoneNumber, 'USER ID EXTRACTION FAILED', {
+                if (phoneNumber) {
+                    await sendDebugMessage(phoneNumber, 'USER ID EXTRACTION FAILED', {
                         error: errorMsg,
-                        runtimeContextAvailable: !!runtimeContext
+                        runtimeContextAvailable: !!runtimeContext,
+                        userId: userId || 'missing',
+                        conversationId: conversationId || 'missing',
+                        phoneNumber: phoneNumber || 'missing'
                     });
                 }
 
@@ -368,8 +376,8 @@ export const getLatestUserTransactionTool = createTool({
             }
 
             // Send debug message about query parameters
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'LATEST TRANSACTION QUERY SETUP', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'LATEST TRANSACTION QUERY SETUP', {
                     userId,
                     limit: 1,
                     operation: 'Getting only the most recent transaction'
@@ -382,8 +390,8 @@ export const getLatestUserTransactionTool = createTool({
             });
 
             // Send debug message about database query
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'DATABASE QUERY STARTED', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'DATABASE QUERY STARTED', {
                     operation: 'api.transactions.getUserTransactions',
                     userId,
                     limit: 1,
@@ -407,8 +415,8 @@ export const getLatestUserTransactionTool = createTool({
                 };
 
                 // Send debug message for no transactions found
-                if (userPhoneNumber) {
-                    await sendDebugMessage(userPhoneNumber, 'NO TRANSACTIONS FOUND', {
+                if (phoneNumber) {
+                    await sendDebugMessage(phoneNumber, 'NO TRANSACTIONS FOUND', {
                         success: true,
                         hasTransaction: false,
                         userId,
@@ -417,7 +425,7 @@ export const getLatestUserTransactionTool = createTool({
                     });
 
                     // Send complete result
-                    await sendDebugMessage(userPhoneNumber, 'COMPLETE NO TRANSACTION RESULT', result);
+                    await sendDebugMessage(phoneNumber, 'COMPLETE NO TRANSACTION RESULT', result);
                 }
 
                 logInfo('No transactions found for user', {
@@ -453,8 +461,8 @@ export const getLatestUserTransactionTool = createTool({
             };
 
             // Send debug message with latest transaction
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'LATEST TRANSACTION FOUND', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'LATEST TRANSACTION FOUND', {
                     success: true,
                     hasTransaction: true,
                     transactionId: latestTransaction._id,
@@ -469,7 +477,7 @@ export const getLatestUserTransactionTool = createTool({
                 });
 
                 // Send complete transaction data
-                await sendDebugMessage(userPhoneNumber, 'COMPLETE LATEST TRANSACTION DATA', result);
+                await sendDebugMessage(phoneNumber, 'COMPLETE LATEST TRANSACTION DATA', result);
             }
 
             logSuccess('Latest user transaction retrieved successfully', {
@@ -485,12 +493,11 @@ export const getLatestUserTransactionTool = createTool({
 
         } catch (error) {
             const executionTime = Date.now() - startTime;
-            const userId = runtimeContext?.get('resourceId');
             const errorMessage = `Failed to get latest user transaction for ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
 
             // Send debug message about error
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'GET LATEST TRANSACTION ERROR', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'GET LATEST TRANSACTION ERROR', {
                     error: errorMessage,
                     errorType: error instanceof Error ? error.constructor.name : typeof error,
                     userId,
@@ -525,15 +532,19 @@ export const getAdminBankDetailsTool = createTool({
         const startTime = Date.now();
         const toolId = 'get_admin_bank_details';
 
-        // Extract phone number for debug messages
-        const userPhoneNumber = runtimeContext?.get('resourceId') as string;
+        // Extract context data using new consistent naming
+        const phoneNumber = runtimeContext?.get('phoneNumber') as string;
+        const userId = runtimeContext?.get('userId') as string;
+        const conversationId = runtimeContext?.get('conversationId') as string;
 
         // Send debug message about tool start
-        if (userPhoneNumber) {
-            await sendDebugMessage(userPhoneNumber, 'GET ADMIN BANK DETAILS TOOL STARTED', {
+        if (phoneNumber) {
+            await sendDebugMessage(phoneNumber, 'GET ADMIN BANK DETAILS TOOL STARTED', {
                 toolId,
                 startTime: new Date(startTime).toISOString(),
-                operation: 'Fetching admin bank details for customer payment'
+                operation: 'Fetching admin bank details for customer payment',
+                userId,
+                conversationId
             });
         }
 
@@ -545,8 +556,8 @@ export const getAdminBankDetailsTool = createTool({
             });
 
             // Send debug message about database query
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'DATABASE QUERY STARTED', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'DATABASE QUERY STARTED', {
                     operation: 'api.adminBankDetails.getDefaultAdminBankDetails',
                     purpose: 'Getting default admin bank account for customer payments'
                 });
@@ -557,8 +568,8 @@ export const getAdminBankDetailsTool = createTool({
             if (!adminBankDetails) {
                 const errorMsg = 'No active admin bank details found. Please contact support.';
 
-                if (userPhoneNumber) {
-                    await sendDebugMessage(userPhoneNumber, 'NO ADMIN BANK DETAILS FOUND', {
+                if (phoneNumber) {
+                    await sendDebugMessage(phoneNumber, 'NO ADMIN BANK DETAILS FOUND', {
                         error: errorMsg,
                         cause: 'No default admin bank account configured in database'
                     });
@@ -579,8 +590,8 @@ export const getAdminBankDetailsTool = createTool({
             };
 
             // Send debug message with results (masked for security)
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'ADMIN BANK DETAILS RETRIEVED', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'ADMIN BANK DETAILS RETRIEVED', {
                     success: true,
                     bankName: adminBankDetails.bankName,
                     accountName: adminBankDetails.accountName,
@@ -589,7 +600,7 @@ export const getAdminBankDetailsTool = createTool({
                 });
 
                 // Send complete bank details (for debugging purposes)
-                await sendDebugMessage(userPhoneNumber, 'COMPLETE ADMIN BANK DETAILS', result);
+                await sendDebugMessage(phoneNumber, 'COMPLETE ADMIN BANK DETAILS', result);
             }
 
             logSuccess('Admin bank details retrieved successfully', {
@@ -609,8 +620,8 @@ export const getAdminBankDetailsTool = createTool({
             const errorMessage = `Failed to get admin bank details: ${error instanceof Error ? error.message : 'Unknown error'}`;
 
             // Send debug message about error
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'GET ADMIN BANK DETAILS ERROR', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'GET ADMIN BANK DETAILS ERROR', {
                     error: errorMessage,
                     errorType: error instanceof Error ? error.constructor.name : typeof error,
                     executionTimeMs: executionTime,
@@ -642,31 +653,36 @@ export const getUserTool = createTool({
         const startTime = Date.now();
         const toolId = 'get_user';
 
-        // Extract phone number for debug messages
-        const userPhoneNumber = runtimeContext?.get('resourceId') as string;
+        // Extract context data using new consistent naming
+        const phoneNumber = runtimeContext?.get('phoneNumber') as string;
+        const userId = runtimeContext?.get('userId') as string;
+        const conversationId = runtimeContext?.get('conversationId') as string;
 
         // Send debug message about tool start
-        if (userPhoneNumber) {
-            await sendDebugMessage(userPhoneNumber, 'GET USER TOOL STARTED', {
+        if (phoneNumber) {
+            await sendDebugMessage(phoneNumber, 'GET USER TOOL STARTED', {
                 toolId,
                 startTime: new Date(startTime).toISOString(),
-                operation: 'Fetching user information and bank details'
+                operation: 'Fetching user information and bank details',
+                userId,
+                conversationId
             });
         }
 
         logToolCall(toolId, context);
 
         try {
-            // Extract userId from memory context
-            const userId = runtimeContext?.get('resourceId'); // This is the userId
-
+            // Validate that we have the required context
             if (!userId) {
-                const errorMsg = 'Unable to extract userId from agent memory context. Make sure the agent is called with proper memory configuration.';
+                const errorMsg = 'Unable to extract userId from runtime context. Make sure the agent is called with proper context configuration.';
 
-                if (userPhoneNumber) {
-                    await sendDebugMessage(userPhoneNumber, 'USER ID EXTRACTION FAILED', {
+                if (phoneNumber) {
+                    await sendDebugMessage(phoneNumber, 'USER ID EXTRACTION FAILED', {
                         error: errorMsg,
-                        runtimeContextAvailable: !!runtimeContext
+                        runtimeContextAvailable: !!runtimeContext,
+                        userId: userId || 'missing',
+                        conversationId: conversationId || 'missing',
+                        phoneNumber: phoneNumber || 'missing'
                     });
                 }
 
@@ -704,8 +720,8 @@ export const getUserTool = createTool({
             };
 
             // Send debug message with user info (masked bank details for security)
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'USER INFORMATION RETRIEVED', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'USER INFORMATION RETRIEVED', {
                     success: true,
                     userId: user._id,
                     whatsappId: user.whatsappId,
@@ -721,7 +737,7 @@ export const getUserTool = createTool({
                 });
 
                 // Send complete user data for debugging
-                await sendDebugMessage(userPhoneNumber, 'COMPLETE USER DATA', result);
+                await sendDebugMessage(phoneNumber, 'COMPLETE USER DATA', result);
             }
 
             logSuccess('User information retrieved successfully', {
@@ -738,12 +754,11 @@ export const getUserTool = createTool({
 
         } catch (error) {
             const executionTime = Date.now() - startTime;
-            const userId = runtimeContext?.get('resourceId');
             const errorMessage = `Failed to get user information for ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
 
             // Send debug message about error
-            if (userPhoneNumber) {
-                await sendDebugMessage(userPhoneNumber, 'GET USER ERROR', {
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'GET USER ERROR', {
                     error: errorMessage,
                     errorType: error instanceof Error ? error.constructor.name : typeof error,
                     userId,
