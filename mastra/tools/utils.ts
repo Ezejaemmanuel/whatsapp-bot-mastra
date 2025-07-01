@@ -1,4 +1,5 @@
 import { TEST_MODE } from '@/constant';
+import WhatsAppCloudApiClient from '@/whatsapp/whatsapp-client';
 
 /**
  * Send debug message via WhatsApp when TEST_MODE is enabled
@@ -8,20 +9,9 @@ export async function sendDebugMessage(phoneNumber: string, title: string, data:
 
     try {
         // Dynamically import WhatsApp client to avoid circular dependencies
-        const { WhatsAppCloudApiClient } = await import('../../whatsapp/whatsapp-client');
 
-        const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
-        const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-
-        if (!accessToken || !phoneNumberId) {
-            console.log('⚠️ DEBUG: WhatsApp credentials not available for debug messaging');
-            return;
-        }
-
-        const client = new WhatsAppCloudApiClient({
-            accessToken,
-            phoneNumberId
-        });
+    
+        const client = new WhatsAppCloudApiClient();
 
         // Format debug message
         const debugMessage = `🔧 DEBUG - ${title}
