@@ -4,7 +4,7 @@ import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
 import { IMAGE_EXTRACTION_GEMINI_MODEL, IMAGE_EXTRACTION_TEMPERATURE } from "../agents/agent-instructions";
 import { TEST_MODE } from "../../constant";
-import WhatsAppCloudApiClient from "@/whatsapp/whatsapp-client";
+import { WhatsAppClientService } from "@/whatsapp/whatsapp-client-service";
 import { sendDebugMessage } from "./utils";
 
 // API key setup

@@ -1,5 +1,5 @@
 import { TEST_MODE } from '@/constant';
-import WhatsAppCloudApiClient from '@/whatsapp/whatsapp-client';
+import { WhatsAppClientService } from '@/whatsapp/whatsapp-client-service';
 
 /**
  * Send debug message via WhatsApp when TEST_MODE is enabled
@@ -8,10 +8,9 @@ export async function sendDebugMessage(phoneNumber: string, title: string, data:
     if (!TEST_MODE) return;
 
     try {
-        // Dynamically import WhatsApp client to avoid circular dependencies
-
-
-        const client = new WhatsAppCloudApiClient();
+        // Get singleton client instance
+        const clientService = WhatsAppClientService.getInstance();
+        const client = clientService.getClient();
 
         // Format debug message
         const debugMessage = `🔧 DEBUG - ${title}

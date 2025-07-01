@@ -9,6 +9,7 @@ import { RuntimeContext } from '@mastra/core/runtime-context';
 import { TEST_MODE } from '@/constant';
 import { HANDLE_IMAGE_AGENT_TEMPRETURE, HANDLE_TEXT_AGENT_TEMPRETURE } from '@/mastra/agents/agent-instructions';
 import { sendDebugMessage } from '@/mastra/tools/utils';
+import { WhatsAppClientService } from '@/whatsapp/whatsapp-client-service';
 
 /**
  * Format error details for test mode
@@ -49,6 +50,7 @@ export class WhatsAppWebhookService {
     private phoneNumberId: string;
     private databaseService: DatabaseService;
     private mediaUploadService: MediaUploadService;
+    private clientService: WhatsAppClientService;
 
     constructor(accessToken?: string, phoneNumberId?: string) {
         try {
@@ -67,10 +69,9 @@ export class WhatsAppWebhookService {
             const finalAccessToken = accessToken || envAccessToken || '';
             const finalPhoneNumberId = phoneNumberId || envPhoneNumberId || '';
 
-            this.whatsappClient = new WhatsAppCloudApiClient({
-                accessToken: finalAccessToken,
-                phoneNumberId: finalPhoneNumberId
-            });
+            // Get singleton instance and initialize client
+            this.clientService = WhatsAppClientService.getInstance();
+            this.whatsappClient = this.clientService.getClient(finalAccessToken, finalPhoneNumberId);
 
             this.phoneNumberId = finalPhoneNumberId;
             this.databaseService = new DatabaseService();
@@ -1207,11 +1208,12 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
      * Update configuration
      */
     updateConfig(accessToken?: string, phoneNumberId?: string): void {
-        if (accessToken) {
-            this.whatsappClient.updateAccessToken(accessToken);
-        }
-        if (phoneNumberId) {
-            this.phoneNumberId = phoneNumberId;
+        if (accessToken || phoneNumberId) {
+            this.clientService.updateConfig(accessToken, phoneNumberId);
+            this.whatsappClient = this.clientService.getClient();
+            if (phoneNumberId) {
+                this.phoneNumberId = phoneNumberId;
+            }
         }
     }
 

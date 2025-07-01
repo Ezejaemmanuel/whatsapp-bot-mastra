@@ -3,6 +3,7 @@ import { ConvexHttpClient } from 'convex/browser';
 import { api } from '@/convex/_generated/api';
 import crypto from 'crypto';
 import { Id } from '@/convex/_generated/dataModel';
+import { WhatsAppClientService } from '@/whatsapp/whatsapp-client-service';
 
 /**
  * Media Upload Service with Convex File Storage Integration
@@ -15,6 +16,7 @@ export class MediaUploadService {
     private convex: ConvexHttpClient;
     private accessToken: string;
     private version: string;
+    private clientService: WhatsAppClientService;
 
     constructor(accessToken?: string) {
         const envAccessToken = process.env.WHATSAPP_ACCESS_TOKEN;
@@ -25,9 +27,8 @@ export class MediaUploadService {
 
         this.accessToken = accessToken || envAccessToken || '';
         this.version = process.env.WHATSAPP_API_VERSION || 'v23.0';
-        this.whatsappClient = new WhatsAppCloudApiClient({
-            accessToken: this.accessToken
-        });
+        this.clientService = WhatsAppClientService.getInstance();
+        this.whatsappClient = this.clientService.getClient(this.accessToken);
 
         // Initialize Convex HTTP client
         const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
@@ -519,9 +520,13 @@ export class MediaUploadService {
     updateConfig(accessToken?: string): void {
         if (accessToken) {
             this.accessToken = accessToken;
-            this.whatsappClient = new WhatsAppCloudApiClient({
-                accessToken: this.accessToken
-            });
+            this.clientService.updateConfig(this.accessToken);
+            this.whatsappClient = this.clientService.getClient();
         }
+    }
+
+    updateAccessToken(newToken: string): void {
+        this.clientService.updateConfig(newToken);
+        this.whatsappClient = this.clientService.getClient();
     }
 } 
