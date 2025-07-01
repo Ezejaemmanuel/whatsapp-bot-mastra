@@ -2,6 +2,7 @@ import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
+import { IMAGE_EXTRACTION_GEMINI_MODEL, IMAGE_EXTRACTION_TEMPERATURE } from "../agents/agent-instructions";
 
 // API key setup
 const GOOGLE_GENERATIVE_AI_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
@@ -90,38 +91,24 @@ async function validateImageUrl(url: string): Promise<void> {
     }
 }
 
-// Schema for receipt information
+// Schema for OCR extraction
 const receiptSchema = z.object({
-    isReceipt: z.boolean().describe("Whether this image is a payment receipt or transaction confirmation"),
+    ocrResults: z.object({
+        rawText: z.string().describe("Complete raw text extracted from the image"),
+        formattedText: z.object({
+            lines: z.array(z.string()).describe("Text split into lines, preserving formatting"),
+            sections: z.array(z.object({
+                content: z.string(),
+                type: z.enum(['text', 'numbers', 'date', 'alphanumeric']).optional()
+            })).describe("Text organized into sections with type hints")
+        }).describe("Structured representation of the extracted text")
+    }),
 
-    // Receipt-specific information (only if isReceipt is true)
-    receiptDetails: z.object({
-        transactionAmount: z.string().optional().describe("Transaction amount with currency symbol"),
-        currency: z.string().optional().describe("Currency of the transaction (e.g., USD, NGN, GBP)"),
-        transactionId: z.string().optional().describe("Transaction ID, reference number, or receipt number"),
-        date: z.string().optional().describe("Date of the transaction"),
-        time: z.string().optional().describe("Time of the transaction"),
-        bankName: z.string().optional().describe("Bank name or payment service provider"),
-        senderName: z.string().optional().describe("Sender name or account details"),
-        receiverName: z.string().optional().describe("Receiver name or account details"),
-        paymentMethod: z.string().optional().describe("Payment method (transfer, card, mobile money, etc.)"),
-        transactionStatus: z.string().optional().describe("Transaction status (successful, pending, failed)"),
-        additionalDetails: z.string().optional().describe("Any other important details found on the receipt")
-    }).optional(),
-
-    // General image information (if not a receipt)
-    imageAnalysis: z.object({
-        description: z.string().describe("Brief description of what the image contains"),
-        content: z.string().describe("Detailed analysis of the image content"),
-        isRelevantToExchange: z.boolean().describe("Whether this image might be relevant to currency exchange business"),
-        suggestedAction: z.string().describe("Suggested response or action for the user")
-    }).optional(),
-
-    // Analysis confidence and quality assessment
-    analysisQuality: z.object({
-        imageQuality: z.enum(['excellent', 'good', 'fair', 'poor']).describe("Quality of the image for analysis"),
-        confidence: z.enum(['high', 'medium', 'low']).describe("Confidence level in the analysis"),
-        issues: z.array(z.string()).optional().describe("Any issues with image quality or readability")
+    // Basic image quality assessment
+    imageQuality: z.object({
+        quality: z.enum(['excellent', 'good', 'fair', 'poor']).describe("Quality of the image for text extraction"),
+        confidence: z.enum(['high', 'medium', 'low']).describe("Confidence level in text extraction"),
+        issues: z.array(z.string()).optional().describe("Any issues affecting text extraction")
     })
 });
 
@@ -167,62 +154,29 @@ export const imageAnalysisTool = createTool({
         // await validateImageUrl(imageUrl);
 
         // Create the analysis prompt
-        const analysisPrompt = `You are an expert image analyst specializing in financial documents and receipt analysis. 
+        const analysisPrompt = `You are an expert OCR system focused on precise text extraction. Your task is to:
 
-Your PRIMARY task is to first determine if this is a genuine payment receipt or transaction confirmation.
+1. EXTRACT ALL TEXT EXACTLY AS SHOWN:
+   - Capture every visible text element
+   - Preserve exact formatting and line breaks
+   - Maintain all numbers, symbols, and special characters
+   - Keep dates and times in original format
+   - Extract account numbers and amounts precisely
 
-**Receipt Validation Checklist:**
-1. **Visual Structure Check:**
-   - Does it have a structured layout typical of financial documents?
-   - Are there clear sections for amount, date, reference numbers?
-   - Does it use formal banking/payment service formatting?
+2. ORGANIZE TEXT:
+   - Split into lines as shown in image
+   - Group related text into sections
+   - Label sections by content type (text/numbers/date/alphanumeric)
+   - Preserve spatial relationships in formatting
 
-2. **Key Elements Check:**
-   - Transaction amount in clear numbers
-   - Currency indicators
-   - Date and timestamp
-   - Transaction/reference numbers
-   - Bank/payment service provider branding
-   - Sender/receiver information
-   - Payment status indicators
+3. QUALITY CHECK:
+   - Note any unclear or unreadable text
+   - Report confidence in extraction accuracy
+   - Flag any image quality issues
 
-3. **Authenticity Indicators:**
-   - Official banking/payment service formatting
-   - Transaction reference numbers in expected format
-   - Professional financial document layout
-   - Digital receipt markers (QR codes, verification links)
-   - Proper financial institution branding
+${analysisContext ? `\nContext: ${analysisContext}` : ''}
 
-Only if it passes these checks, proceed with detailed analysis:
-
-1. **For Confirmed Receipts:**
-   - Extract ALL transaction details meticulously
-   - Verify all critical fields are present
-   - Note any missing but expected information
-   - Assess receipt quality and completeness
-
-2. **If NOT a Valid Receipt:**
-   - Explain clearly why it's not a valid payment proof
-   - Describe what the image actually shows
-   - Provide specific guidance on what a proper receipt should look like
-   - Be firm but helpful about requirements
-
-3. **Quality Assessment:**
-   - Image clarity and readability
-   - Completeness of visible information
-   - Any signs of manipulation or editing
-   - Overall confidence in authenticity
-
-${analysisContext ? `\n**Additional Context:** ${analysisContext}` : ''}
-
-**Critical Instructions:**
-- Be STRICT in receipt validation
-- Flag ANY suspicious or non-standard elements
-- Don't assume it's a receipt just because it has numbers
-- Be direct but professional about invalid submissions
-- Prioritize security and accuracy above all
-
-Analyze the image now:`;
+Extract all text now, maintaining exact formatting:`;
 
         try {
             logInfo('Initiating Gemini Vision analysis', {
@@ -234,7 +188,8 @@ Analyze the image now:`;
 
             // Use generateObject for structured outputs with AI SDK
             const result = await generateObject({
-                model: google('gemini-2.0-flash'),
+                model: google(IMAGE_EXTRACTION_GEMINI_MODEL),
+                temperature: IMAGE_EXTRACTION_TEMPERATURE, // Lower temperature for more precise text extraction
                 messages: [
                     {
                         role: 'user',
@@ -257,13 +212,10 @@ Analyze the image now:`;
             const analysisResult = result.object;
 
             logSuccess('AI image analysis completed successfully', {
-                isReceipt: analysisResult.isReceipt,
-                imageQuality: analysisResult.analysisQuality?.imageQuality,
-                confidence: analysisResult.analysisQuality?.confidence,
-                hasReceiptDetails: !!analysisResult.receiptDetails,
-                hasImageAnalysis: !!analysisResult.imageAnalysis,
-                hasIssues: !!analysisResult.analysisQuality?.issues && analysisResult.analysisQuality.issues.length > 0,
-                issuesCount: analysisResult.analysisQuality?.issues?.length || 0,
+                imageQuality: analysisResult.imageQuality?.quality,
+                confidence: analysisResult.imageQuality?.confidence,
+                hasIssues: !!analysisResult.imageQuality?.issues && analysisResult.imageQuality.issues.length > 0,
+                issuesCount: analysisResult.imageQuality?.issues?.length || 0,
                 executionTimeMs: executionTime,
                 operation: 'analyze_image'
             });
@@ -278,10 +230,8 @@ Analyze the image now:`;
             }
 
             // Validate that we got meaningful analysis
-            if (!analysisResult.analysisQuality) {
+            if (!analysisResult.imageQuality) {
                 logError('AI did not provide quality assessment', new Error('Missing quality assessment'), {
-                    hasReceiptDetails: !!analysisResult.receiptDetails,
-                    hasImageAnalysis: !!analysisResult.imageAnalysis,
                     executionTimeMs: executionTime,
                     operation: 'analyze_image',
                     errorType: 'incomplete_analysis'
@@ -290,25 +240,12 @@ Analyze the image now:`;
             }
 
             // Log detailed analysis results for debugging
-            if (analysisResult.isReceipt) {
-                logInfo('Receipt analysis details', {
-                    transactionAmount: analysisResult.receiptDetails?.transactionAmount,
-                    currency: analysisResult.receiptDetails?.currency,
-                    hasTransactionId: !!analysisResult.receiptDetails?.transactionId,
-                    hasBankName: !!analysisResult.receiptDetails?.bankName,
-                    hasDate: !!analysisResult.receiptDetails?.date,
-                    paymentMethod: analysisResult.receiptDetails?.paymentMethod,
-                    transactionStatus: analysisResult.receiptDetails?.transactionStatus,
-                    operation: 'analyze_image'
-                });
-            } else {
-                logInfo('General image analysis details', {
-                    description: analysisResult.imageAnalysis?.description?.substring(0, 100),
-                    isRelevantToExchange: analysisResult.imageAnalysis?.isRelevantToExchange,
-                    hasSuggestedAction: !!analysisResult.imageAnalysis?.suggestedAction,
-                    operation: 'analyze_image'
-                });
-            }
+            logInfo('General image analysis details', {
+                description: analysisResult.ocrResults?.rawText?.substring(0, 100),
+                isRelevantToExchange: false,
+                hasSuggestedAction: false,
+                operation: 'analyze_image'
+            });
 
             return analysisResult;
 
@@ -334,15 +271,15 @@ Analyze the image now:`;
 
             // Return a structured error response instead of throwing
             return {
-                isReceipt: false,
-                imageAnalysis: {
-                    description: "Error analyzing image",
-                    content: `Failed to analyze the image: ${errorMessage}`,
-                    isRelevantToExchange: false,
-                    suggestedAction: "Please try uploading the image again or contact support if the issue persists."
+                ocrResults: {
+                    rawText: "Error analyzing image",
+                    formattedText: {
+                        lines: [],
+                        sections: []
+                    }
                 },
-                analysisQuality: {
-                    imageQuality: 'poor' as const,
+                imageQuality: {
+                    quality: 'poor' as const,
                     confidence: 'low' as const,
                     issues: [`Analysis failed: ${errorMessage}`]
                 }

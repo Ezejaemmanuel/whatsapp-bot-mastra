@@ -7,6 +7,7 @@ import { Id } from '@/convex/_generated/dataModel';
 import { mastra } from '@/mastra';
 import { RuntimeContext } from '@mastra/core/runtime-context';
 import { TEST_MODE } from '@/constant';
+import { HANDLE_IMAGE_AGENT_TEMPRETURE, HANDLE_TEXT_AGENT_TEMPRETURE } from '@/mastra/agents/agent-instructions';
 
 /**
  * Format error details for test mode
@@ -481,6 +482,7 @@ export class WhatsAppWebhookService {
                         content: messageText || 'Hello',
                     }
                 ], {
+                    temperature: HANDLE_TEXT_AGENT_TEMPRETURE,
                     memory: {
                         thread: `whatsapp-${messageInfo.from}`, // Use phone number as thread ID for conversation continuity
                         resource: messageInfo.from, // Use phone number as resource ID
@@ -722,6 +724,7 @@ Please extract relevant payment information including transaction amount, curren
                             resource: messageInfo.from,
                         },
                         runtimeContext, // ✅ Pass userId and conversationId to tools via runtime context
+                        temperature: HANDLE_IMAGE_AGENT_TEMPRETURE,
                     });
 
                     response = agentResponse.text || 'Got your receipt! 📸 Let me analyze the details...';
