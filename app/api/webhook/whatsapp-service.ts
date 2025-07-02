@@ -740,55 +740,10 @@ export class WhatsAppWebhookService {
                     operation: 'handleMediaMessage'
                 });
 
-                let imageUrl = null;
                 const imageFile = mediaFiles.find(file => file.mimeType?.startsWith('image/'));
+                const imageUrl = imageFile?.storedUrl;
 
-                if (imageFile?.storedUrl) {
-                    imageUrl = imageFile.storedUrl;
-                    // Debug message for found image URL
-                    // await sendDebugMessage(messageInfo.from, 'IMAGE URL FOUND', {
-                    //     messageId: messageInfo.id,
-                    //     imageUrl: imageUrl,
-                    //     fileName: imageFile.fileName,
-                    //     mimeType: imageFile.mimeType,
-                    //     timestamp: new Date().toISOString()
-                    // });
-
-                    logInfo('Found stored image URL for AI analysis', {
-                        messageId: messageInfo.id,
-                        imageUrl,
-                        fileName: imageFile.fileName,
-                        mimeType: imageFile.mimeType,
-                        operation: 'handleMediaMessage'
-                    });
-                } else {
-                    // // Debug message for missing image URL
-                    // await sendDebugMessage(messageInfo.from, 'IMAGE URL NOT FOUND', {
-                    //     messageId: messageInfo.id,
-                    //     mediaFilesFound: mediaFiles.length,
-                    //     hasImageFile: !!imageFile,
-                    //     error: 'No valid image URL found in media files',
-                    //     timestamp: new Date().toISOString()
-                    // });
-
-                    logWarning('No stored image URL found for AI analysis', {
-                        messageId: messageInfo.id,
-                        mediaFilesFound: mediaFiles.length,
-                        hasImageFile: !!imageFile,
-                        imageFileStoredUrl: imageFile?.storedUrl,
-                        operation: 'handleMediaMessage'
-                    });
-                }
-
-                // // Debug message for agent preparation
-                // await sendDebugMessage(messageInfo.from, 'PREPARING AGENT CONTENT', {
-                //     messageId: messageInfo.id,
-                //     hasImageUrl: !!imageUrl,
-                //     imageUrl: imageUrl || 'not available',
-                //     hasCaption: !!messageInfo.mediaInfo?.caption,
-                //     timestamp: new Date().toISOString()
-                // });
-
+              
                 // Analyze the image directly if URL is available
                 let imageAnalysisResults = null;
                 if (imageUrl) {
