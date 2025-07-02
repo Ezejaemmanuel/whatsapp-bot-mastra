@@ -8,7 +8,7 @@ import { mastra } from '@/mastra';
 import { RuntimeContext } from '@mastra/core/runtime-context';
 import { TEST_MODE } from '@/constant';
 import { HANDLE_IMAGE_AGENT_TEMPRETURE, HANDLE_TEXT_AGENT_TEMPRETURE } from '@/mastra/agents/agent-instructions';
-import { sendDebugMessage } from '@/mastra/tools/utils';
+// import { sendDebugMessage } from '@/mastra/tools/utils';
 import { WhatsAppClientService } from '@/whatsapp/whatsapp-client-service';
 
 /**
@@ -473,10 +473,14 @@ export class WhatsAppWebhookService {
                     userId: string;
                     conversationId: string;
                     phoneNumber: string;
+                    processImageUrl?: boolean;
+                    imageUrl?: string;
                 }>();
                 runtimeContext.set('userId', user._id); // ✅ Pass userId as userId (clear and consistent)
                 runtimeContext.set('conversationId', conversation._id); // ✅ Pass conversationId as conversationId (clear and consistent)
                 runtimeContext.set('phoneNumber', messageInfo.from); // ✅ Pass phone number for debug messages
+                runtimeContext.set('processImageUrl', false); // ✅ Disable image processing for text messages
+                runtimeContext.set('imageUrl', undefined); // ✅ No image URL for text messages
 
 
                 const agent = mastra.getAgent('whatsappAgent');
@@ -628,15 +632,15 @@ export class WhatsAppWebhookService {
      */
     private async handleMediaMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: Id<"conversations">): Promise<void> {
         try {
-            // Initial debug message for media processing start
-            await sendDebugMessage(messageInfo.from, 'MEDIA MESSAGE PROCESSING STARTED', {
-                messageType: messageInfo.type,
-                messageId: messageInfo.id,
-                hasCaption: !!messageInfo.mediaInfo?.caption,
-                caption: messageInfo.mediaInfo?.caption,
-                timestamp: new Date().toISOString(),
-                operation: 'handleMediaMessage'
-            });
+            // // Initial debug message for media processing start
+            // await sendDebugMessage(messageInfo.from, 'MEDIA MESSAGE PROCESSING STARTED', {
+            //     messageType: messageInfo.type,
+            //     messageId: messageInfo.id,
+            //     hasCaption: !!messageInfo.mediaInfo?.caption,
+            //     caption: messageInfo.mediaInfo?.caption,
+            //     timestamp: new Date().toISOString(),
+            //     operation: 'handleMediaMessage'
+            // });
 
             logInfo('Media message received for processing', {
                 messageType: messageInfo.type,
@@ -650,22 +654,22 @@ export class WhatsAppWebhookService {
             // Handle different media types
             if (messageInfo.type === 'image') {
                 // Debug message for image processing start
-                await sendDebugMessage(messageInfo.from, 'IMAGE PROCESSING STARTED', {
-                    messageId: messageInfo.id,
-                    timestamp: new Date().toISOString(),
-                    caption: messageInfo.mediaInfo?.caption
-                });
+                // await sendDebugMessage(messageInfo.from, 'IMAGE PROCESSING STARTED', {
+                //     messageId: messageInfo.id,
+                //     timestamp: new Date().toISOString(),
+                //     caption: messageInfo.mediaInfo?.caption
+                // });
 
                 // First, get the stored message to find its ID
                 const storedMessage = await this.databaseService.getMessageByWhatsAppId(messageInfo.id);
 
                 if (!storedMessage) {
                     // Debug message for missing stored message
-                    await sendDebugMessage(messageInfo.from, 'STORED MESSAGE NOT FOUND', {
-                        messageId: messageInfo.id,
-                        error: 'Message not found in database',
-                        timestamp: new Date().toISOString()
-                    });
+                    // await sendDebugMessage(messageInfo.from, 'STORED MESSAGE NOT FOUND', {
+                    //     messageId: messageInfo.id,
+                    //     error: 'Message not found in database',
+                    //     timestamp: new Date().toISOString()
+                    // });
 
                     logWarning('Stored message not found for image processing', {
                         messageId: messageInfo.id,
@@ -682,24 +686,24 @@ export class WhatsAppWebhookService {
                     return;
                 }
 
-                // Debug message for stored message found
-                await sendDebugMessage(messageInfo.from, 'STORED MESSAGE FOUND', {
-                    messageId: messageInfo.id,
-                    storedMessageId: storedMessage._id,
-                    timestamp: new Date().toISOString()
-                });
+                // // Debug message for stored message found
+                // await sendDebugMessage(messageInfo.from, 'STORED MESSAGE FOUND', {
+                //     messageId: messageInfo.id,
+                //     storedMessageId: storedMessage._id,
+                //     timestamp: new Date().toISOString()
+                // });
 
                 // Get the stored media files for this message
                 const mediaFiles = await this.databaseService.getMediaFilesByMessageId(storedMessage._id);
 
-                // Debug message for media files retrieval
-                await sendDebugMessage(messageInfo.from, 'MEDIA FILES RETRIEVED', {
-                    messageId: messageInfo.id,
-                    storedMessageId: storedMessage._id,
-                    mediaFilesCount: mediaFiles.length,
-                    mediaFileIds: mediaFiles.map(f => f._id),
-                    timestamp: new Date().toISOString()
-                });
+                // // Debug message for media files retrieval
+                // await sendDebugMessage(messageInfo.from, 'MEDIA FILES RETRIEVED', {
+                //     messageId: messageInfo.id,
+                //     storedMessageId: storedMessage._id,
+                //     mediaFilesCount: mediaFiles.length,
+                //     mediaFileIds: mediaFiles.map(f => f._id),
+                //     timestamp: new Date().toISOString()
+                // });
 
                 logInfo('Retrieved stored media files', {
                     messageId: messageInfo.id,
@@ -715,13 +719,13 @@ export class WhatsAppWebhookService {
                 if (imageFile?.storedUrl) {
                     imageUrl = imageFile.storedUrl;
                     // Debug message for found image URL
-                    await sendDebugMessage(messageInfo.from, 'IMAGE URL FOUND', {
-                        messageId: messageInfo.id,
-                        imageUrl: imageUrl,
-                        fileName: imageFile.fileName,
-                        mimeType: imageFile.mimeType,
-                        timestamp: new Date().toISOString()
-                    });
+                    // await sendDebugMessage(messageInfo.from, 'IMAGE URL FOUND', {
+                    //     messageId: messageInfo.id,
+                    //     imageUrl: imageUrl,
+                    //     fileName: imageFile.fileName,
+                    //     mimeType: imageFile.mimeType,
+                    //     timestamp: new Date().toISOString()
+                    // });
 
                     logInfo('Found stored image URL for AI analysis', {
                         messageId: messageInfo.id,
@@ -731,14 +735,14 @@ export class WhatsAppWebhookService {
                         operation: 'handleMediaMessage'
                     });
                 } else {
-                    // Debug message for missing image URL
-                    await sendDebugMessage(messageInfo.from, 'IMAGE URL NOT FOUND', {
-                        messageId: messageInfo.id,
-                        mediaFilesFound: mediaFiles.length,
-                        hasImageFile: !!imageFile,
-                        error: 'No valid image URL found in media files',
-                        timestamp: new Date().toISOString()
-                    });
+                    // // Debug message for missing image URL
+                    // await sendDebugMessage(messageInfo.from, 'IMAGE URL NOT FOUND', {
+                    //     messageId: messageInfo.id,
+                    //     mediaFilesFound: mediaFiles.length,
+                    //     hasImageFile: !!imageFile,
+                    //     error: 'No valid image URL found in media files',
+                    //     timestamp: new Date().toISOString()
+                    // });
 
                     logWarning('No stored image URL found for AI analysis', {
                         messageId: messageInfo.id,
@@ -749,58 +753,62 @@ export class WhatsAppWebhookService {
                     });
                 }
 
-                // Debug message for agent preparation
-                await sendDebugMessage(messageInfo.from, 'PREPARING AGENT CONTENT', {
-                    messageId: messageInfo.id,
-                    hasImageUrl: !!imageUrl,
-                    imageUrl: imageUrl || 'not available',
-                    hasCaption: !!messageInfo.mediaInfo?.caption,
-                    timestamp: new Date().toISOString()
-                });
+                // // Debug message for agent preparation
+                // await sendDebugMessage(messageInfo.from, 'PREPARING AGENT CONTENT', {
+                //     messageId: messageInfo.id,
+                //     hasImageUrl: !!imageUrl,
+                //     imageUrl: imageUrl || 'not available',
+                //     hasCaption: !!messageInfo.mediaInfo?.caption,
+                //     timestamp: new Date().toISOString()
+                // });
 
-                // Prepare text content for agent - let the agent decide how to handle the image
+                // Prepare text content for agent - indicate that image processing is required
                 const agentContent = imageUrl ?
-                    `Customer sent a receipt image. Image URL: ${imageUrl}${messageInfo.mediaInfo?.caption ? `\n\nCustomer's caption: ${messageInfo.mediaInfo.caption}` : ''}`
+                    `Customer sent a receipt image that needs to be analyzed. Please process the image to extract transaction details.${messageInfo.mediaInfo?.caption ? `\n\nCustomer's caption: ${messageInfo.mediaInfo.caption}` : ''}`
                     : `Customer sent a receipt image but it couldn't be processed. ${messageInfo.mediaInfo?.caption ? `Caption: ${messageInfo.mediaInfo.caption}` : ''} Please help them resolve this issue.`;
 
                 let response: string;
 
                 try {
-                    // Debug message for user context retrieval
-                    await sendDebugMessage(messageInfo.from, 'RETRIEVING USER CONTEXT', {
-                        messageId: messageInfo.id,
-                        timestamp: new Date().toISOString()
-                    });
+                    // // Debug message for user context retrieval
+                    // await sendDebugMessage(messageInfo.from, 'RETRIEVING USER CONTEXT', {
+                    //     messageId: messageInfo.id,
+                    //     timestamp: new Date().toISOString()
+                    // });
 
                     // Get user and conversation for proper memory context
                     const user = await this.databaseService.getOrCreateUser(messageInfo.from);
                     const conversation = await this.databaseService.getOrCreateConversation(user._id);
 
-                    // Debug message for context setup
-                    await sendDebugMessage(messageInfo.from, 'RUNTIME CONTEXT SETUP', {
-                        messageId: messageInfo.id,
-                        userId: user._id,
-                        conversationId: conversation._id,
-                        timestamp: new Date().toISOString()
-                    });
+                    // // Debug message for context setup
+                    // await sendDebugMessage(messageInfo.from, 'RUNTIME CONTEXT SETUP', {
+                    //     messageId: messageInfo.id,
+                    //     userId: user._id,
+                    //     conversationId: conversation._id,
+                    //     timestamp: new Date().toISOString()
+                    // });
 
                     // Create runtime context with memory context for tools
                     const runtimeContext = new RuntimeContext<{
                         userId: string;
                         conversationId: string;
                         phoneNumber: string;
+                        processImageUrl?: boolean;
+                        imageUrl?: string;
                     }>();
                     runtimeContext.set('userId', user._id);
                     runtimeContext.set('conversationId', conversation._id);
                     runtimeContext.set('phoneNumber', messageInfo.from);
+                    runtimeContext.set('processImageUrl', !!imageUrl); // ✅ Enable image processing only when imageUrl is available
+                    runtimeContext.set('imageUrl', imageUrl || undefined); // ✅ Pass the actual imageUrl for processing
 
-                    // Debug message for agent processing start
-                    await sendDebugMessage(messageInfo.from, 'AGENT PROCESSING STARTED', {
-                        messageId: messageInfo.id,
-                        agentName: 'whatsappAgent',
-                        temperature: HANDLE_IMAGE_AGENT_TEMPRETURE,
-                        timestamp: new Date().toISOString()
-                    });
+                    // // Debug message for agent processing start
+                    // await sendDebugMessage(messageInfo.from, 'AGENT PROCESSING STARTED', {
+                    //     messageId: messageInfo.id,
+                    //     agentName: 'whatsappAgent',
+                    //     temperature: HANDLE_IMAGE_AGENT_TEMPRETURE,
+                    //     timestamp: new Date().toISOString()
+                    // });
 
                     // Process image with exchange agent for receipt analysis
                     const agent = mastra.getAgent('whatsappAgent');
@@ -820,14 +828,14 @@ export class WhatsAppWebhookService {
 
                     response = agentResponse.text || 'Got your receipt! 📸 Let me analyze the details...';
 
-                    // Debug message for successful agent response
-                    await sendDebugMessage(messageInfo.from, 'AGENT PROCESSING COMPLETED', {
-                        messageId: messageInfo.id,
-                        responseLength: response.length,
-                        hasToolCalls: agentResponse.toolCalls && agentResponse.toolCalls.length > 0,
-                        toolCallsCount: agentResponse.toolCalls?.length || 0,
-                        timestamp: new Date().toISOString()
-                    });
+                    // // Debug message for successful agent response
+                    // await sendDebugMessage(messageInfo.from, 'AGENT PROCESSING COMPLETED', {
+                    //     messageId: messageInfo.id,
+                    //     responseLength: response.length,
+                    //     hasToolCalls: agentResponse.toolCalls && agentResponse.toolCalls.length > 0,
+                    //     toolCallsCount: agentResponse.toolCalls?.length || 0,
+                    //     timestamp: new Date().toISOString()
+                    // });
 
                     logInfo('Generated exchange agent response for image', {
                         messageId: messageInfo.id,
@@ -843,15 +851,15 @@ export class WhatsAppWebhookService {
                 } catch (agentError) {
                     const agentErrorMessage = agentError instanceof Error ? agentError.message : 'Unknown agent error';
 
-                    // Debug message for agent error
-                    await sendDebugMessage(messageInfo.from, 'AGENT PROCESSING ERROR', {
-                        messageId: messageInfo.id,
-                        error: agentErrorMessage,
-                        hasImageUrl: !!imageUrl,
-                        imageUrl: imageUrl || 'not available',
-                        stack: agentError instanceof Error ? agentError.stack : undefined,
-                        timestamp: new Date().toISOString()
-                    });
+                    // // Debug message for agent error
+                    // await sendDebugMessage(messageInfo.from, 'AGENT PROCESSING ERROR', {
+                    //     messageId: messageInfo.id,
+                    //     error: agentErrorMessage,
+                    //     hasImageUrl: !!imageUrl,
+                    //     imageUrl: imageUrl || 'not available',
+                    //     stack: agentError instanceof Error ? agentError.stack : undefined,
+                    //     timestamp: new Date().toISOString()
+                    // });
 
                     logError('Exchange agent failed to process image message', agentError as Error, {
                         messageId: messageInfo.id,
@@ -883,13 +891,13 @@ export class WhatsAppWebhookService {
                     }
                 }
 
-                // Debug message for sending response
-                await sendDebugMessage(messageInfo.from, 'SENDING RESPONSE', {
-                    messageId: messageInfo.id,
-                    responseLength: response.length,
-                    isReply: true,
-                    timestamp: new Date().toISOString()
-                });
+                // // Debug message for sending response
+                // await sendDebugMessage(messageInfo.from, 'SENDING RESPONSE', {
+                //     messageId: messageInfo.id,
+                //     responseLength: response.length,
+                //     isReply: true,
+                //     timestamp: new Date().toISOString()
+                // });
 
                 await this.sendTextReply(
                     messageInfo.from,
@@ -897,12 +905,12 @@ export class WhatsAppWebhookService {
                     messageInfo.id
                 );
 
-                // Debug message for storing message
-                await sendDebugMessage(messageInfo.from, 'STORING RESPONSE', {
-                    messageId: messageInfo.id,
-                    conversationId,
-                    timestamp: new Date().toISOString()
-                });
+                // // Debug message for storing message
+                // await sendDebugMessage(messageInfo.from, 'STORING RESPONSE', {
+                //     messageId: messageInfo.id,
+                //     conversationId,
+                //     timestamp: new Date().toISOString()
+                // });
 
                 // Store outgoing message in database
                 await this.storeValidatedOutgoingMessage(
@@ -913,13 +921,13 @@ export class WhatsAppWebhookService {
                     messageInfo.id
                 );
 
-                // Debug message for completion
-                await sendDebugMessage(messageInfo.from, 'IMAGE PROCESSING COMPLETED', {
-                    messageId: messageInfo.id,
-                    hasImageUrl: !!imageUrl,
-                    processingSuccess: true,
-                    timestamp: new Date().toISOString()
-                });
+                // // Debug message for completion
+                // await sendDebugMessage(messageInfo.from, 'IMAGE PROCESSING COMPLETED', {
+                //     messageId: messageInfo.id,
+                //     hasImageUrl: !!imageUrl,
+                //     processingSuccess: true,
+                //     timestamp: new Date().toISOString()
+                // });
 
                 logSuccess('Image receipt processed successfully with vision analysis', {
                     messageId: messageInfo.id,
@@ -930,12 +938,12 @@ export class WhatsAppWebhookService {
                 });
 
             } else {
-                // Debug message for unsupported media
-                await sendDebugMessage(messageInfo.from, 'UNSUPPORTED MEDIA TYPE', {
-                    messageId: messageInfo.id,
-                    mediaType: messageInfo.type,
-                    timestamp: new Date().toISOString()
-                });
+                // // Debug message for unsupported media
+                // await sendDebugMessage(messageInfo.from, 'UNSUPPORTED MEDIA TYPE', {
+                //     messageId: messageInfo.id,
+                //     mediaType: messageInfo.type,
+                //     timestamp: new Date().toISOString()
+                // });
 
                 // Handle unsupported media types
                 const response = `Hey! I can only work with text messages and images right now 📱
@@ -966,13 +974,13 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
 
         } catch (error) {
             // Debug message for main error
-            await sendDebugMessage(messageInfo.from, 'MEDIA PROCESSING ERROR', {
-                messageId: messageInfo.id,
-                messageType: messageInfo.type,
-                error: error instanceof Error ? error.message : String(error),
-                stack: error instanceof Error ? error.stack : undefined,
-                timestamp: new Date().toISOString()
-            });
+            // await sendDebugMessage(messageInfo.from, 'MEDIA PROCESSING ERROR', {
+            //     messageId: messageInfo.id,
+            //     messageType: messageInfo.type,
+            //     error: error instanceof Error ? error.message : String(error),
+            //     stack: error instanceof Error ? error.stack : undefined,
+            //     timestamp: new Date().toISOString()
+            // });
 
             logError('Error in media message handling (non-agent error)', error as Error, {
                 messageType: messageInfo.type,
@@ -997,13 +1005,13 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
             }
 
             try {
-                // Debug message for error response attempt
-                await sendDebugMessage(messageInfo.from, 'SENDING ERROR RESPONSE', {
-                    messageId: messageInfo.id,
-                    responseLength: systemErrorResponse.length,
-                    isTestMode: TEST_MODE,
-                    timestamp: new Date().toISOString()
-                });
+                // // Debug message for error response attempt
+                // await sendDebugMessage(messageInfo.from, 'SENDING ERROR RESPONSE', {
+                //     messageId: messageInfo.id,
+                //     responseLength: systemErrorResponse.length,
+                //     isTestMode: TEST_MODE,
+                //     timestamp: new Date().toISOString()
+                // });
 
                 await this.sendTextReply(
                     messageInfo.from,
@@ -1011,12 +1019,12 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                     messageInfo.id
                 );
 
-                // Debug message for storing error response
-                await sendDebugMessage(messageInfo.from, 'STORING ERROR RESPONSE', {
-                    messageId: messageInfo.id,
-                    conversationId,
-                    timestamp: new Date().toISOString()
-                });
+                // // Debug message for storing error response
+                // await sendDebugMessage(messageInfo.from, 'STORING ERROR RESPONSE', {
+                //     messageId: messageInfo.id,
+                //     conversationId,
+                //     timestamp: new Date().toISOString()
+                // });
 
                 await this.storeValidatedOutgoingMessage(
                     messageInfo.from,
@@ -1026,13 +1034,13 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                     messageInfo.id
                 );
             } catch (fallbackError) {
-                // Debug message for fallback error
-                await sendDebugMessage(messageInfo.from, 'ERROR RESPONSE FAILED', {
-                    messageId: messageInfo.id,
-                    error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
-                    stack: fallbackError instanceof Error ? fallbackError.stack : undefined,
-                    timestamp: new Date().toISOString()
-                });
+                // // Debug message for fallback error
+                // await sendDebugMessage(messageInfo.from, 'ERROR RESPONSE FAILED', {
+                //     messageId: messageInfo.id,
+                //     error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+                //     stack: fallbackError instanceof Error ? fallbackError.stack : undefined,
+                //     timestamp: new Date().toISOString()
+                // });
 
                 logError('Failed to send media system error response', fallbackError as Error, {
                     messageId: messageInfo.id,
@@ -1040,11 +1048,11 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                     operation: 'handleMediaMessage'
                 });
 
-                // Debug message for final fallback attempt
-                await sendDebugMessage(messageInfo.from, 'ATTEMPTING FINAL FALLBACK', {
-                    messageId: messageInfo.id,
-                    timestamp: new Date().toISOString()
-                });
+                // // Debug message for final fallback attempt
+                // await sendDebugMessage(messageInfo.from, 'ATTEMPTING FINAL FALLBACK', {
+                //     messageId: messageInfo.id,
+                //     timestamp: new Date().toISOString()
+                // });
 
                 // Use the new error response system as final fallback
                 await this.sendErrorResponse(

@@ -60,6 +60,10 @@ function logError(message: string, error?: Error | string, data?: Record<string,
     logImageAnalysisEvent('ERROR', message, errorData);
 }
 
+function logWarn(message: string, data?: Record<string, any>): void {
+    logImageAnalysisEvent('WARN', message, data);
+}
+
 function logInfo(message: string, data?: Record<string, any>): void {
     logImageAnalysisEvent('INFO', message, data);
 }
@@ -133,6 +137,37 @@ export const imageAnalysisTool = createTool({
         const phoneNumber = runtimeContext?.get('phoneNumber') as string;
         const userId = runtimeContext?.get('userId') as string;
         const conversationId = runtimeContext?.get('conversationId') as string;
+        const processImage = runtimeContext?.get('processImageUrl') as boolean | undefined;
+
+        // GUARDRAIL: Check if image processing is explicitly enabled
+        if (processImage !== true) {
+            const feedbackMessage = 'Image analysis is not permitted for this message. Please ask the user to send an image if you need to perform analysis.';
+            logWarn('Image analysis blocked by guardrail', {
+                userId,
+                conversationId,
+                imageUrl,
+                reason: 'processImageUrl flag in runtimeContext is not true'
+            });
+
+            if (phoneNumber) {
+                await sendDebugMessage(phoneNumber, 'IMAGE ANALYSIS BLOCKED', {
+                    message: feedbackMessage,
+                    reason: 'Guardrail `processImageUrl` is not true'
+                });
+            }
+
+            return {
+                ocrResults: {
+                    rawText: feedbackMessage,
+                    formattedText: { lines: [], sections: [] }
+                },
+                imageQuality: {
+                    quality: 'poor' as const,
+                    confidence: 'low' as const,
+                    issues: [feedbackMessage]
+                }
+            };
+        }
 
         // Send debug message about tool start
         if (phoneNumber) {
