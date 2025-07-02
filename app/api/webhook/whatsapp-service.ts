@@ -11,6 +11,8 @@ import { HANDLE_IMAGE_AGENT_TEMPRETURE, HANDLE_TEXT_AGENT_TEMPRETURE } from '@/m
 // import { sendDebugMessage } from '@/mastra/tools/utils';
 import { WhatsAppClientService } from '@/whatsapp/whatsapp-client-service';
 import { Conversation } from '@/lib/schema';
+import { analyzeImageDirectly } from '@/mastra/tools/image-analysis-tool';
+import { sendDebugMessage } from '@/mastra/tools/utils';
 
 /**
  * Format error details for test mode
@@ -498,14 +500,10 @@ export class WhatsAppWebhookService {
                     userId: string;
                     conversationId: string;
                     phoneNumber: string;
-                    processImageUrl?: boolean;
-                    imageUrl?: string;
                 }>();
                 runtimeContext.set('userId', user._id); // ✅ Pass userId as userId (clear and consistent)
                 runtimeContext.set('conversationId', conversation._id); // ✅ Pass conversationId as conversationId (clear and consistent)
                 runtimeContext.set('phoneNumber', messageInfo.from); // ✅ Pass phone number for debug messages
-                runtimeContext.set('processImageUrl', false); // ✅ Disable image processing for text messages
-                runtimeContext.set('imageUrl', undefined); // ✅ No image URL for text messages
 
 
                 const agent = mastra.getAgent('whatsappAgent');
@@ -791,10 +789,79 @@ export class WhatsAppWebhookService {
                 //     timestamp: new Date().toISOString()
                 // });
 
-                // Prepare text content for agent - indicate that image processing is required
-                const agentContent = imageUrl ?
-                    `Customer sent a receipt image that needs to be analyzed. Please process the image to extract transaction details.${messageInfo.mediaInfo?.caption ? `\n\nCustomer's caption: ${messageInfo.mediaInfo.caption}` : ''}`
-                    : `Customer sent a receipt image but it couldn't be processed. ${messageInfo.mediaInfo?.caption ? `Caption: ${messageInfo.mediaInfo.caption}` : ''} Please help them resolve this issue.`;
+                // Analyze the image directly if URL is available
+                let imageAnalysisResults = null;
+                if (imageUrl) {
+                    try {
+                        logInfo('Starting direct image analysis for receipt processing', {
+                            messageId: messageInfo.id,
+                            from: messageInfo.from,
+                            operation: 'handleMediaMessage:image_analysis'
+                        });
+                        sendDebugMessage(messageInfo.from, 'STARTING DIRECT IMAGE ANALYSIS FOR RECEIPT PROCESSING', {
+                            messageId: messageInfo.id,
+                            from: messageInfo.from,
+                            operation: 'handleMediaMessage:image_analysis'
+                        });
+
+                        imageAnalysisResults = await analyzeImageDirectly(
+                            imageUrl,
+                            messageInfo.from,
+                            `Receipt image from WhatsApp message. ${messageInfo.mediaInfo?.caption ? `User caption: ${messageInfo.mediaInfo.caption}` : ''}`
+                        );
+                        sendDebugMessage(messageInfo.from, 'DIRECT IMAGE ANALYSIS COMPLETED SUCCESSFULLY', {
+                            messageId: messageInfo.id,
+                            from: messageInfo.from,
+                            imageUrl,
+                            imageAnalysisResults,
+                            operation: 'handleMediaMessage:image_analysis'
+                        });
+
+                        logSuccess('Direct image analysis completed successfully', {
+                            messageId: messageInfo.id,
+                            from: messageInfo.from,
+                            quality: imageAnalysisResults.imageQuality?.quality,
+                            confidence: imageAnalysisResults.imageQuality?.confidence,
+                            hasText: !!imageAnalysisResults.ocrResults?.rawText,
+                            operation: 'handleMediaMessage:image_analysis'
+                        });
+                        sendDebugMessage(messageInfo.from, 'DIRECT IMAGE ANALYSIS COMPLETED SUCCESSFULLY', {
+                            messageId: messageInfo.id,
+                            from: messageInfo.from,
+                            operation: 'handleMediaMessage:image_analysis'
+                        });
+                    } catch (analysisError) {
+                        logError('Direct image analysis failed', analysisError as Error, {
+                            messageId: messageInfo.id,
+                            from: messageInfo.from,
+                            operation: 'handleMediaMessage:image_analysis'
+                        });
+                        sendDebugMessage(messageInfo.from, 'DIRECT IMAGE ANALYSIS FAILED', {
+                            messageId: messageInfo.id,
+                            from: messageInfo.from,
+                            operation: 'handleMediaMessage:image_analysis'
+                        });
+                        // Continue without analysis results - agent will handle the lack of extracted text
+                    }
+                }
+
+                // Prepare text content for agent - include extracted text if available
+                let agentContent: string;
+                if (imageUrl && imageAnalysisResults && imageAnalysisResults.ocrResults?.rawText) {
+                    agentContent = `Customer sent a receipt image. I have extracted the following text from the image:
+
+EXTRACTED TEXT FROM RECEIPT:
+${imageAnalysisResults.ocrResults.rawText}
+
+IMAGE QUALITY: ${imageAnalysisResults.imageQuality?.quality} (confidence: ${imageAnalysisResults.imageQuality?.confidence})
+${imageAnalysisResults.imageQuality?.issues?.length ? `Issues: ${imageAnalysisResults.imageQuality.issues.join(', ')}` : ''}
+
+Please help the customer with their currency exchange based on this receipt information.${messageInfo.mediaInfo?.caption ? `\n\nCustomer's caption: ${messageInfo.mediaInfo.caption}` : ''}`;
+                } else if (imageUrl) {
+                    agentContent = `Customer sent a receipt image but I couldn't extract the text from it. Please help them by asking for the transaction details manually.${messageInfo.mediaInfo?.caption ? `\n\nCustomer's caption: ${messageInfo.mediaInfo.caption}` : ''}`;
+                } else {
+                    agentContent = `Customer sent a receipt image but it couldn't be processed. ${messageInfo.mediaInfo?.caption ? `Caption: ${messageInfo.mediaInfo.caption}` : ''} Please help them resolve this issue.`;
+                }
 
                 let response: string;
 
@@ -823,36 +890,10 @@ export class WhatsAppWebhookService {
                         userId: string;
                         conversationId: string;
                         phoneNumber: string;
-                        processImageUrl?: boolean;
-                        imageUrl?: string;
                     }>();
                     runtimeContext.set('userId', user._id);
                     runtimeContext.set('conversationId', conversation._id);
                     runtimeContext.set('phoneNumber', messageInfo.from);
-
-                    // Only enable image processing for valid image messages with URLs
-                    if (messageInfo.type === 'image' && imageUrl) {
-                        runtimeContext.set('processImageUrl', true);
-                        runtimeContext.set('imageUrl', imageUrl);
-
-                        logInfo('Image processing enabled for receipt analysis', {
-                            messageId: messageInfo.id,
-                            from: messageInfo.from,
-                            hasImageUrl: true,
-                            operation: 'handleMediaMessage'
-                        });
-                    } else {
-                        runtimeContext.set('processImageUrl', false);
-                        runtimeContext.set('imageUrl', undefined);
-
-                        logInfo('Image processing disabled - not an image or no URL', {
-                            messageId: messageInfo.id,
-                            from: messageInfo.from,
-                            messageType: messageInfo.type,
-                            hasImageUrl: false,
-                            operation: 'handleMediaMessage'
-                        });
-                    }
 
                     // // Debug message for agent processing start
                     // await sendDebugMessage(messageInfo.from, 'AGENT PROCESSING STARTED', {

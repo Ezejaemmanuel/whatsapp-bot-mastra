@@ -3,7 +3,6 @@ import { Memory } from '@mastra/memory';
 import { UpstashStore, UpstashVector } from '@mastra/upstash';
 import { google } from '@ai-sdk/google';
 import { WHATSAPP_AGENT_NAME, WHATSAPP_AGENT_INSTRUCTIONS, GEMINI_MODEL } from './agent-instructions';
-import { imageAnalysisTool } from '../tools/image-analysis-tool';
 import { getCurrentRatesTool, createTransactionTool, updateTransactionStatusTool } from '../tools/exchange-tools';
 import { getUserTransactionsTool, getLatestUserTransactionTool, getAdminBankDetailsTool, getUserTool, updateUserBankDetailsTool } from '../tools/exchange-tools-2';
 
@@ -114,7 +113,7 @@ const memory = new Memory({
 export const whatsappAgent = new Agent({
 
     name: WHATSAPP_AGENT_NAME,
-    description: 'An intelligent WhatsApp exchange bot for KhalidWid Exchange, specializing in currency exchange with smart negotiation, transaction processing, fraud prevention, and receipt processing through specialized tools.',
+    description: 'An intelligent WhatsApp exchange bot for KhalidWid Exchange, specializing in currency exchange with smart negotiation, transaction processing, and fraud prevention.',
     instructions: WHATSAPP_AGENT_INSTRUCTIONS,
     model: google(GEMINI_MODEL), // API key should be set via GOOGLE_GENERATIVE_AI_API_KEY environment variable
     memory,
@@ -127,6 +126,5 @@ export const whatsappAgent = new Agent({
         getAdminBankDetailsTool,
         getUserTool,
         updateUserBankDetailsTool,
-        imageAnalysisTool,
     },
 }); 
