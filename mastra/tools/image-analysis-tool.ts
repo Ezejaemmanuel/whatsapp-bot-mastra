@@ -138,24 +138,40 @@ export const imageAnalysisTool = createTool({
         const userId = runtimeContext?.get('userId') as string;
         const conversationId = runtimeContext?.get('conversationId') as string;
         const processImage = runtimeContext?.get('processImageUrl') as boolean | undefined;
+        const latestImageUrl = runtimeContext?.get('imageUrl') as string | undefined;
 
         // GUARDRAIL: Check if image processing is explicitly enabled
         if (processImage !== true) {
-            const feedbackMessage = 'Image analysis is not permitted for this message. Please ask the user to send an image if you need to perform analysis.';
+            const feedbackMessage = 'Image analysis is not permitted for this message. Please use the check_image_processing tool to verify status before retrying.';
             logWarn('Image analysis blocked by guardrail', {
                 userId,
                 conversationId,
-                imageUrl,
-                reason: 'processImageUrl flag in runtimeContext is not true'
+                reason: 'processImageUrl is not true',
+                operation: 'imageAnalysisTool.execute'
             });
+            return {
+                ocrResults: {
+                    rawText: feedbackMessage,
+                    formattedText: { lines: [], sections: [] }
+                },
+                imageQuality: {
+                    quality: 'poor' as const,
+                    confidence: 'low' as const,
+                    issues: [feedbackMessage]
+                }
+            };
+        }
 
-            if (phoneNumber) {
-                await sendDebugMessage(phoneNumber, 'IMAGE ANALYSIS BLOCKED', {
-                    message: feedbackMessage,
-                    reason: 'Guardrail `processImageUrl` is not true'
-                });
-            }
-
+        // NEW GUARDRAIL: Verify the provided imageUrl matches the one from the runtime context
+        if (imageUrl !== latestImageUrl) {
+            const feedbackMessage = `Image analysis mismatch. The provided imageUrl does not match the latest image from the user. Please continue the conversation without analyzing the image.`;
+            logWarn('Image analysis blocked due to URL mismatch', {
+                userId,
+                conversationId,
+                providedImageUrl: imageUrl,
+                latestImageUrl: latestImageUrl,
+                operation: 'imageAnalysisTool.execute'
+            });
             return {
                 ocrResults: {
                     rawText: feedbackMessage,
@@ -440,4 +456,40 @@ Extract all text now, maintaining exact formatting:`;
             };
         }
     },
-}); 
+});
+
+/**
+ * Tool to check if image processing is enabled and get current image URL
+ */
+export const checkImageProcessingStatus = createTool({
+    id: "check_image_processing",
+    description: "Check if image processing is enabled and get the current image URL if available. Use this before attempting to analyze any images.",
+    inputSchema: z.object({}), // No input needed
+    outputSchema: z.object({
+        isEnabled: z.boolean().describe("Whether image processing is currently enabled"),
+        imageUrl: z.string().optional().describe("The current image URL if available"),
+        message: z.string().describe("A message explaining the current status")
+    }),
+    execute: async ({ runtimeContext }) => {
+        const processImage = runtimeContext?.get('processImageUrl') as boolean | undefined;
+        const imageUrl = runtimeContext?.get('imageUrl') as string | undefined;
+
+        logInfo('Checking image processing status', {
+            isEnabled: !!processImage,
+            hasImageUrl: !!imageUrl,
+            operation: 'check_image_processing'
+        });
+
+        return {
+            isEnabled: processImage === true,
+            imageUrl: imageUrl,
+            message: processImage === true && imageUrl
+                ? `Image processing is enabled and an image URL is available for analysis.`
+                : processImage === true
+                    ? `Image processing is enabled but no image URL is available.`
+                    : `Image processing is currently disabled.`
+        };
+    }
+});
+
+// Export tools

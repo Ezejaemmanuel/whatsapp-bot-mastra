@@ -799,8 +799,30 @@ export class WhatsAppWebhookService {
                     runtimeContext.set('userId', user._id);
                     runtimeContext.set('conversationId', conversation._id);
                     runtimeContext.set('phoneNumber', messageInfo.from);
-                    runtimeContext.set('processImageUrl', !!imageUrl); // ✅ Enable image processing only when imageUrl is available
-                    runtimeContext.set('imageUrl', imageUrl || undefined); // ✅ Pass the actual imageUrl for processing
+
+                    // Only enable image processing for valid image messages with URLs
+                    if (messageInfo.type === 'image' && imageUrl) {
+                        runtimeContext.set('processImageUrl', true);
+                        runtimeContext.set('imageUrl', imageUrl);
+
+                        logInfo('Image processing enabled for receipt analysis', {
+                            messageId: messageInfo.id,
+                            from: messageInfo.from,
+                            hasImageUrl: true,
+                            operation: 'handleMediaMessage'
+                        });
+                    } else {
+                        runtimeContext.set('processImageUrl', false);
+                        runtimeContext.set('imageUrl', undefined);
+
+                        logInfo('Image processing disabled - not an image or no URL', {
+                            messageId: messageInfo.id,
+                            from: messageInfo.from,
+                            messageType: messageInfo.type,
+                            hasImageUrl: false,
+                            operation: 'handleMediaMessage'
+                        });
+                    }
 
                     // // Debug message for agent processing start
                     // await sendDebugMessage(messageInfo.from, 'AGENT PROCESSING STARTED', {
