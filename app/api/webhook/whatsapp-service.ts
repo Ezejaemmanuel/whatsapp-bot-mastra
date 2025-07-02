@@ -10,6 +10,7 @@ import { TEST_MODE } from '@/constant';
 import { HANDLE_IMAGE_AGENT_TEMPRETURE, HANDLE_TEXT_AGENT_TEMPRETURE } from '@/mastra/agents/agent-instructions';
 // import { sendDebugMessage } from '@/mastra/tools/utils';
 import { WhatsAppClientService } from '@/whatsapp/whatsapp-client-service';
+import { Conversation } from '@/lib/schema';
 
 /**
  * Format error details for test mode
@@ -101,7 +102,7 @@ export class WhatsAppWebhookService {
     async processIncomingMessage(message: WebhookMessage, contactName?: string): Promise<void> {
         let messageInfo: ReturnType<typeof extractMessageInfo>;
         let user: any;
-        let conversation: any;
+        let conversation: Conversation | null;
         let storedMessage: any;
 
         try {
@@ -143,7 +144,25 @@ export class WhatsAppWebhookService {
                     messageInfo.from,
                     contactName
                 );
-                conversation = await this.databaseService.getOrCreateConversation(user._id);
+                const userName = user.profileName || user.phoneNumber || messageInfo.from;
+                conversation = await this.databaseService.getOrCreateConversation(user._id, userName);
+
+                // == NEW: Check who is in charge of the conversation ==
+                if (conversation && conversation.inCharge === 'admin') {
+                    logInfo('Conversation handled by admin, bot will not respond', {
+                        conversationId: conversation._id,
+                        userId: user._id,
+                        messageId: messageInfo.id,
+                    });
+                    // Store the message but do not proceed to agent processing
+                    await this.databaseService.storeIncomingMessage(
+                        message,
+                        conversation._id,
+                        userName,
+                    );
+                    return; // Exit processing
+                }
+
             } catch (userError) {
                 logError('Failed to get/create user or conversation', userError as Error, {
                     messageId: messageInfo.id,
@@ -157,10 +176,11 @@ export class WhatsAppWebhookService {
 
             // Step 3: Store incoming message with fallback
             try {
+                const userName = user.profileName || user.phoneNumber || messageInfo.from;
                 storedMessage = await this.databaseService.storeIncomingMessage(
                     message,
                     conversation._id,
-                    contactName
+                    userName,
                 );
             } catch (storeError) {
                 logError('Failed to store incoming message', storeError as Error, {
@@ -218,6 +238,10 @@ export class WhatsAppWebhookService {
                     text: messageInfo.text,
                     timestamp: messageInfo.timestamp
                 });
+
+                if (!conversation) {
+                    throw new Error("Conversation could not be retrieved, cannot process message.");
+                }
 
                 switch (messageInfo.type) {
                     case 'text':
@@ -464,7 +488,8 @@ export class WhatsAppWebhookService {
             try {
                 // Get user and conversation for proper memory context
                 const user = await this.databaseService.getOrCreateUser(messageInfo.from);
-                const conversation = await this.databaseService.getOrCreateConversation(user._id);
+                const userName = user.profileName || user.phoneNumber || messageInfo.from;
+                const conversation = await this.databaseService.getOrCreateConversation(user._id, userName);
 
                 // Import RuntimeContext for passing memory context to tools
 
@@ -561,6 +586,8 @@ export class WhatsAppWebhookService {
                 'text',
                 response,
                 conversationId,
+                'bot', // senderRole
+                'Bot',   // senderName
                 messageInfo.id
             );
 
@@ -609,6 +636,8 @@ export class WhatsAppWebhookService {
                     'text',
                     systemErrorResponse,
                     conversationId,
+                    'bot', // senderRole
+                    'Bot',   // senderName
                     messageInfo.id
                 );
             } catch (fallbackError) {
@@ -778,7 +807,8 @@ export class WhatsAppWebhookService {
 
                     // Get user and conversation for proper memory context
                     const user = await this.databaseService.getOrCreateUser(messageInfo.from);
-                    const conversation = await this.databaseService.getOrCreateConversation(user._id);
+                    const userName = user.profileName || user.phoneNumber || messageInfo.from;
+                    const conversation = await this.databaseService.getOrCreateConversation(user._id, userName);
 
                     // // Debug message for context setup
                     // await sendDebugMessage(messageInfo.from, 'RUNTIME CONTEXT SETUP', {
@@ -940,6 +970,8 @@ export class WhatsAppWebhookService {
                     'text',
                     response,
                     conversationId,
+                    'bot', // senderRole
+                    'Bot',   // senderName
                     messageInfo.id
                 );
 
@@ -983,6 +1015,8 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                     'text',
                     response,
                     conversationId,
+                    'bot', // senderRole
+                    'Bot',   // senderName
                     messageInfo.id
                 );
 
@@ -1053,6 +1087,8 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                     'text',
                     systemErrorResponse,
                     conversationId,
+                    'bot', // senderRole
+                    'Bot',   // senderName
                     messageInfo.id
                 );
             } catch (fallbackError) {
@@ -1106,6 +1142,8 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
             'text',
             response,
             conversationId,
+            'bot', // senderRole
+            'Bot',   // senderName
             messageInfo.id
         );
     }
@@ -1128,6 +1166,8 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
             'text',
             response,
             conversationId,
+            'bot', // senderRole
+            'Bot',   // senderName
             messageInfo.id
         );
     }
@@ -1290,6 +1330,8 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
         messageType: string,
         content: string,
         conversationId: Id<"conversations">,
+        senderRole: 'bot' | 'admin',
+        senderName: string,
         whatsappMessageId?: string,
         replyToMessageId?: string
     ): Promise<void> {
@@ -1299,6 +1341,8 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                 messageType,
                 content,
                 conversationId,
+                senderRole,
+                senderName,
                 whatsappMessageId,
                 replyToMessageId
             );

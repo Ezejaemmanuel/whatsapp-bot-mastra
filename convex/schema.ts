@@ -30,14 +30,17 @@ export default defineSchema({
      */
     conversations: defineTable({
         userId: v.id("users"), // Reference to user
-        whatsappConversationId: v.optional(v.string()), // WhatsApp conversation ID
+        userName: v.string(), // User's profile name or phone number for display
         status: v.optional(v.string()), // active, archived, closed
+        inCharge: v.union(v.literal("bot"), v.literal("admin")), // Who is handling the conversation
         lastMessageAt: v.optional(v.number()), // Last message timestamp
+        lastMessageSummary: v.optional(v.string()), // A snippet of the last message content
         metadata: v.optional(v.any()), // Conversation-specific metadata
     })
         .index("by_user_id", ["userId"])
         .index("by_status", ["status"])
-        .index("by_last_message_at", ["lastMessageAt"]),
+        .index("by_last_message_at", ["lastMessageAt"])
+        .index("by_in_charge", ["inCharge"]),
 
     /**
      * Messages table - stores all messages (incoming and outgoing)
@@ -45,7 +48,9 @@ export default defineSchema({
     messages: defineTable({
         conversationId: v.id("conversations"), // Reference to conversation
         whatsappMessageId: v.optional(v.string()), // WhatsApp message ID
-        direction: v.string(), // 'inbound', 'outbound'
+        direction: v.union(v.literal("inbound"), v.literal("outbound")), // 'inbound', 'outbound'
+        senderRole: v.union(v.literal("user"), v.literal("bot"), v.literal("admin")), // Who sent the message
+        senderName: v.string(), // Display name of the sender (user name, 'Bot', or admin name)
         messageType: v.string(), // 'text', 'image', 'audio', 'video', 'document', 'location', 'contact', 'system'
         content: v.optional(v.string()), // Text content for text messages
         mediaUrl: v.optional(v.string()), // URL for media files
@@ -65,7 +70,8 @@ export default defineSchema({
         .index("by_direction", ["direction"])
         .index("by_message_type", ["messageType"])
         .index("by_status", ["status"])
-        .index("by_timestamp", ["timestamp"]),
+        .index("by_timestamp", ["timestamp"])
+        .index("by_sender_role", ["senderRole"]),
 
     /**
      * Media files table - stores information about uploaded media files

@@ -286,10 +286,10 @@ export default function TestDashboard() {
                                                     <div className="flex justify-between items-start mb-2">
                                                         <div className="flex items-center gap-2">
                                                             <Badge
-                                                                variant={message.direction === "incoming" ? "default" : "secondary"}
+                                                                variant={ message.direction === "inbound" ? "default" : "secondary"}
                                                                 className="text-xs"
                                                             >
-                                                                {message.direction === "incoming" ? "📥 In" : "📤 Out"}
+                                                                {message.direction === "inbound" ? "📥 In" : "📤 Out"}
                                                             </Badge>
                                                             <Badge variant="outline" className="text-xs">
                                                                 {message.messageType}

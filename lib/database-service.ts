@@ -40,11 +40,11 @@ export class DatabaseService {
     /**
      * Get or create a conversation for a user
      */
-    async getOrCreateConversation(userId: Id<"users">, whatsappConversationId?: string): Promise<Conversation> {
+    async getOrCreateConversation(userId: Id<"users">, userName: string): Promise<Conversation> {
         try {
             const conversation = await fetchMutation(api.conversations.getOrCreateConversation, {
                 userId,
-                whatsappConversationId,
+                userName,
             });
 
             if (!conversation) {
@@ -64,7 +64,7 @@ export class DatabaseService {
     async storeIncomingMessage(
         webhookMessage: WebhookMessage,
         conversationId: Id<"conversations">,
-        contactName?: string
+        userName: string
     ): Promise<Message> {
         try {
             // ✅ VALIDATE MESSAGE CONTENT - Prevent storing completely empty messages
@@ -84,6 +84,9 @@ export class DatabaseService {
             const messageData: any = {
                 conversationId,
                 whatsappMessageId: webhookMessage.id,
+                direction: 'inbound',
+                senderRole: 'user',
+                senderName: userName,
                 messageType: webhookMessage.type,
                 content: messageContent,
                 caption: this.getMediaCaption(webhookMessage),
@@ -103,7 +106,7 @@ export class DatabaseService {
                 } : undefined,
                 timestamp: parseInt(webhookMessage.timestamp) * 1000,
                 metadata: {
-                    contactName,
+                    contactName: userName,
                     originalPayload: webhookMessage
                 }
             };
@@ -141,6 +144,8 @@ export class DatabaseService {
         messageType: string,
         content: string,
         conversationId: Id<"conversations">,
+        senderRole: 'bot' | 'admin',
+        senderName: string,
         whatsappMessageId?: string,
         replyToMessageId?: string
     ): Promise<Message> {
@@ -148,6 +153,9 @@ export class DatabaseService {
             const messageData = {
                 conversationId,
                 whatsappMessageId,
+                direction: 'outbound',
+                senderRole,
+                senderName,
                 messageType,
                 content,
                 context: replyToMessageId ? { id: replyToMessageId } : undefined,
@@ -169,8 +177,6 @@ export class DatabaseService {
             throw error;
         }
     }
-
-
 
     /**
      * Store media file information
@@ -241,8 +247,6 @@ export class DatabaseService {
             throw error;
         }
     }
-
-
 
     /**
      * Get message by WhatsApp ID

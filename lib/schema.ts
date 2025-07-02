@@ -1,3 +1,5 @@
+import { v } from "convex/values";
+import { defineSchema, defineTable } from "convex/server";
 import { Id } from "../convex/_generated/dataModel";
 
 /**
@@ -19,6 +21,9 @@ export interface User extends BaseDocument {
     phoneNumber?: string;
     profileName?: string;
     isBlocked?: boolean;
+    bankName?: string;
+    accountNumber?: string;
+    accountName?: string;
     metadata?: any;
 }
 
@@ -34,17 +39,21 @@ export interface NewUser {
 export interface Conversation extends BaseDocument {
     _id: Id<"conversations">;
     userId: Id<"users">;
-    whatsappConversationId?: string;
+    userName: string;
     status?: string;
+    inCharge: 'bot' | 'admin';
     lastMessageAt?: number;
+    lastMessageSummary?: string;
     metadata?: any;
 }
 
 export interface NewConversation {
     userId: Id<"users">;
-    whatsappConversationId?: string;
+    userName: string;
     status?: string;
+    inCharge: 'bot' | 'admin';
     lastMessageAt?: number;
+    lastMessageSummary?: string;
     metadata?: any;
 }
 
@@ -53,7 +62,9 @@ export interface Message extends BaseDocument {
     _id: Id<"messages">;
     conversationId: Id<"conversations">;
     whatsappMessageId?: string;
-    direction: string;
+    direction: 'inbound' | 'outbound';
+    senderRole: 'user' | 'bot' | 'admin';
+    senderName: string;
     messageType: string;
     content?: string;
     mediaUrl?: string;
@@ -72,7 +83,9 @@ export interface Message extends BaseDocument {
 export interface NewMessage {
     conversationId: Id<"conversations">;
     whatsappMessageId?: string;
-    direction: string;
+    direction: 'inbound' | 'outbound';
+    senderRole: 'user' | 'bot' | 'admin';
+    senderName: string;
     messageType: string;
     content?: string;
     mediaUrl?: string;

@@ -7,7 +7,7 @@ import { mutation, query } from "./_generated/server";
 export const getOrCreateConversation = mutation({
     args: {
         userId: v.id("users"),
-        whatsappConversationId: v.optional(v.string()),
+        userName: v.string(),
     },
     handler: async (ctx, args) => {
         // Try to find active conversation for the user
@@ -25,8 +25,9 @@ export const getOrCreateConversation = mutation({
         // Create new conversation
         const conversationId = await ctx.db.insert("conversations", {
             userId: args.userId,
-            whatsappConversationId: args.whatsappConversationId,
+            userName: args.userName,
             status: "active",
+            inCharge: "bot", // Default to bot
             lastMessageAt: Date.now(),
         });
 
@@ -69,10 +70,12 @@ export const updateConversationLastMessage = mutation({
     args: {
         conversationId: v.id("conversations"),
         lastMessageAt: v.number(),
+        lastMessageSummary: v.string(),
     },
     handler: async (ctx, args) => {
         await ctx.db.patch(args.conversationId, {
             lastMessageAt: args.lastMessageAt,
+            lastMessageSummary: args.lastMessageSummary,
         });
         return await ctx.db.get(args.conversationId);
     },
@@ -102,6 +105,22 @@ export const updateConversationMetadata = mutation({
     handler: async (ctx, args) => {
         await ctx.db.patch(args.conversationId, {
             metadata: args.metadata,
+        });
+        return await ctx.db.get(args.conversationId);
+    },
+});
+
+/**
+ * Set who is in charge of a conversation
+ */
+export const setInCharge = mutation({
+    args: {
+        conversationId: v.id("conversations"),
+        inCharge: v.union(v.literal("bot"), v.literal("admin")),
+    },
+    handler: async (ctx, args) => {
+        await ctx.db.patch(args.conversationId, {
+            inCharge: args.inCharge,
         });
         return await ctx.db.get(args.conversationId);
     },

@@ -8,6 +8,8 @@ export const storeIncomingMessage = mutation({
     args: {
         conversationId: v.id("conversations"),
         whatsappMessageId: v.optional(v.string()),
+        senderRole: v.union(v.literal("user"), v.literal("bot"), v.literal("admin")),
+        senderName: v.string(),
         messageType: v.string(),
         content: v.optional(v.string()),
         caption: v.optional(v.string()),
@@ -25,6 +27,8 @@ export const storeIncomingMessage = mutation({
             conversationId: args.conversationId,
             whatsappMessageId: args.whatsappMessageId,
             direction: "inbound",
+            senderRole: args.senderRole,
+            senderName: args.senderName,
             messageType: args.messageType,
             content: args.content,
             caption: args.caption,
@@ -38,9 +42,10 @@ export const storeIncomingMessage = mutation({
             fileName: args.fileName,
         });
 
-        // Update conversation last message time
+        // Update conversation last message time and summary
         await ctx.db.patch(args.conversationId, {
             lastMessageAt: args.timestamp,
+            lastMessageSummary: args.content?.substring(0, 100) ?? args.caption ?? args.messageType,
         });
 
         return await ctx.db.get(messageId);
@@ -54,6 +59,8 @@ export const storeOutgoingMessage = mutation({
     args: {
         conversationId: v.id("conversations"),
         whatsappMessageId: v.optional(v.string()),
+        senderRole: v.union(v.literal("user"), v.literal("bot"), v.literal("admin")),
+        senderName: v.string(),
         messageType: v.string(),
         content: v.optional(v.string()),
         context: v.optional(v.any()),
@@ -65,6 +72,8 @@ export const storeOutgoingMessage = mutation({
             conversationId: args.conversationId,
             whatsappMessageId: args.whatsappMessageId,
             direction: "outbound",
+            senderRole: args.senderRole,
+            senderName: args.senderName,
             messageType: args.messageType,
             content: args.content,
             context: args.context,
@@ -73,9 +82,10 @@ export const storeOutgoingMessage = mutation({
             metadata: args.metadata,
         });
 
-        // Update conversation last message time
+        // Update conversation last message time and summary
         await ctx.db.patch(args.conversationId, {
             lastMessageAt: timestamp,
+            lastMessageSummary: args.content?.substring(0, 100) ?? args.messageType,
         });
 
         return await ctx.db.get(messageId);
