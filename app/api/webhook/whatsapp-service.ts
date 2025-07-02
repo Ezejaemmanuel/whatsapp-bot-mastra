@@ -210,17 +210,17 @@ export class WhatsAppWebhookService {
             }
 
             // Step 4: Handle media processing separately (non-blocking)
-            if (this.isMediaMessage(message) && storedMessage._id && !storedMessage._id.toString().startsWith('fallback_')) {
-                // Process media in background - don't let it block message processing
-                this.processAndStoreMediaSafely(message, storedMessage._id, messageInfo.from).catch(mediaError => {
-                    logError('Media processing failed (non-blocking)', mediaError as Error, {
-                        messageId: messageInfo.id,
-                        from: messageInfo.from,
-                        messageType: messageInfo.type,
-                        operation: 'processIncomingMessage:media_processing'
-                    });
-                });
-            }
+            // if (this.isMediaMessage(message) && storedMessage._id && !storedMessage._id.toString().startsWith('fallback_')) {
+            //     // Process media in background - don't let it block message processing
+            //     this.processAndStoreMediaSafely(message, storedMessage._id, messageInfo.from).catch(mediaError => {
+            //         logError('Media processing failed (non-blocking)', mediaError as Error, {
+            //             messageId: messageInfo.id,
+            //             from: messageInfo.from,
+            //             messageType: messageInfo.type,
+            //             operation: 'processIncomingMessage:media_processing'
+            //         });
+            //     });
+            // }
 
             // Step 5: Mark message as read (non-blocking)
             this.markMessageAsRead(messageInfo.id).catch(readError => {
@@ -253,7 +253,7 @@ export class WhatsAppWebhookService {
                     case 'audio':
                     case 'video':
                     case 'document':
-                        await this.handleMediaMessage(messageInfo, conversation._id);
+                        await this.handleMediaMessage(message, messageInfo, conversation._id, storedMessage?._id);
                         break;
 
                     case 'location':
@@ -657,18 +657,8 @@ export class WhatsAppWebhookService {
     /**
      * Handle media messages (images for receipt processing)
      */
-    private async handleMediaMessage(messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: Id<"conversations">): Promise<void> {
+    private async handleMediaMessage(message: WebhookMessage, messageInfo: ReturnType<typeof extractMessageInfo>, conversationId: Id<"conversations">, storedMessageId?: Id<"messages">): Promise<void> {
         try {
-            // // Initial debug message for media processing start
-            // await sendDebugMessage(messageInfo.from, 'MEDIA MESSAGE PROCESSING STARTED', {
-            //     messageType: messageInfo.type,
-            //     messageId: messageInfo.id,
-            //     hasCaption: !!messageInfo.mediaInfo?.caption,
-            //     caption: messageInfo.mediaInfo?.caption,
-            //     timestamp: new Date().toISOString(),
-            //     operation: 'handleMediaMessage'
-            // });
-
             logInfo('Media message received for processing', {
                 messageType: messageInfo.type,
                 messageId: messageInfo.id,
@@ -680,70 +670,25 @@ export class WhatsAppWebhookService {
 
             // Handle different media types
             if (messageInfo.type === 'image') {
-                // Debug message for image processing start
-                // await sendDebugMessage(messageInfo.from, 'IMAGE PROCESSING STARTED', {
-                //     messageId: messageInfo.id,
-                //     timestamp: new Date().toISOString(),
-                //     caption: messageInfo.mediaInfo?.caption
-                // });
-
-                // First, get the stored message to find its ID
-                const storedMessage = await this.databaseService.getMessageByWhatsAppId(messageInfo.id);
-
-                if (!storedMessage) {
-                    // Debug message for missing stored message
-                    // await sendDebugMessage(messageInfo.from, 'STORED MESSAGE NOT FOUND', {
-                    //     messageId: messageInfo.id,
-                    //     error: 'Message not found in database',
-                    //     timestamp: new Date().toISOString()
-                    // });
-
-                    logWarning('Stored message not found for image processing', {
+                if (!storedMessageId) {
+                    logWarning('Stored message not found, cannot process image', {
                         messageId: messageInfo.id,
                         from: messageInfo.from,
                         operation: 'handleMediaMessage'
                     });
-
-                    // Use enhanced error response system
                     await this.sendErrorResponse(
                         messageInfo.from,
-                        'I received your image but couldn\'t process it at the moment. Please try again.',
-                        new Error('Stored message not found for image processing')
+                        'I received your image but couldn\'t process it right now. Please try sending it again.',
+                        new Error('Stored message ID not available for image processing')
                     );
                     return;
                 }
 
-                // // Debug message for stored message found
-                // await sendDebugMessage(messageInfo.from, 'STORED MESSAGE FOUND', {
-                //     messageId: messageInfo.id,
-                //     storedMessageId: storedMessage._id,
-                //     timestamp: new Date().toISOString()
-                // });
+                // Process the image and wait for the URL
+                const mediaResult = await this.processAndStoreMediaSafely(message, storedMessageId, messageInfo.from);
+                const imageUrl = mediaResult.success ? mediaResult.storedUrl : null;
 
-                // Get the stored media files for this message
-                const mediaFiles = await this.databaseService.getMediaFilesByMessageId(storedMessage._id);
 
-                // // Debug message for media files retrieval
-                // await sendDebugMessage(messageInfo.from, 'MEDIA FILES RETRIEVED', {
-                //     messageId: messageInfo.id,
-                //     storedMessageId: storedMessage._id,
-                //     mediaFilesCount: mediaFiles.length,
-                //     mediaFileIds: mediaFiles.map(f => f._id),
-                //     timestamp: new Date().toISOString()
-                // });
-
-                logInfo('Retrieved stored media files', {
-                    messageId: messageInfo.id,
-                    storedMessageId: storedMessage._id,
-                    mediaFilesCount: mediaFiles.length,
-                    mediaFiles: mediaFiles.map(f => ({ id: f._id, storedUrl: f.storedUrl, fileName: f.fileName })),
-                    operation: 'handleMediaMessage'
-                });
-
-                const imageFile = mediaFiles.find(file => file.mimeType?.startsWith('image/'));
-                const imageUrl = imageFile?.storedUrl;
-
-              
                 // Analyze the image directly if URL is available
                 let imageAnalysisResults = null;
                 if (imageUrl) {
@@ -821,24 +766,10 @@ Please help the customer with their currency exchange based on this receipt info
                 let response: string;
 
                 try {
-                    // // Debug message for user context retrieval
-                    // await sendDebugMessage(messageInfo.from, 'RETRIEVING USER CONTEXT', {
-                    //     messageId: messageInfo.id,
-                    //     timestamp: new Date().toISOString()
-                    // });
-
                     // Get user and conversation for proper memory context
                     const user = await this.databaseService.getOrCreateUser(messageInfo.from);
                     const userName = user.profileName || user.phoneNumber || messageInfo.from;
                     const conversation = await this.databaseService.getOrCreateConversation(user._id, userName);
-
-                    // // Debug message for context setup
-                    // await sendDebugMessage(messageInfo.from, 'RUNTIME CONTEXT SETUP', {
-                    //     messageId: messageInfo.id,
-                    //     userId: user._id,
-                    //     conversationId: conversation._id,
-                    //     timestamp: new Date().toISOString()
-                    // });
 
                     // Create runtime context with memory context for tools
                     const runtimeContext = new RuntimeContext<{
@@ -849,14 +780,6 @@ Please help the customer with their currency exchange based on this receipt info
                     runtimeContext.set('userId', user._id);
                     runtimeContext.set('conversationId', conversation._id);
                     runtimeContext.set('phoneNumber', messageInfo.from);
-
-                    // // Debug message for agent processing start
-                    // await sendDebugMessage(messageInfo.from, 'AGENT PROCESSING STARTED', {
-                    //     messageId: messageInfo.id,
-                    //     agentName: 'whatsappAgent',
-                    //     temperature: HANDLE_IMAGE_AGENT_TEMPRETURE,
-                    //     timestamp: new Date().toISOString()
-                    // });
 
                     // Process image with exchange agent for receipt analysis
                     const agent = mastra.getAgent('whatsappAgent');
@@ -876,15 +799,6 @@ Please help the customer with their currency exchange based on this receipt info
 
                     response = agentResponse.text || 'Got your receipt! 📸 Let me analyze the details...';
 
-                    // // Debug message for successful agent response
-                    // await sendDebugMessage(messageInfo.from, 'AGENT PROCESSING COMPLETED', {
-                    //     messageId: messageInfo.id,
-                    //     responseLength: response.length,
-                    //     hasToolCalls: agentResponse.toolCalls && agentResponse.toolCalls.length > 0,
-                    //     toolCallsCount: agentResponse.toolCalls?.length || 0,
-                    //     timestamp: new Date().toISOString()
-                    // });
-
                     logInfo('Generated exchange agent response for image', {
                         messageId: messageInfo.id,
                         from: messageInfo.from,
@@ -898,16 +812,6 @@ Please help the customer with their currency exchange based on this receipt info
 
                 } catch (agentError) {
                     const agentErrorMessage = agentError instanceof Error ? agentError.message : 'Unknown agent error';
-
-                    // // Debug message for agent error
-                    // await sendDebugMessage(messageInfo.from, 'AGENT PROCESSING ERROR', {
-                    //     messageId: messageInfo.id,
-                    //     error: agentErrorMessage,
-                    //     hasImageUrl: !!imageUrl,
-                    //     imageUrl: imageUrl || 'not available',
-                    //     stack: agentError instanceof Error ? agentError.stack : undefined,
-                    //     timestamp: new Date().toISOString()
-                    // });
 
                     logError('Exchange agent failed to process image message', agentError as Error, {
                         messageId: messageInfo.id,
@@ -939,26 +843,11 @@ Please help the customer with their currency exchange based on this receipt info
                     }
                 }
 
-                // // Debug message for sending response
-                // await sendDebugMessage(messageInfo.from, 'SENDING RESPONSE', {
-                //     messageId: messageInfo.id,
-                //     responseLength: response.length,
-                //     isReply: true,
-                //     timestamp: new Date().toISOString()
-                // });
-
                 await this.sendTextReply(
                     messageInfo.from,
                     response,
                     messageInfo.id
                 );
-
-                // // Debug message for storing message
-                // await sendDebugMessage(messageInfo.from, 'STORING RESPONSE', {
-                //     messageId: messageInfo.id,
-                //     conversationId,
-                //     timestamp: new Date().toISOString()
-                // });
 
                 // Store outgoing message in database
                 await this.storeValidatedOutgoingMessage(
@@ -971,14 +860,6 @@ Please help the customer with their currency exchange based on this receipt info
                     messageInfo.id
                 );
 
-                // // Debug message for completion
-                // await sendDebugMessage(messageInfo.from, 'IMAGE PROCESSING COMPLETED', {
-                //     messageId: messageInfo.id,
-                //     hasImageUrl: !!imageUrl,
-                //     processingSuccess: true,
-                //     timestamp: new Date().toISOString()
-                // });
-
                 logSuccess('Image receipt processed successfully with vision analysis', {
                     messageId: messageInfo.id,
                     from: messageInfo.from,
@@ -988,12 +869,12 @@ Please help the customer with their currency exchange based on this receipt info
                 });
 
             } else {
-                // // Debug message for unsupported media
-                // await sendDebugMessage(messageInfo.from, 'UNSUPPORTED MEDIA TYPE', {
-                //     messageId: messageInfo.id,
-                //     mediaType: messageInfo.type,
-                //     timestamp: new Date().toISOString()
-                // });
+                // For other media types, do not process, just inform user.
+                logWarning('Unsupported media type received', {
+                    messageType: messageInfo.type,
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                });
 
                 // Handle unsupported media types
                 const response = `Hey! I can only work with text messages and images right now 📱
@@ -1025,15 +906,6 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
             }
 
         } catch (error) {
-            // Debug message for main error
-            // await sendDebugMessage(messageInfo.from, 'MEDIA PROCESSING ERROR', {
-            //     messageId: messageInfo.id,
-            //     messageType: messageInfo.type,
-            //     error: error instanceof Error ? error.message : String(error),
-            //     stack: error instanceof Error ? error.stack : undefined,
-            //     timestamp: new Date().toISOString()
-            // });
-
             logError('Error in media message handling (non-agent error)', error as Error, {
                 messageType: messageInfo.type,
                 messageId: messageInfo.id,
@@ -1057,26 +929,11 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
             }
 
             try {
-                // // Debug message for error response attempt
-                // await sendDebugMessage(messageInfo.from, 'SENDING ERROR RESPONSE', {
-                //     messageId: messageInfo.id,
-                //     responseLength: systemErrorResponse.length,
-                //     isTestMode: TEST_MODE,
-                //     timestamp: new Date().toISOString()
-                // });
-
                 await this.sendTextReply(
                     messageInfo.from,
                     systemErrorResponse,
                     messageInfo.id
                 );
-
-                // // Debug message for storing error response
-                // await sendDebugMessage(messageInfo.from, 'STORING ERROR RESPONSE', {
-                //     messageId: messageInfo.id,
-                //     conversationId,
-                //     timestamp: new Date().toISOString()
-                // });
 
                 await this.storeValidatedOutgoingMessage(
                     messageInfo.from,
@@ -1088,25 +945,11 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                     messageInfo.id
                 );
             } catch (fallbackError) {
-                // // Debug message for fallback error
-                // await sendDebugMessage(messageInfo.from, 'ERROR RESPONSE FAILED', {
-                //     messageId: messageInfo.id,
-                //     error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
-                //     stack: fallbackError instanceof Error ? fallbackError.stack : undefined,
-                //     timestamp: new Date().toISOString()
-                // });
-
                 logError('Failed to send media system error response', fallbackError as Error, {
                     messageId: messageInfo.id,
                     from: messageInfo.from,
                     operation: 'handleMediaMessage'
                 });
-
-                // // Debug message for final fallback attempt
-                // await sendDebugMessage(messageInfo.from, 'ATTEMPTING FINAL FALLBACK', {
-                //     messageId: messageInfo.id,
-                //     timestamp: new Date().toISOString()
-                // });
 
                 // Use the new error response system as final fallback
                 await this.sendErrorResponse(
@@ -1404,7 +1247,11 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
     /**
      * Safe media processing that doesn't crash the main flow
      */
-    private async processAndStoreMediaSafely(message: WebhookMessage, messageId: Id<"messages">, userPhoneNumber: string): Promise<void> {
+    private async processAndStoreMediaSafely(
+        message: WebhookMessage,
+        messageId: Id<"messages">,
+        userPhoneNumber: string
+    ): Promise<{ success: boolean; storedUrl?: string; error?: string }> {
         try {
             logInfo('Starting safe media processing', {
                 messageType: message.type,
@@ -1424,14 +1271,7 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                     mediaInfo: mediaInfo ? Object.keys(mediaInfo) : 'null',
                     operation: 'processAndStoreMediaSafely'
                 });
-
-                // Send error message to user
-                await this.sendErrorResponse(
-                    userPhoneNumber,
-                    'I had trouble processing your media file. The file format might not be supported. Please try again or send a different file.',
-                    validationError
-                );
-                return;
+                return { success: false, error: validationError.message };
             }
 
             logInfo('Media info extracted successfully', {
@@ -1444,20 +1284,13 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
             });
 
             // Process media with timeout and comprehensive error handling
-            const uploadResult = await Promise.race([
-                this.mediaUploadService.processMediaMessage(
-                    mediaInfo.id,
-                    mediaInfo.filename,
-                    mediaInfo.mime_type,
-                    mediaInfo.sha256,
-                    messageId
-                ),
-                // Timeout after 45 seconds
-                new Promise<any>((_, reject) =>
-                    setTimeout(() => reject(new Error('Media processing timeout after 45 seconds')), 45000)
-                )
-            ]);
-
+            const uploadResult = await this.mediaUploadService.processMediaMessage(
+                mediaInfo.id,
+                mediaInfo.filename,
+                mediaInfo.mime_type,
+                mediaInfo.sha256,
+                messageId
+            )
             if (uploadResult.success && uploadResult.storedUrl) {
                 logSuccess('Media processed and stored successfully', {
                     messageId,
@@ -1469,12 +1302,7 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                     mimeType: mediaInfo.mime_type,
                     operation: 'processAndStoreMediaSafely'
                 });
-
-                // Send success confirmation to user
-                await this.sendErrorResponse(
-                    userPhoneNumber,
-                    '✅ Your media file has been processed successfully! You can now continue with your request.'
-                );
+                return { success: true, storedUrl: uploadResult.storedUrl };
             } else {
                 const errorMessage = uploadResult.error || 'Unknown upload error';
                 const uploadError = new Error(`Media upload failed: ${errorMessage}`);
@@ -1487,13 +1315,7 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                     uploadResult: uploadResult,
                     operation: 'processAndStoreMediaSafely'
                 });
-
-                // Send detailed error to user
-                await this.sendErrorResponse(
-                    userPhoneNumber,
-                    'I had trouble processing your media file. This could be due to file size, format, or network issues. Please try again with a smaller file or different format.',
-                    uploadError
-                );
+                return { success: false, error: errorMessage };
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -1508,23 +1330,7 @@ Send me a text or share your payment receipt as an image, and I'll help you out!
                 isStorageError: errorMessage.includes('storage') || errorMessage.includes('upload'),
                 isValidationError: errorMessage.includes('validation') || errorMessage.includes('Invalid')
             });
-
-            // Send comprehensive error message to user
-            let userErrorMessage = 'I encountered an issue processing your media file. ';
-
-            if (errorMessage.includes('timeout')) {
-                userErrorMessage += 'The processing took too long - this might be due to file size or network issues. Please try with a smaller file.';
-            } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
-                userErrorMessage += 'There was a network issue. Please check your connection and try again.';
-            } else if (errorMessage.includes('storage') || errorMessage.includes('upload')) {
-                userErrorMessage += 'There was a storage issue on our end. Please try again in a moment.';
-            } else if (errorMessage.includes('validation') || errorMessage.includes('Invalid')) {
-                userErrorMessage += 'The file format or structure is not supported. Please try with a different file.';
-            } else {
-                userErrorMessage += 'Please try again or contact support if the problem persists.';
-            }
-
-            await this.sendErrorResponse(userPhoneNumber, userErrorMessage, error);
+            return { success: false, error: errorMessage };
         }
     }
-} 
+}
