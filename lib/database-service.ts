@@ -81,11 +81,10 @@ export class DatabaseService {
                 throw new Error('Cannot store message with no content, media, interactive elements, location, or contacts');
             }
 
-            const messageData: any = {
+            const commonData = {
                 conversationId,
                 whatsappMessageId: webhookMessage.id,
-                direction: 'inbound',
-                senderRole: 'user',
+                senderRole: 'user' as const,
                 senderName: userName,
                 messageType: webhookMessage.type,
                 content: messageContent,
@@ -105,31 +104,40 @@ export class DatabaseService {
                     id: webhookMessage.context.id
                 } : undefined,
                 timestamp: parseInt(webhookMessage.timestamp) * 1000,
-                metadata: {
-                    contactName: userName,
-                    originalPayload: webhookMessage
-                }
             };
 
-            // Handle media messages
             if (this.isMediaMessage(webhookMessage)) {
                 const mediaInfo = this.getMediaInfo(webhookMessage);
-                messageData.mediaType = mediaInfo.mime_type;
-                messageData.fileName = mediaInfo.filename;
-                messageData.metadata = {
-                    ...messageData.metadata,
-                    whatsappMediaId: mediaInfo.id,
-                    sha256: mediaInfo.sha256
+                const messageData = {
+                    ...commonData,
+                    mediaType: mediaInfo.mime_type,
+                    fileName: mediaInfo.filename,
+                    metadata: {
+                        contactName: userName,
+                        originalPayload: webhookMessage,
+                        whatsappMediaId: mediaInfo.id,
+                        sha256: mediaInfo.sha256,
+                    },
                 };
+                const message = await fetchMutation(api.messages.storeIncomingMessage, messageData);
+                if (!message) {
+                    throw new Error('Failed to store incoming message');
+                }
+                return message;
+            } else {
+                const messageData = {
+                    ...commonData,
+                    metadata: {
+                        contactName: userName,
+                        originalPayload: webhookMessage,
+                    },
+                };
+                const message = await fetchMutation(api.messages.storeIncomingMessage, messageData);
+                if (!message) {
+                    throw new Error('Failed to store incoming message');
+                }
+                return message;
             }
-
-            const message = await fetchMutation(api.messages.storeIncomingMessage, messageData);
-
-            if (!message) {
-                throw new Error('Failed to store incoming message');
-            }
-
-            return message;
         } catch (error) {
             console.error('Error in storeIncomingMessage:', error);
             throw error;
@@ -153,7 +161,6 @@ export class DatabaseService {
             const messageData = {
                 conversationId,
                 whatsappMessageId,
-                direction: 'outbound',
                 senderRole,
                 senderName,
                 messageType,
