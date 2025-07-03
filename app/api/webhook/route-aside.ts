@@ -18,7 +18,8 @@ import {
     createErrorResponse,
     createSuccessResponse
 } from './utils';
-import { WhatsAppWebhookService } from './whatsapp-service';
+import { handleIncomingMessage } from './whatsapp-service';
+import { processStatusUpdate } from './status-handlers';
 
 // Environment variables for webhook configuration
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || 'your-verify-token-here';
@@ -79,13 +80,14 @@ try {
 }
 
 // Initialize WhatsApp service
-const whatsappService = new WhatsAppWebhookService();
+// Service is initialized automatically when needed
 
 /**
  * GET handler for webhook verification
  * WhatsApp sends a GET request to verify the webhook endpoint
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
+    console.log("I have hit the webhook");
     console.log("I have hit the webhook");
     try {
         const { searchParams } = new URL(request.url);
@@ -190,14 +192,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                             }
 
                             // Process individual message with contact name
-                            await whatsappService.processIncomingMessage(message, contactName);
+                            await handleIncomingMessage(message, contactName);
                         }
                     }
 
                     // Process status updates
                     if (change.value.statuses) {
                         for (const status of change.value.statuses) {
-                            await whatsappService.processStatusUpdate(status);
+                            console.log("I have hit the status update");
+                            console.log("I have hit the status update");
+                            // await processStatusUpdate(status);
                         }
                     }
                 }
