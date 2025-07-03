@@ -23,3 +23,7 @@
  */
 export const TEST_MODE = true; // Set to false in production
 
+
+
+export const WHATSAPP_TEST_MODE = true;
+

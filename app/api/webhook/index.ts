@@ -24,8 +24,6 @@ export {
     initializeWebhookService,
     processIncomingMessage,
     processWebhookPayload,
-    WebhookServiceConfig,
-    WebhookServiceInstance
 } from './webhook-processor';
 
 export {
@@ -65,5 +63,5 @@ export {
 } from './media-processor';
 
 // Types and utilities
-export * from './types';
+export type * from './types';
 export * from './utils'; 

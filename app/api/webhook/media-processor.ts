@@ -198,7 +198,7 @@ export async function processImageAnalysis(
 export function generateImageAgentContent(
     imageUrl: string | null,
     imageAnalysisResults: unknown | null,
-    caption?: string
+    caption?: string | null
 ): string {
     const results = imageAnalysisResults as any;
     if (imageUrl && results && results.ocrResults?.rawText) {

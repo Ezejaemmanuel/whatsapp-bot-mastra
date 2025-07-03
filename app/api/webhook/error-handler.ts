@@ -1,5 +1,5 @@
 import { WhatsAppCloudApiClient } from '@/whatsapp/whatsapp-client';
-import { TEST_MODE } from '@/constant';
+import { TEST_MODE, WHATSAPP_TEST_MODE } from '@/constant';
 import { logInfo, logError } from './utils';
 
 /**
@@ -43,7 +43,7 @@ export async function sendErrorResponse(
         let messageToSend = friendlyMessage;
 
         // In test mode, include detailed error information
-        if (TEST_MODE && error) {
+        if (WHATSAPP_TEST_MODE && error) {
             const errorDetails = formatErrorForTestMode(error, {
                 operation: 'sendErrorResponse',
                 to,
@@ -60,8 +60,8 @@ export async function sendErrorResponse(
         logInfo('Error response sent successfully', {
             to,
             messageLength: messageToSend.length,
-            isTestMode: TEST_MODE,
-            hasErrorDetails: TEST_MODE && !!error,
+            isTestMode: WHATSAPP_TEST_MODE,
+            hasErrorDetails: WHATSAPP_TEST_MODE && !!error,
             operation: 'sendErrorResponse'
         });
     } catch (sendError) {

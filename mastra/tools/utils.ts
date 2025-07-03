@@ -1,11 +1,11 @@
-import { TEST_MODE } from '@/constant';
+import { WHATSAPP_TEST_MODE } from '@/constant';
 import { WhatsAppClientService } from '@/whatsapp/whatsapp-client-service';
 
 /**
  * Send debug message via WhatsApp when TEST_MODE is enabled
  */
 export async function sendDebugMessage(phoneNumber: string, title: string, data: any): Promise<void> {
-    if (!TEST_MODE) return;
+    if (!WHATSAPP_TEST_MODE) return;
 
     try {
         // Get singleton client instance

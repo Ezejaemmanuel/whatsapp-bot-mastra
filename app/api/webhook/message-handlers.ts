@@ -255,7 +255,8 @@ export async function handleMediaMessage(
             }
 
             // Prepare text content for agent - include extracted text if available
-            const agentContent = generateImageAgentContent(imageUrl, imageAnalysisResults, messageInfo.mediaInfo?.caption);
+            const caption = messageInfo.mediaInfo?.caption ?? null;
+            const agentContent = generateImageAgentContent(imageUrl ?? null, imageAnalysisResults, caption as string | null);
 
             let response: string;
 
