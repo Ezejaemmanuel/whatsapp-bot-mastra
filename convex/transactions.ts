@@ -148,8 +148,6 @@ export const getConversationTransactions = query({
     },
 });
 
-
-
 /**
  * Get pending transactions (for admin/monitoring)
  */
@@ -169,7 +167,37 @@ export const getPendingTransactions = query({
     },
 });
 
+/**
+ * Get all transactions with user details
+ */
+export const getAllTransactions = query({
+    args: {
+        paginationOpts: v.any(),
+    },
+    handler: async (ctx, args) => {
+        const transactions = await ctx.db
+            .query("transactions")
+            .order("desc")
+            .paginate(args.paginationOpts);
 
+        const transactionsWithUsers = {
+            ...transactions,
+            page: await Promise.all(
+                transactions.page.map(async (transaction) => {
+                    const user = await ctx.db.get(transaction.userId);
+                    const conversation = await ctx.db.get(transaction.conversationId);
+                    return {
+                        ...transaction,
+                        user,
+                        conversation,
+                    };
+                })
+            )
+        };
+
+        return transactionsWithUsers;
+    },
+});
 
 /**
  * Cancel transaction

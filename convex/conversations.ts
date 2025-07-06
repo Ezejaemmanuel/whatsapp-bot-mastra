@@ -29,6 +29,7 @@ export const getOrCreateConversation = mutation({
             status: "active",
             inCharge: "bot", // Default to bot
             lastMessageAt: Date.now(),
+            unreadCount: 0,
         });
 
         return await ctx.db.get(conversationId);
@@ -60,6 +61,19 @@ export const getConversationById = query({
     args: { conversationId: v.id("conversations") },
     handler: async (ctx, args) => {
         return await ctx.db.get(args.conversationId);
+    },
+});
+
+/**
+ * Get conversation by User ID
+ */
+export const getConversationByUserId = query({
+    args: { userId: v.id("users") },
+    handler: async (ctx, args) => {
+        return await ctx.db
+            .query("conversations")
+            .withIndex("by_user_id", (q) => q.eq("userId", args.userId))
+            .first();
     },
 });
 
@@ -123,5 +137,63 @@ export const setInCharge = mutation({
             inCharge: args.inCharge,
         });
         return await ctx.db.get(args.conversationId);
+    },
+});
+
+/**
+ * Get all conversations with their user details
+ */
+export const getAllConversationsWithUsers = query({
+    args: {
+        paginationOpts: v.any(),
+    },
+    handler: async (ctx, args) => {
+        const conversations = await ctx.db
+            .query("conversations")
+            .order("desc")
+            .paginate(args.paginationOpts);
+
+        const page = await Promise.all(
+            conversations.page.map(async (conversation) => {
+                const user = await ctx.db.get(conversation.userId);
+                return {
+                    ...conversation,
+                    user,
+                };
+            })
+        );
+
+        return {
+            ...conversations,
+            page,
+        };
+    },
+});
+
+export const updateConversation = mutation({
+    args: {
+        conversationId: v.id("conversations"),
+        updates: v.object({
+            lastMessageAt: v.optional(v.number()),
+            lastMessageSummary: v.optional(v.string()),
+            unreadCount: v.optional(v.number()),
+            status: v.optional(v.string()),
+            inCharge: v.optional(v.union(v.literal("bot"), v.literal("admin"))),
+            metadata: v.optional(v.any()),
+        }),
+    },
+    handler: async (ctx, args) => {
+        await ctx.db.patch(args.conversationId, args.updates);
+    },
+});
+
+export const markConversationAsRead = mutation({
+    args: {
+        conversationId: v.id("conversations"),
+    },
+    handler: async (ctx, args) => {
+        await ctx.db.patch(args.conversationId, {
+            unreadCount: 0,
+        });
     },
 }); 

@@ -18,6 +18,7 @@ import type * as conversations from "../conversations.js";
 import type * as exchangeRates from "../exchangeRates.js";
 import type * as mediaFiles from "../mediaFiles.js";
 import type * as messages from "../messages.js";
+import type * as seed from "../seed.js";
 import type * as transactions from "../transactions.js";
 import type * as users from "../users.js";
 
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   exchangeRates: typeof exchangeRates;
   mediaFiles: typeof mediaFiles;
   messages: typeof messages;
+  seed: typeof seed;
   transactions: typeof transactions;
   users: typeof users;
 }>;

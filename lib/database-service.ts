@@ -6,6 +6,7 @@ import {
 } from './schema';
 import { WebhookMessage, WebhookMessageStatus } from '@/app/api/webhook/types';
 import { Id } from "../convex/_generated/dataModel";
+import { Doc } from "../convex/_generated/dataModel";
 
 /**
  * Database Service for WhatsApp Bot
@@ -319,5 +320,19 @@ export class DatabaseService {
             console.error('Error in getMediaFilesByMessageId:', error);
             throw error;
         }
+    }
+
+    async incrementUnreadCount(conversationId: Id<"conversations">): Promise<void> {
+        const conversation = await this.getConversationById(conversationId);
+        if (conversation) {
+            await fetchMutation(api.conversations.updateConversation, {
+                conversationId,
+                updates: { unreadCount: (conversation.unreadCount || 0) + 1 },
+            });
+        }
+    }
+
+    async getConversationById(conversationId: Id<"conversations">): Promise<Doc<"conversations"> | null> {
+        return await fetchQuery(api.conversations.getConversationById, { conversationId });
     }
 }

@@ -36,6 +36,7 @@ export default defineSchema({
         lastMessageAt: v.optional(v.number()), // Last message timestamp
         lastMessageSummary: v.optional(v.string()), // A snippet of the last message content
         metadata: v.optional(v.any()), // Conversation-specific metadata
+        unreadCount: v.optional(v.number()),
     })
         .index("by_user_id", ["userId"])
         .index("by_status", ["status"])
@@ -93,9 +94,6 @@ export default defineSchema({
         .index("by_upload_status", ["uploadStatus"])
         .index("by_storage_id", ["storageId"]),
 
-
-
-
     /**
      * Exchange rates table - stores currency exchange rates with min/max boundaries
      */
@@ -137,9 +135,6 @@ export default defineSchema({
         .index("by_status", ["status"])
         .index("by_created_at", ["createdAt"])
         .index("by_updated_at", ["updatedAt"]),
-
-
-
 
     /**
      * Admin bank details table - stores admin bank account information for receiving payments
