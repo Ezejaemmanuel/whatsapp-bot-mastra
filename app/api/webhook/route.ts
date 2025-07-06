@@ -25,6 +25,19 @@ import { processStatusUpdate } from './status-handlers';
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || 'your-verify-token-here';
 const WEBHOOK_SECRET = process.env.WHATSAPP_WEBHOOK_SECRET || '';
 
+// Initialize WhatsApp service at module load
+let whatsappServiceInitialized = false;
+try {
+    initializeWhatsAppService();
+    whatsappServiceInitialized = true;
+    logWebhookEvent('INFO', 'WhatsApp service initialized successfully at module load');
+} catch (error) {
+    logWebhookEvent('ERROR', 'Failed to initialize WhatsApp service at module load', {
+        error: error instanceof Error ? error.message : 'Unknown initialization error'
+    });
+    // Don't throw here - we'll handle the uninitialized state in the request handlers
+}
+
 // Validate WhatsApp configuration on module load with detailed error reporting
 try {
     // Basic validation - check if required environment variables are present
@@ -78,9 +91,6 @@ try {
     // Don't throw here as it would prevent the module from loading
     // The error will be caught when the service is actually used
 }
-
-// Initialize WhatsApp service
-// Service is initialized automatically when needed
 
 /**
  * GET handler for webhook verification
@@ -140,14 +150,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const signature = request.headers.get('x-hub-signature-256') || '';
         const metadata = extractRequestMetadata(request);
 
-        // Initialize WhatsApp service
-        try {
-            initializeWhatsAppService();
-        } catch (initError) {
-            logWebhookEvent('ERROR', 'Failed to initialize WhatsApp service', {
-                error: initError instanceof Error ? initError.message : 'Unknown initialization error'
+        // Check if WhatsApp service is initialized
+        if (!whatsappServiceInitialized) {
+            logWebhookEvent('ERROR', 'WhatsApp service is not initialized', {
+                error: 'Service initialization failed during module load'
             });
-            return createErrorResponse('Service Initialization Failed', 500);
+            return createErrorResponse('Service Not Initialized', 500);
         }
 
         // Verify webhook signature if secret is configured
