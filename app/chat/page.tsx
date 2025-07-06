@@ -1,4 +1,3 @@
-import { ChatInterface } from '@/components/ChatInterface';
 
 export default function ChatPage() {
     return (
@@ -10,7 +9,6 @@ export default function ChatPage() {
                 </p>
             </div>
 
-            <ChatInterface />
         </div>
     );
 } 

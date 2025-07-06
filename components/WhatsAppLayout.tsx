@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, Suspense, useState, useMemo } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import Image from 'next/image';
 import { ChatList } from './ChatList';
 import { ChatView } from './ChatView';
 import { SideNavigation } from './SideNavigation';
@@ -285,7 +286,7 @@ const WhatsAppLayoutContent: React.FC = () => {
                 <div className="space-y-1">
                   <p className="text-whatsapp-text-muted text-sm">Related Conversation</p>
                   <div className="bg-whatsapp-panel-bg p-3 rounded-lg">
-                    <p className="text-whatsapp-text-primary text-sm italic">"{(selectedTransaction as any).conversation.lastMessageSummary}"</p>
+                    <p className="text-whatsapp-text-primary text-sm italic">&ldquo;{(selectedTransaction as any).conversation.lastMessageSummary}&rdquo;</p>
                     <p className="text-xs text-whatsapp-text-muted mt-2 text-right"> - Last message from {(selectedTransaction as any).conversation.userName}</p>
                   </div>
                 </div>
@@ -295,9 +296,11 @@ const WhatsAppLayoutContent: React.FC = () => {
                 <div className="space-y-1">
                   <p className="text-whatsapp-text-muted text-sm">Receipt</p>
                   <div className="bg-whatsapp-panel-bg p-2 rounded-lg border border-whatsapp-divider">
-                    <img
+                    <Image
                       src={selectedTransaction.receiptImageUrl}
                       alt="Transaction Receipt"
+                      width={500}
+                      height={300}
                       className="rounded-md max-w-full h-auto"
                     />
                   </div>

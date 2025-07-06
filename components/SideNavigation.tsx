@@ -21,7 +21,7 @@ export const SideNavigation: React.FC<SideNavigationProps> = ({ activeTab, onTab
     <div className="w-14 bg-whatsapp-panel-bg border-r border-whatsapp-border flex flex-col items-center py-4 gap-4">
       {/* Profile */}
       <Avatar className="w-8 h-8 mb-2">
-        <AvatarImage src={profileAvatar} alt="Profile" />
+        <AvatarImage src={profileAvatar.src} alt="Profile" />
         <AvatarFallback className="bg-whatsapp-primary text-white text-xs">ME</AvatarFallback>
       </Avatar>
 
