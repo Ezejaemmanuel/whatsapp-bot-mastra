@@ -18,7 +18,7 @@ import {
     createErrorResponse,
     createSuccessResponse
 } from './utils';
-import { handleIncomingMessage } from './whatsapp-service';
+import { handleIncomingMessage, initializeWhatsAppService } from './whatsapp-service';
 import { processStatusUpdate } from './status-handlers';
 
 // Environment variables for webhook configuration
@@ -140,13 +140,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const signature = request.headers.get('x-hub-signature-256') || '';
         const metadata = extractRequestMetadata(request);
 
-        // logWebhookEvent('INFO', 'Webhook POST request received', {
-        //     contentLength: body.length,
-        //     hasSignature: !!signature,
-        //     userAgent: metadata.userAgent,
-        //     ip: metadata.ip,
-        //     headers: Object.fromEntries(request.headers.entries())
-        // });
+        // Initialize WhatsApp service
+        try {
+            initializeWhatsAppService();
+        } catch (initError) {
+            logWebhookEvent('ERROR', 'Failed to initialize WhatsApp service', {
+                error: initError instanceof Error ? initError.message : 'Unknown initialization error'
+            });
+            return createErrorResponse('Service Initialization Failed', 500);
+        }
 
         // Verify webhook signature if secret is configured
         if (WEBHOOK_SECRET && !verifyWebhookSignature(body, signature, WEBHOOK_SECRET)) {
