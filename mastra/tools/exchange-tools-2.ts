@@ -4,7 +4,6 @@ import { createTool } from "@mastra/core";
 import { fetchMutation, fetchQuery } from "convex/nextjs";
 import z from "zod";
 import { logToolCall, logInfo, logSuccess, logToolResult, logError, logToolError, sendDebugMessage } from "./utils";
-import { mastra } from "@mastra/core";
 
 
 
@@ -782,31 +781,3 @@ export const getUserTool = createTool({
     },
 });
 
-/**
- * Tool for the agent to reset its own working memory after completing a transaction
- */
-export const endTransactionAndResetMemoryTool = mastra.tool({
-    name: 'endTransactionAndResetMemoryTool',
-    description: 'Call this tool ONLY after successfully receiving and acknowledging a payment proof image. This tool resets the working memory to prepare for a new transaction while preserving transaction history.',
-    parameters: {},
-    handler: async (params, ctx) => {
-        const phoneNumber = ctx.get('phoneNumber');
-        if (!phoneNumber) {
-            throw new Error('Phone number not found in context');
-        }
-
-        const threadId = `whatsapp-${phoneNumber}`;
-        const agent = mastra.getAgent('whatsappAgent');
-
-        try {
-            await agent.memory.workingMemory.reset(threadId);
-            return {
-                success: true,
-                message: 'Working memory has been reset. Ready for new transaction.'
-            };
-        } catch (error) {
-            console.error('Failed to reset working memory:', error);
-            throw new Error('Failed to reset working memory');
-        }
-    }
-});
