@@ -14,6 +14,13 @@ import { useShallow } from 'zustand/react/shallow';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ArrowUpRight } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const WhatsAppLayoutContent: React.FC = () => {
   const router = useRouter();
@@ -145,6 +152,8 @@ const WhatsAppLayoutContent: React.FC = () => {
         return 'bg-red-100 text-red-800 border-red-200';
       case 'cancelled':
         return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'image_sent_waiting_for_confirmation':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -166,11 +175,38 @@ const WhatsAppLayoutContent: React.FC = () => {
             </div>
             <div className="flex-1 p-4 overflow-y-auto">
               <div className="bg-whatsapp-panel-bg rounded-lg p-4 space-y-4 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-whatsapp-text-muted">Status</span>
-                  <Badge variant="outline" className={getStatusColor(selectedTransaction.status) + " text-xs"}>
-                    {selectedTransaction.status.charAt(0).toUpperCase() + selectedTransaction.status.slice(1)}
-                  </Badge>
+                <div className="space-y-1">
+                  <p className="text-whatsapp-text-muted">Status</p>
+                  <Select
+                    value={selectedTransaction.status}
+                    onValueChange={(newStatus) =>
+                      handleUpdateTransactionStatus(
+                        selectedTransaction._id,
+                        newStatus as Doc<"transactions">["status"]
+                      )
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Update status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[
+                        "pending",
+                        "paid",
+                        "verified",
+                        "completed",
+                        "failed",
+                        "cancelled",
+                        "image_sent_waiting_for_confirmation",
+                      ].map((status) => (
+                        <SelectItem key={status} value={status}>
+                          <Badge variant="outline" className={getStatusColor(status) + " text-xs mr-2"}>
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                          </Badge>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-whatsapp-text-muted">From</span>
@@ -189,6 +225,26 @@ const WhatsAppLayoutContent: React.FC = () => {
                   <span className="font-medium text-whatsapp-text-primary">{new Date(selectedTransaction.createdAt).toLocaleString()}</span>
                 </div>
               </div>
+
+              <div className="bg-whatsapp-panel-bg rounded-lg p-4 space-y-4 text-sm mt-4">
+                <div className="flex justify-between">
+                  <span className="text-whatsapp-text-muted">Phone Number</span>
+                  <span className="font-medium text-whatsapp-text-primary">{(selectedTransaction as any).user?.phoneNumber || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-whatsapp-text-muted">Bank Name</span>
+                  <span className="font-medium text-whatsapp-text-primary">{(selectedTransaction as any).user?.bankName || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-whatsapp-text-muted">Account Name</span>
+                  <span className="font-medium text-whatsapp-text-primary">{(selectedTransaction as any).user?.accountName || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-whatsapp-text-muted">Account Number</span>
+                  <span className="font-medium text-whatsapp-text-primary">{(selectedTransaction as any).user?.accountNumber || 'N/A'}</span>
+                </div>
+              </div>
+
             </div>
           </div>
         ) : activeTab === 'transactions' ? (
@@ -257,9 +313,36 @@ const WhatsAppLayoutContent: React.FC = () => {
               <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
                 <div className="space-y-1">
                   <p className="text-whatsapp-text-muted">Status</p>
-                  <Badge variant="outline" className={getStatusColor(selectedTransaction.status) + " text-xs"}>
-                    {selectedTransaction.status.charAt(0).toUpperCase() + selectedTransaction.status.slice(1)}
-                  </Badge>
+                  <Select
+                    value={selectedTransaction.status}
+                    onValueChange={(newStatus) =>
+                      handleUpdateTransactionStatus(
+                        selectedTransaction._id,
+                        newStatus as Doc<"transactions">["status"]
+                      )
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Update status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[
+                        "pending",
+                        "paid",
+                        "verified",
+                        "completed",
+                        "failed",
+                        "cancelled",
+                        "image_sent_waiting_for_confirmation",
+                      ].map((status) => (
+                        <SelectItem key={status} value={status}>
+                          <Badge variant="outline" className={getStatusColor(status) + " text-xs mr-2"}>
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                          </Badge>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1">
                   <p className="text-whatsapp-text-muted">User</p>
@@ -278,6 +361,27 @@ const WhatsAppLayoutContent: React.FC = () => {
                 <div className="space-y-1">
                   <p className="text-whatsapp-text-muted">Last Update</p>
                   <p className="text-whatsapp-text-primary font-medium">{new Date(selectedTransaction.updatedAt).toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-whatsapp-text-muted text-sm">User Details</p>
+                <div className="bg-whatsapp-panel-bg p-4 rounded-lg space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-whatsapp-text-muted">Phone Number</span>
+                    <span className="font-medium text-whatsapp-text-primary">{(selectedTransaction as any).user?.phoneNumber || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-whatsapp-text-muted">Bank Name</span>
+                    <span className="font-medium text-whatsapp-text-primary">{(selectedTransaction as any).user?.bankName || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-whatsapp-text-muted">Account Name</span>
+                    <span className="font-medium text-whatsapp-text-primary">{(selectedTransaction as any).user?.accountName || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-whatsapp-text-muted">Account Number</span>
+                    <span className="font-medium text-whatsapp-text-primary">{(selectedTransaction as any).user?.accountNumber || 'N/A'}</span>
+                  </div>
                 </div>
               </div>
               <div className="space-y-2">

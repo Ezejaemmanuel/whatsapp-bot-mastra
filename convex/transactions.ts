@@ -97,7 +97,19 @@ export const addNegotiationToHistory = mutation({
 export const getTransaction = query({
     args: { transactionId: v.id("transactions") },
     handler: async (ctx, args) => {
-        return await ctx.db.get(args.transactionId);
+        const transaction = await ctx.db.get(args.transactionId);
+        if (!transaction) {
+            return null;
+        }
+
+        const user = await ctx.db.get(transaction.userId);
+        const conversation = await ctx.db.get(transaction.conversationId);
+
+        return {
+            ...transaction,
+            user,
+            conversation,
+        };
     },
 });
 
