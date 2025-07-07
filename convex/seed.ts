@@ -2,6 +2,9 @@ import { action } from "./_generated/server";
 import { api } from "./_generated/api";
 import { Faker, en } from "@faker-js/faker";
 import { Doc } from "./_generated/dataModel";
+import { mutation } from "./_generated/server";
+import { v } from "convex/values";
+import { TransactionStatus, SenderRole } from "./types";
 
 // A little helper function to get a random element from an array
 const getRandom = <T>(array: T[]): T => {

@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import { TransactionStatusUnion, TransactionStatus } from "./schemaUnions";
 
 /**
  * Create a new exchange transaction
@@ -19,6 +20,7 @@ export const createTransaction = mutation({
     },
     handler: async (ctx, args) => {
         const now = Date.now();
+        const status: TransactionStatus = "pending";
 
         return await ctx.db.insert("transactions", {
             userId: args.userId,
@@ -28,7 +30,7 @@ export const createTransaction = mutation({
             amountFrom: args.amountFrom,
             amountTo: args.amountTo,
             negotiatedRate: args.negotiatedRate,
-            status: "pending",
+            status,
             negotiationHistory: args.negotiationHistory || [],
             createdAt: now,
             updatedAt: now,
@@ -43,7 +45,7 @@ export const createTransaction = mutation({
 export const updateTransactionStatus = mutation({
     args: {
         transactionId: v.id("transactions"),
-        status: v.string(),
+        status: TransactionStatusUnion,
         paymentReference: v.optional(v.string()),
         receiptImageUrl: v.optional(v.string()),
         extractedDetails: v.optional(v.any()),
@@ -106,7 +108,7 @@ export const getUserTransactions = query({
     args: {
         userId: v.id("users"),
         limit: v.optional(v.number()),
-        status: v.optional(v.string()),
+        status: v.optional(TransactionStatusUnion),
     },
     handler: async (ctx, args) => {
         let query = ctx.db
@@ -156,7 +158,7 @@ export const getPendingTransactions = query({
     handler: async (ctx, args) => {
         let query = ctx.db
             .query("transactions")
-            .withIndex("by_status", (q) => q.eq("status", "pending"))
+            .withIndex("by_status", (q) => q.eq("status", "pending" as TransactionStatus))
             .order("desc");
 
         if (args.limit) {
@@ -218,7 +220,7 @@ export const cancelTransaction = mutation({
         }
 
         return await ctx.db.patch(args.transactionId, {
-            status: "cancelled",
+            status: "cancelled" as TransactionStatus,
             updatedAt: Date.now(),
             metadata: {
                 ...transaction.metadata,

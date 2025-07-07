@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, action } from "./_generated/server";
 import { api } from "./_generated/api";
 import type { Id, Doc } from "./_generated/dataModel";
+import { UploadStatusUnion, UploadStatus } from "./schemaUnions";
 
 /**
  * Store file directly from buffer (for server-side uploads) - Complete Action
@@ -27,7 +28,7 @@ export const storeFileFromBuffer = action({
         mimeType?: string;
         fileSize: number;
         sha256?: string;
-        uploadStatus: string;
+        uploadStatus: UploadStatus;
         metadata?: any;
         storedUrl: string;
     } | null> => {
@@ -51,7 +52,7 @@ export const storeFileFromBuffer = action({
                         mimeType: existingFile.mimeType,
                         fileSize: existingFile.fileSize || 0,
                         sha256: existingFile.sha256,
-                        uploadStatus: existingFile.uploadStatus || "uploaded",
+                        uploadStatus: existingFile.uploadStatus || "uploaded" as UploadStatus,
                         metadata: existingFile.metadata,
                         storedUrl: existingFile.storedUrl || "",
                     };
@@ -69,6 +70,8 @@ export const storeFileFromBuffer = action({
                 throw new Error('Failed to get file URL from storage');
             }
 
+            const status: UploadStatus = "uploaded";
+
             // Store metadata in database with the file URL
             const mediaFileId = await ctx.runMutation(api.mediaFiles.insertMediaFileRecord, {
                 storageId,
@@ -78,7 +81,7 @@ export const storeFileFromBuffer = action({
                 mimeType: args.contentType,
                 fileSize: args.fileData.byteLength,
                 sha256: args.sha256,
-                uploadStatus: "uploaded",
+                uploadStatus: status,
                 metadata: args.metadata,
                 storedUrl: fileUrl, // Store the URL directly in the record
             });
@@ -100,7 +103,7 @@ export const storeFileFromBuffer = action({
                 mimeType: args.contentType,
                 fileSize: args.fileData.byteLength,
                 sha256: args.sha256,
-                uploadStatus: "uploaded",
+                uploadStatus: status,
                 metadata: args.metadata,
                 storedUrl: fileUrl,
             };
@@ -123,11 +126,12 @@ export const insertMediaFileRecord = mutation({
         mimeType: v.optional(v.string()),
         fileSize: v.optional(v.number()),
         sha256: v.optional(v.string()),
-        uploadStatus: v.optional(v.string()),
+        uploadStatus: v.optional(UploadStatusUnion),
         metadata: v.optional(v.any()),
         storedUrl: v.optional(v.string()), // Add storedUrl field
     },
     handler: async (ctx, args) => {
+        const status: UploadStatus = args.uploadStatus || "uploaded";
         const mediaFileId = await ctx.db.insert("mediaFiles", {
             storageId: args.storageId,
             messageId: args.messageId,
@@ -136,7 +140,7 @@ export const insertMediaFileRecord = mutation({
             mimeType: args.mimeType,
             fileSize: args.fileSize,
             sha256: args.sha256,
-            uploadStatus: args.uploadStatus || "uploaded",
+            uploadStatus: status,
             metadata: args.metadata,
             storedUrl: args.storedUrl, // Store the URL in the database
         });
@@ -166,11 +170,12 @@ export const storeMediaFile = mutation({
         mimeType: v.optional(v.string()),
         fileSize: v.optional(v.number()),
         sha256: v.optional(v.string()),
-        uploadStatus: v.optional(v.string()),
+        uploadStatus: v.optional(UploadStatusUnion),
         storageId: v.optional(v.id("_storage")),
         storedUrl: v.optional(v.string()), // Add storedUrl field
     },
     handler: async (ctx, args) => {
+        const status: UploadStatus = args.uploadStatus || "uploaded";
         const mediaFileId = await ctx.db.insert("mediaFiles", {
             messageId: args.messageId,
             whatsappMediaId: args.whatsappMediaId,
@@ -178,7 +183,7 @@ export const storeMediaFile = mutation({
             mimeType: args.mimeType,
             fileSize: args.fileSize,
             sha256: args.sha256,
-            uploadStatus: args.uploadStatus || "uploaded",
+            uploadStatus: status,
             storageId: args.storageId,
             storedUrl: args.storedUrl, // Store the URL in the database
         });

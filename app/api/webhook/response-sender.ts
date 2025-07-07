@@ -2,6 +2,7 @@ import { WhatsAppCloudApiClient } from '@/whatsapp/whatsapp-client';
 import { DatabaseService } from '@/lib/database-service';
 import { Id } from '@/convex/_generated/dataModel';
 import { logSuccess, logError, logInfo } from './utils';
+import { MessageType } from '@/convex/schemaUnions';
 
 /**
  * Send a text reply to a message
@@ -123,7 +124,7 @@ export async function markMessageAsRead(
 export async function storeOutgoingMessage(
     databaseService: DatabaseService,
     to: string,
-    messageType: string,
+    messageType: MessageType,
     content: string,
     conversationId: Id<"conversations">,
     senderRole: 'bot' | 'admin',

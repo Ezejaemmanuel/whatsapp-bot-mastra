@@ -2,6 +2,15 @@ import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { Id } from '@/convex/_generated/dataModel';
+import {
+    ConversationStatus,
+    InCharge,
+    MessageDirection,
+    SenderRole,
+    MessageType,
+    MessageStatus,
+    TransactionStatus
+} from '@/convex/types';
 
 // Types for the store
 export interface User {
@@ -20,8 +29,8 @@ export interface Conversation {
     _id: Id<"conversations">;
     userId: Id<"users">;
     userName: string;
-    status?: string;
-    inCharge: "bot" | "admin";
+    status?: ConversationStatus;
+    inCharge: InCharge;
     lastMessageAt?: number;
     lastMessageSummary?: string;
     metadata?: any;
@@ -31,10 +40,10 @@ export interface Message {
     _id: Id<"messages">;
     conversationId: Id<"conversations">;
     whatsappMessageId?: string;
-    direction: "inbound" | "outbound";
-    senderRole: "user" | "bot" | "admin";
+    direction: MessageDirection;
+    senderRole: SenderRole;
     senderName: string;
-    messageType: string;
+    messageType: MessageType;
     content?: string;
     mediaUrl?: string;
     mediaType?: string;
@@ -43,7 +52,7 @@ export interface Message {
     location?: any;
     contacts?: any;
     context?: any;
-    status?: string;
+    status?: MessageStatus;
     timestamp: number;
     metadata?: any;
     error?: string;
@@ -61,7 +70,7 @@ export interface Transaction {
     paymentReference?: string;
     receiptImageUrl?: string;
     extractedDetails?: any;
-    status: string;
+    status: TransactionStatus;
     negotiationHistory?: any[];
     createdAt: number;
     updatedAt: number;

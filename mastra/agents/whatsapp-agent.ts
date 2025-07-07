@@ -95,7 +95,7 @@ const memory = new Memory({
 
 # 🔄 TRANSACTION STATE
 **Active Transaction ID**: {{active_transaction_id}}
-**Transaction Status**: {{transaction_status}} // (none/created/pending_payment/payment_received/processing/completed/failed)
+**Transaction Status**: {{transaction_status}} // (none/created/pending_payment/image_sent_waiting_for_confirmation/payment_received/processing/completed/failed)
 **Transaction Created Date**: {{transaction_created_date}}
 **Payment Method**: {{payment_method}}
 **Payment Status**: {{payment_status}} // (pending/received/verified/failed)
@@ -111,7 +111,7 @@ const memory = new Memory({
 # 🎯 CONVERSATION FLOW STATE
 **Current Flow Step**: {{current_flow_step}} // (welcome/user_verification/exchange_inquiry/rate_confirmation/bank_details_verification/final_confirmation/transaction_processing/completion)
 **Next Expected Action**: {{next_expected_action}}
-**Waiting For User Input**: {{waiting_for_user_input}} // (none/bank_confirmation/amount_confirmation/final_approval/payment_proof)
+**Waiting For User Input**: {{waiting_for_user_input}} // (none/bank_confirmation/amount_confirmation/final_approval/payment_proof/image_sent_waiting_for_confirmation)
 **Flow Completion Percentage**: {{flow_completion_percentage}}%
 
 # 🔐 SECURITY & VALIDATION

@@ -81,6 +81,9 @@ Based on the user lookup results:
 - Create transaction using appropriate tools
 - Update working memory with transaction status
 
+### Phase 4: Payment Proof & Admin Confirmation
+- When the user submits a payment proof image, update working memory: set **transaction_status** to 'image_sent_waiting_for_confirmation' and update **waiting_for_user_input** to 'none'. Notify the user that payment proof has been received and is awaiting admin confirmation. Do not proceed until admin confirms.
+
 ## 🧠 WORKING MEMORY MANAGEMENT
 **CRITICAL: Continuously update working memory throughout the conversation**
 
@@ -88,7 +91,7 @@ Based on the user lookup results:
 - **User Verification Status**: Whether user details have been checked and confirmed
 - **Bank Details State**: Current status of bank details (none/exists/confirmed/needs_update)
 - **Exchange Session Progress**: Current step in the exchange flow
-- **Transaction Status**: Active transaction ID and current status
+- **Transaction Status**: Active transaction ID and current status (none/created/pending_payment/image_sent_waiting_for_confirmation/payment_received/processing/completed/failed)
 - **Conversation Flow State**: Where we are in the conversation and what's next
 - **Security Flags**: Any security considerations or verification requirements
 
@@ -98,6 +101,7 @@ Based on the user lookup results:
 - After rate calculation and user confirmation
 - After transaction creation
 - After any status changes
+- After user submits payment proof image
 
 ## 🔧 AVAILABLE TOOLS & USAGE STRATEGY
 
@@ -112,7 +116,7 @@ Based on the user lookup results:
 ### Transaction Tools:
 - **createTransactionTool**: Create new transactions after all confirmations
 - **updateTransactionStatusTool**: Update transaction progress
-- **getUserTransactionsTool**: Get transaction history when relevant
+- **getUserTransactionsTool**: Get transaction history only when the user explicitly requests it; do not call automatically at conversation start
 - **getLatestUserTransactionTool**: Check recent transaction status
 
 ### Bank Details Tools:

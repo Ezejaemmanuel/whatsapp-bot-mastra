@@ -1,5 +1,15 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import {
+    ConversationStatusUnion,
+    InChargeUnion,
+    MessageDirectionUnion,
+    SenderRoleUnion,
+    MessageTypeUnion,
+    MessageStatusUnion,
+    UploadStatusUnion,
+    TransactionStatusUnion
+} from "./schemaUnions";
 
 /**
  * Convex Schema for WhatsApp Bot
@@ -31,8 +41,8 @@ export default defineSchema({
     conversations: defineTable({
         userId: v.id("users"), // Reference to user
         userName: v.string(), // User's profile name or phone number for display
-        status: v.optional(v.string()), // active, archived, closed
-        inCharge: v.union(v.literal("bot"), v.literal("admin")), // Who is handling the conversation
+        status: v.optional(ConversationStatusUnion), // Conversation status
+        inCharge: InChargeUnion, // Who is handling the conversation
         lastMessageAt: v.optional(v.number()), // Last message timestamp
         lastMessageSummary: v.optional(v.string()), // A snippet of the last message content
         metadata: v.optional(v.any()), // Conversation-specific metadata
@@ -49,10 +59,10 @@ export default defineSchema({
     messages: defineTable({
         conversationId: v.id("conversations"), // Reference to conversation
         whatsappMessageId: v.optional(v.string()), // WhatsApp message ID
-        direction: v.union(v.literal("inbound"), v.literal("outbound")), // 'inbound', 'outbound'
-        senderRole: v.union(v.literal("user"), v.literal("bot"), v.literal("admin")), // Who sent the message
+        direction: MessageDirectionUnion, // Message direction
+        senderRole: SenderRoleUnion, // Who sent the message
         senderName: v.string(), // Display name of the sender (user name, 'Bot', or admin name)
-        messageType: v.string(), // 'text', 'image', 'audio', 'video', 'document', 'location', 'contact', 'system'
+        messageType: MessageTypeUnion, // Message type
         content: v.optional(v.string()), // Text content for text messages
         mediaUrl: v.optional(v.string()), // URL for media files
         mediaType: v.optional(v.string()), // MIME type for media
@@ -61,7 +71,7 @@ export default defineSchema({
         location: v.optional(v.any()), // Location data {latitude, longitude, name, address}
         contacts: v.optional(v.any()), // Contact information
         context: v.optional(v.any()), // Message context (reply, forward info)
-        status: v.optional(v.string()), // 'sent', 'delivered', 'read', 'failed'
+        status: v.optional(MessageStatusUnion), // Message status
         timestamp: v.number(), // Message timestamp
         metadata: v.optional(v.any()), // Additional message metadata
         error: v.optional(v.string()), // Error message if status is 'failed'
@@ -86,7 +96,7 @@ export default defineSchema({
         mimeType: v.optional(v.string()), // MIME type
         fileSize: v.optional(v.number()), // Size in bytes
         sha256: v.optional(v.string()), // WhatsApp provided hash
-        uploadStatus: v.optional(v.string()), // 'pending', 'uploaded', 'failed'
+        uploadStatus: v.optional(UploadStatusUnion), // Upload status
         metadata: v.optional(v.any()), // Additional file metadata
     })
         .index("by_message_id", ["messageId"])
@@ -124,7 +134,7 @@ export default defineSchema({
         paymentReference: v.optional(v.string()), // Payment reference number
         receiptImageUrl: v.optional(v.string()), // URL to receipt image
         extractedDetails: v.optional(v.any()), // OCR extracted data from receipt
-        status: v.string(), // 'pending', 'paid', 'verified', 'completed', 'failed', 'cancelled'
+        status: TransactionStatusUnion, // Transaction status
         negotiationHistory: v.optional(v.array(v.any())), // History of rate negotiations
         createdAt: v.number(), // Transaction creation timestamp
         updatedAt: v.number(), // Last update timestamp

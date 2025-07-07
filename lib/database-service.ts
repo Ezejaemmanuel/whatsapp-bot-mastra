@@ -7,6 +7,7 @@ import {
 import { WebhookMessage, WebhookMessageStatus } from '@/app/api/webhook/types';
 import { Id } from "../convex/_generated/dataModel";
 import { Doc } from "../convex/_generated/dataModel";
+import { MessageType, UploadStatus } from '@/convex/schemaUnions';
 
 /**
  * Database Service for WhatsApp Bot
@@ -82,12 +83,16 @@ export class DatabaseService {
                 throw new Error('Cannot store message with no content, media, interactive elements, location, or contacts');
             }
 
+            // Determine Convex-compatible messageType
+            const messageType: MessageType = webhookMessage.type === 'contacts'
+                ? 'contact'
+                : (webhookMessage.type as MessageType);
             const commonData = {
                 conversationId,
                 whatsappMessageId: webhookMessage.id,
                 senderRole: 'user' as const,
                 senderName: userName,
-                messageType: webhookMessage.type,
+                messageType,
                 content: messageContent,
                 caption: this.getMediaCaption(webhookMessage),
                 location: webhookMessage.location ? {
@@ -150,7 +155,7 @@ export class DatabaseService {
      */
     async storeOutgoingMessage(
         to: string,
-        messageType: string,
+        messageType: MessageType,
         content: string,
         conversationId: Id<"conversations">,
         senderRole: 'bot' | 'admin',
@@ -207,7 +212,7 @@ export class DatabaseService {
                 mimeType,
                 fileSize,
                 sha256,
-                uploadStatus: "uploaded",
+                uploadStatus: "uploaded" as UploadStatus,
                 storageId,
                 storedUrl  // Include storedUrl parameter
             };
@@ -327,7 +332,7 @@ export class DatabaseService {
         if (conversation) {
             await fetchMutation(api.conversations.updateConversation, {
                 conversationId,
-                updates: { unreadCount: (conversation.unreadCount || 0) + 1 },
+                unreadCount: (conversation.unreadCount || 0) + 1,
             });
         }
     }

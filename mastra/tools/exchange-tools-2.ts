@@ -172,7 +172,7 @@ export const getUserTransactionsTool = createTool({
     description: 'Get all transactions for the current user. Useful for finding valid transaction IDs and transaction history. The userId is automatically extracted from agent memory context.',
     inputSchema: z.object({
         limit: z.number().optional().describe('Maximum number of transactions to return (default: 10)'),
-        status: z.string().optional().describe('Filter by transaction status: pending, paid, verified, completed, failed, cancelled'),
+        status: z.enum(["pending", "paid", "verified", "completed", "failed", "cancelled"]).optional().describe('Filter by transaction status: pending, paid, verified, completed, failed, cancelled'),
     }),
     execute: async ({ context, runtimeContext }) => {
         const startTime = Date.now();

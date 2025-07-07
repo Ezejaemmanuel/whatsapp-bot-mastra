@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { ConversationStatusUnion, ConversationStatus, InChargeUnion, InCharge } from "./schemaUnions";
 
 /**
  * Get or create a conversation for a user
@@ -14,7 +15,7 @@ export const getOrCreateConversation = mutation({
         const existingConversation = await ctx.db
             .query("conversations")
             .withIndex("by_user_id", (q) => q.eq("userId", args.userId))
-            .filter((q) => q.eq(q.field("status"), "active"))
+            .filter((q) => q.eq(q.field("status"), "active" as ConversationStatus))
             .order("desc")
             .first();
 
@@ -26,8 +27,8 @@ export const getOrCreateConversation = mutation({
         const conversationId = await ctx.db.insert("conversations", {
             userId: args.userId,
             userName: args.userName,
-            status: "active",
-            inCharge: "bot", // Default to bot
+            status: "active" as ConversationStatus,
+            inCharge: "bot" as InCharge, // Default to bot
             lastMessageAt: Date.now(),
             unreadCount: 0,
         });
@@ -99,12 +100,12 @@ export const updateConversationLastMessage = mutation({
  * Archive a conversation
  */
 export const archiveConversation = mutation({
-    args: { conversationId: v.id("conversations") },
+    args: {
+        conversationId: v.id("conversations"),
+    },
     handler: async (ctx, args) => {
-        await ctx.db.patch(args.conversationId, {
-            status: "archived",
-        });
-        return await ctx.db.get(args.conversationId);
+        const status: ConversationStatus = "archived";
+        return await ctx.db.patch(args.conversationId, { status });
     },
 });
 
@@ -130,7 +131,7 @@ export const updateConversationMetadata = mutation({
 export const setInCharge = mutation({
     args: {
         conversationId: v.id("conversations"),
-        inCharge: v.union(v.literal("bot"), v.literal("admin")),
+        inCharge: InChargeUnion,
     },
     handler: async (ctx, args) => {
         await ctx.db.patch(args.conversationId, {
@@ -170,20 +171,28 @@ export const getAllConversationsWithUsers = query({
     },
 });
 
+/**
+ * Update conversation
+ */
 export const updateConversation = mutation({
     args: {
         conversationId: v.id("conversations"),
-        updates: v.object({
-            lastMessageAt: v.optional(v.number()),
-            lastMessageSummary: v.optional(v.string()),
-            unreadCount: v.optional(v.number()),
-            status: v.optional(v.string()),
-            inCharge: v.optional(v.union(v.literal("bot"), v.literal("admin"))),
-            metadata: v.optional(v.any()),
-        }),
+        inCharge: v.optional(InChargeUnion),
+        status: v.optional(ConversationStatusUnion),
+        lastMessageAt: v.optional(v.number()),
+        lastMessageSummary: v.optional(v.string()),
+        metadata: v.optional(v.any()),
+        unreadCount: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
-        await ctx.db.patch(args.conversationId, args.updates);
+        return await ctx.db.patch(args.conversationId, {
+            ...(args.inCharge && { inCharge: args.inCharge }),
+            ...(args.status && { status: args.status }),
+            ...(args.lastMessageAt && { lastMessageAt: args.lastMessageAt }),
+            ...(args.lastMessageSummary && { lastMessageSummary: args.lastMessageSummary }),
+            ...(args.metadata && { metadata: args.metadata }),
+            ...(typeof args.unreadCount === 'number' && { unreadCount: args.unreadCount }),
+        });
     },
 });
 
@@ -193,6 +202,42 @@ export const markConversationAsRead = mutation({
     },
     handler: async (ctx, args) => {
         await ctx.db.patch(args.conversationId, {
+            unreadCount: 0,
+        });
+    },
+});
+
+/**
+ * Get active conversations
+ */
+export const getActiveConversations = query({
+    args: {},
+    handler: async (ctx) => {
+        return await ctx.db
+            .query("conversations")
+            .filter((q) => q.eq(q.field("status"), "active" as ConversationStatus))
+            .collect();
+    },
+});
+
+/**
+ * Create a new conversation
+ */
+export const createConversation = mutation({
+    args: {
+        userId: v.id("users"),
+        userName: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const status: ConversationStatus = "active";
+        const inCharge: InCharge = "bot"; // Default to bot
+
+        return await ctx.db.insert("conversations", {
+            userId: args.userId,
+            userName: args.userName,
+            status,
+            inCharge,
+            lastMessageAt: Date.now(),
             unreadCount: 0,
         });
     },

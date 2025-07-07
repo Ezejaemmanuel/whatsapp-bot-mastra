@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { MessageDirectionUnion, MessageDirection, SenderRoleUnion, SenderRole, MessageTypeUnion, MessageType, MessageStatusUnion, MessageStatus } from "./schemaUnions";
 
 /**
  * Store an incoming message
@@ -8,9 +9,9 @@ export const storeIncomingMessage = mutation({
     args: {
         conversationId: v.id("conversations"),
         whatsappMessageId: v.optional(v.string()),
-        senderRole: v.union(v.literal("user"), v.literal("bot"), v.literal("admin")),
+        senderRole: SenderRoleUnion,
         senderName: v.string(),
-        messageType: v.string(),
+        messageType: MessageTypeUnion,
         content: v.optional(v.string()),
         caption: v.optional(v.string()),
         location: v.optional(v.any()),
@@ -59,9 +60,9 @@ export const storeOutgoingMessage = mutation({
     args: {
         conversationId: v.id("conversations"),
         whatsappMessageId: v.optional(v.string()),
-        senderRole: v.union(v.literal("user"), v.literal("bot"), v.literal("admin")),
+        senderRole: SenderRoleUnion,
         senderName: v.string(),
-        messageType: v.string(),
+        messageType: MessageTypeUnion,
         content: v.optional(v.string()),
         context: v.optional(v.any()),
         metadata: v.optional(v.any()),
@@ -142,7 +143,7 @@ export const getMessageById = query({
 export const updateMessageStatus = mutation({
     args: {
         messageId: v.id("messages"),
-        status: v.string(),
+        status: MessageStatusUnion,
         error: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
@@ -180,5 +181,71 @@ export const getRecentMediaMessages = query({
             )
             .order("desc")
             .take(limit);
+    },
+});
+
+/**
+ * Create a new message
+ */
+export const createMessage = mutation({
+    args: {
+        conversationId: v.id("conversations"),
+        whatsappMessageId: v.optional(v.string()),
+        senderRole: SenderRoleUnion,
+        senderName: v.string(),
+        messageType: MessageTypeUnion,
+        content: v.optional(v.string()),
+        mediaUrl: v.optional(v.string()),
+        mediaType: v.optional(v.string()),
+        fileName: v.optional(v.string()),
+        caption: v.optional(v.string()),
+        location: v.optional(v.any()),
+        contacts: v.optional(v.any()),
+        context: v.optional(v.any()),
+        metadata: v.optional(v.any()),
+    },
+    handler: async (ctx, args) => {
+        const direction: MessageDirection = "inbound";
+        const status: MessageStatus = "sent";
+
+        return await ctx.db.insert("messages", {
+            ...args,
+            direction,
+            status,
+            timestamp: Date.now(),
+        });
+    },
+});
+
+/**
+ * Create outbound message
+ */
+export const createOutboundMessage = mutation({
+    args: {
+        conversationId: v.id("conversations"),
+        whatsappMessageId: v.optional(v.string()),
+        senderRole: SenderRoleUnion,
+        senderName: v.string(),
+        messageType: MessageTypeUnion,
+        content: v.optional(v.string()),
+        mediaUrl: v.optional(v.string()),
+        mediaType: v.optional(v.string()),
+        fileName: v.optional(v.string()),
+        caption: v.optional(v.string()),
+        location: v.optional(v.any()),
+        contacts: v.optional(v.any()),
+        context: v.optional(v.any()),
+        metadata: v.optional(v.any()),
+    },
+    handler: async (ctx, args) => {
+        const direction: MessageDirection = "outbound";
+        const status: MessageStatus = "sent";
+
+        return await ctx.db.insert("messages", {
+            ...args,
+            direction,
+            status,
+            timestamp: Date.now(),
+        });
     },
 }); 
