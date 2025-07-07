@@ -192,18 +192,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             // Process each entry and message individually to pass contact information
             for (const entry of parsedBody.entry) {
                 for (const change of entry.changes) {
-                    if (change.value.messages) {
-                        for (const message of change.value.messages) {
-                            // Get contact name from the webhook contacts array
-                            let contactName: string | undefined;
-                            if (change.value.contacts && change.value.contacts.length > 0) {
-                                const contact = change.value.contacts.find(c => c.wa_id === message.from);
-                                contactName = contact?.profile?.name;
-                            }
+                    if (change.value.messages && change.value.messages.length > 0) {
+                        // Find the most recent message based on timestamp
+                        const latestMessage = change.value.messages.reduce((latest, current) => {
+                            const latestTimestamp = parseInt(latest.timestamp, 10);
+                            const currentTimestamp = parseInt(current.timestamp, 10);
+                            return currentTimestamp > latestTimestamp ? current : latest;
+                        });
 
-                            // Process individual message with contact name
-                            await handleIncomingMessage(message, contactName);
+                        // Get contact name from the webhook contacts array
+                        let contactName: string | undefined;
+                        if (change.value.contacts && change.value.contacts.length > 0) {
+                            const contact = change.value.contacts.find(c => c.wa_id === latestMessage.from);
+                            contactName = contact?.profile?.name;
                         }
+
+                        // Process only the latest message with contact name
+                        await handleIncomingMessage(latestMessage, contactName);
                     }
 
                     // Process status updates
