@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Phone, Video, MoreVertical, Smile, Paperclip, Mic, Send } from 'lucide-react';
+import { ArrowLeft, Phone, Video, MoreVertical, Smile, Paperclip, Mic, Send, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -8,6 +8,7 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import avatarMale1 from '@/assets/avatar-male-1.jpg';
+import Image from 'next/image';
 
 interface ChatViewProps {
   chatId?: Id<"conversations">;
@@ -18,6 +19,8 @@ interface ChatViewProps {
 export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = false }) => {
   const [message, setMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Get conversation and messages from Convex
   const conversation = useQuery(api.conversations.getConversationById,
@@ -60,18 +63,29 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
   }
 
   const handleSendMessage = async () => {
-    if (message.trim() && chatId) {
+    if ((message.trim() || attachment) && chatId) {
       try {
+        let mediaUrl, caption;
+        if (attachment) {
+          // In a real app, you'd upload the file to a storage service
+          // and get a URL. For now, we'll use a placeholder.
+          mediaUrl = '/assets/avatar-female-1.jpg'; // Placeholder
+          caption = message.trim();
+        }
+
         // Store the message in Convex
         await storeMessage({
           conversationId: chatId,
           senderRole: "admin",
           senderName: "Admin",
-          messageType: "text",
-          content: message.trim(),
+          messageType: attachment ? "image" : "text",
+          content: attachment ? undefined : message.trim(),
+          mediaUrl: mediaUrl,
+          caption: caption,
         });
 
         setMessage('');
+        setAttachment(null);
       } catch (error) {
         console.error('Failed to send message:', error);
       }
@@ -82,6 +96,23 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    }
+  };
+
+  const handleAttachmentClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setAttachment(e.target.files[0]);
+    }
+  };
+
+  const handleRemoveAttachment = () => {
+    setAttachment(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -160,7 +191,23 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
                     <p className="text-xs font-semibold text-whatsapp-primary mb-1">{msg.senderName}</p>
                   )}
                   <div className="flex flex-col">
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                    {msg.messageType === 'image' && msg.mediaUrl ? (
+                      <div className="relative w-64 h-64 mb-1">
+                        <Image
+                          src={msg.mediaUrl}
+                          alt={msg.caption || 'Image'}
+                          layout="fill"
+                          objectFit="cover"
+                          className="rounded-md"
+                        />
+                      </div>
+                    ) : null}
+                    {msg.content && (
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                    )}
+                    {msg.messageType === 'image' && msg.caption && (
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap mt-1">{msg.caption}</p>
+                    )}
                     <div className="flex items-center justify-end mt-1 gap-1">
                       <span className={`text-xs opacity-70 ${isOwn ? 'text-white' : 'text-whatsapp-text-muted'}`}>
                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -190,13 +237,34 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
         </Button>
 
         <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover ${isMobile ? 'w-9 h-9' : 'w-10 h-10'
-          }`}>
+          }`}
+          onClick={handleAttachmentClick}
+        >
           <Paperclip className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
         </Button>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          accept="image/*"
+        />
+
+        {attachment && (
+          <div className="absolute bottom-12 left-0 right-0 p-2 bg-whatsapp-panel-bg">
+            <div className="flex items-center gap-2">
+              <Image src={URL.createObjectURL(attachment)} alt="preview" width={40} height={40} className="rounded" />
+              <span className="text-sm text-whatsapp-text-primary truncate">{attachment.name}</span>
+              <Button variant="ghost" size="icon" onClick={handleRemoveAttachment} className="ml-auto text-whatsapp-text-secondary">
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div className="flex-1 relative">
           <Input
-            placeholder="Type a message"
+            placeholder={attachment ? "Add a caption..." : "Type a message"}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={handleKeyPress}

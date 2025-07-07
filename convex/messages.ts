@@ -64,6 +64,8 @@ export const storeOutgoingMessage = mutation({
         senderName: v.string(),
         messageType: MessageTypeUnion,
         content: v.optional(v.string()),
+        mediaUrl: v.optional(v.string()),
+        caption: v.optional(v.string()),
         context: v.optional(v.any()),
         metadata: v.optional(v.any()),
     },
@@ -77,6 +79,8 @@ export const storeOutgoingMessage = mutation({
             senderName: args.senderName,
             messageType: args.messageType,
             content: args.content,
+            mediaUrl: args.mediaUrl,
+            caption: args.caption,
             context: args.context,
             status: "sent",
             timestamp,
@@ -86,7 +90,7 @@ export const storeOutgoingMessage = mutation({
         // Update conversation last message time and summary
         await ctx.db.patch(args.conversationId, {
             lastMessageAt: timestamp,
-            lastMessageSummary: args.content?.substring(0, 100) ?? args.messageType,
+            lastMessageSummary: args.content?.substring(0, 100) ?? args.caption ?? args.messageType,
         });
 
         return await ctx.db.get(messageId);
