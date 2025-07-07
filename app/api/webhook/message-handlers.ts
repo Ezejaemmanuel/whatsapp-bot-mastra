@@ -86,7 +86,26 @@ export async function handleTextMessage(
                 runtimeContext,
             });
 
-            response = agentResponse.text || 'I apologize, but I couldn\'t process your message at the moment. Please try again.';
+            if (agentResponse.text) {
+                response = agentResponse.text;
+            } else {
+                const emptyResponseError = new Error('Agent returned an empty response.');
+                logWarning('Agent generated an empty response', {
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    threadId: `whatsapp-${messageInfo.from}`,
+                    operation: 'handleTextMessage'
+                });
+                response = formatErrorForTestMode(emptyResponseError, {
+                    operation: 'handleTextMessage',
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    errorType: 'agent_empty_response'
+                });
+                if (!TEST_MODE) {
+                    response = 'I apologize, but I couldn\'t process your message at the moment. Please try again.';
+                }
+            }
 
             logInfo('Generated exchange agent response', {
                 messageId: messageInfo.id,
