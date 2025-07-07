@@ -9,7 +9,7 @@ import { TransactionList } from './TransactionList';
 import { useWhatsAppStore, useUIState } from '@/lib/store';
 import { usePaginatedQuery, useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { Id } from '@/convex/_generated/dataModel';
+import { Doc, Id } from '@/convex/_generated/dataModel';
 import { useShallow } from 'zustand/react/shallow';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -47,6 +47,8 @@ const WhatsAppLayoutContent: React.FC = () => {
     {},
     { initialNumItems: 20 }
   );
+
+  const updateTransactionStatus = useMutation(api.transactions.updateTransactionStatus);
 
   const selectedTransaction = useQuery(
     api.transactions.getTransaction,
@@ -104,6 +106,18 @@ const WhatsAppLayoutContent: React.FC = () => {
   const handleTransactionSelect = (transactionId: Id<"transactions">) => {
     setSelectedTransactionId(transactionId);
     setSelectedConversationId(undefined);
+  };
+
+  const handleUpdateTransactionStatus = async (
+    transactionId: Id<"transactions">,
+    status: Doc<"transactions">["status"]
+  ) => {
+    try {
+      await updateTransactionStatus({ transactionId, status });
+    } catch (error) {
+      console.error("Failed to update transaction status", error);
+      // You can add a toast notification here to inform the user.
+    }
   };
 
   const handleTabChange = (tab: 'chats' | 'transactions' | 'settings' | 'calls') => {
@@ -184,6 +198,7 @@ const WhatsAppLayoutContent: React.FC = () => {
             loadMore={loadMoreTransactions}
             selectedTransactionId={selectedTransactionId}
             onTransactionSelect={handleTransactionSelect}
+            onUpdateStatus={handleUpdateTransactionStatus}
             isMobile={true} />
         ) : (
           <ChatList
@@ -220,6 +235,7 @@ const WhatsAppLayoutContent: React.FC = () => {
             loadMore={loadMoreTransactions}
             selectedTransactionId={selectedTransactionId}
             onTransactionSelect={handleTransactionSelect}
+            onUpdateStatus={handleUpdateTransactionStatus}
             isMobile={false} />
         ) : (
           <div className="flex items-center justify-center h-full bg-whatsapp-panel-bg">
