@@ -72,38 +72,60 @@ export async function handleTextMessage(
 
             const agent = mastra.getAgent('whatsappAgent');
             // Use the enhanced WhatsApp Exchange Agent to generate a response
-            const agentResponse = await agent.generate([
-                {
-                    role: 'user' as const,
-                    content: messageText || 'Hello',
-                }
-            ], {
-                temperature: HANDLE_TEXT_AGENT_TEMPRETURE,
-                memory: {
-                    thread: `whatsapp-${messageInfo.from}`,
-                    resource: messageInfo.from,
-                },
-                runtimeContext,
-            });
+            let agentResponse;
+            const maxRetries = 3;
+            for (let i = 0; i < maxRetries; i++) {
+                agentResponse = await agent.generate(
+                    [
+                        {
+                            role: 'user' as const,
+                            content: messageText || 'Hello',
+                        },
+                    ],
+                    {
+                        temperature: HANDLE_TEXT_AGENT_TEMPRETURE,
+                        memory: {
+                            thread: `whatsapp-${messageInfo.from}`,
+                            resource: messageInfo.from,
+                        },
+                        runtimeContext,
+                    }
+                );
 
-            if (agentResponse.text) {
-                response = agentResponse.text;
-            } else {
-                const emptyResponseError = new Error('Agent returned an empty response.');
-                logWarning('Agent generated an empty response', {
+                if (agentResponse?.text) {
+                    break; // Exit loop if response is not empty
+                }
+
+                logWarning(`Agent generated an empty response on attempt ${i + 1}`, {
                     messageId: messageInfo.id,
                     from: messageInfo.from,
                     threadId: `whatsapp-${messageInfo.from}`,
-                    operation: 'handleTextMessage'
+                    operation: 'handleTextMessage',
+                });
+
+                if (i < maxRetries - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // wait 1s before retrying
+                }
+            }
+
+            if (agentResponse?.text) {
+                response = agentResponse.text;
+            } else {
+                const emptyResponseError = new Error(`Agent returned an empty response after ${maxRetries} attempts.`);
+                logWarning('Agent generated an empty response after multiple retries', {
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    threadId: `whatsapp-${messageInfo.from}`,
+                    operation: 'handleTextMessage',
                 });
                 response = formatErrorForTestMode(emptyResponseError, {
                     operation: 'handleTextMessage',
                     messageId: messageInfo.id,
                     from: messageInfo.from,
-                    errorType: 'agent_empty_response'
+                    errorType: 'agent_empty_response',
                 });
                 if (!TEST_MODE) {
-                    response = 'I apologize, but I couldn\'t process your message at the moment. Please try again.';
+                    response = "I apologize, but I couldn't process your message at the moment. Please try again.";
                 }
             }
 
@@ -112,10 +134,10 @@ export async function handleTextMessage(
                 from: messageInfo.from,
                 responseLength: response.length,
                 threadId: `whatsapp-${messageInfo.from}`,
-                hasToolCalls: agentResponse.toolCalls && agentResponse.toolCalls.length > 0,
-                toolCallsCount: agentResponse.toolCalls?.length || 0,
+                hasToolCalls: agentResponse?.toolCalls && agentResponse?.toolCalls.length > 0,
+                toolCallsCount: agentResponse?.toolCalls?.length || 0,
                 messageTextLength: messageText.length,
-                operation: 'handleTextMessage'
+                operation: 'handleTextMessage',
             });
 
         } catch (agentError) {
