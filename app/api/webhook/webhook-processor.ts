@@ -21,6 +21,7 @@ import { processStatusUpdate } from './status-handlers';
 import { markMessageAsRead } from './response-sender';
 import { sendErrorResponse } from './error-handler';
 import { isMediaMessage } from './media-processor';
+import { sendDebugMessage } from '@/mastra/tools/utils';
 
 /**
  * Service configuration for webhook processing
@@ -99,6 +100,29 @@ export async function processIncomingMessage(
     message: WebhookMessage,
     contactName?: string
 ): Promise<void> {
+    const botPhoneNumber = process.env.WHATSAPP_PHONE_NUMBER;
+    await sendDebugMessage(message.from, 'Processing incoming message', {
+        messageId: message.id,
+        from: message.from,
+        type: message.type,
+        botPhoneNumber: botPhoneNumber
+    });
+    if (message.from === botPhoneNumber) {
+        logInfo('Ignoring outgoing message received by webhook  because it was sent by the bot', {
+            messageId: message.id,
+            from: message.from,
+            type: message.type,
+            botPhoneNumber: botPhoneNumber
+        });
+      await  sendDebugMessage(message.from, 'Ignoring outgoing message received by webhook because it was sent by the bot ', {
+            messageId: message.id,
+            from: message.from,
+            type: message.type,
+            botPhoneNumber: botPhoneNumber
+        });
+        return;
+    }
+
     let messageInfo: ReturnType<typeof extractMessageInfo>;
     let user: User;
     let conversation: Conversation;

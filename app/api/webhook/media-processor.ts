@@ -145,7 +145,7 @@ export async function processImageAnalysis(
             operation: 'processImageAnalysis'
         });
 
-        sendDebugMessage(userPhoneNumber, 'STARTING DIRECT IMAGE ANALYSIS FOR RECEIPT PROCESSING', {
+        await sendDebugMessage(userPhoneNumber, 'STARTING DIRECT IMAGE ANALYSIS FOR RECEIPT PROCESSING', {
             messageId,
             from: userPhoneNumber,
             operation: 'processImageAnalysis'
@@ -157,7 +157,7 @@ export async function processImageAnalysis(
             `Receipt image from WhatsApp message. ${caption ? `User caption: ${caption}` : ''}`
         );
 
-        sendDebugMessage(userPhoneNumber, 'DIRECT IMAGE ANALYSIS COMPLETED SUCCESSFULLY', {
+        await sendDebugMessage(userPhoneNumber, 'DIRECT IMAGE ANALYSIS COMPLETED SUCCESSFULLY', {
             messageId,
             from: userPhoneNumber,
             imageUrl,
@@ -182,7 +182,7 @@ export async function processImageAnalysis(
             operation: 'processImageAnalysis'
         });
 
-        sendDebugMessage(userPhoneNumber, 'DIRECT IMAGE ANALYSIS FAILED', {
+        await sendDebugMessage(userPhoneNumber, 'DIRECT IMAGE ANALYSIS FAILED', {
             messageId,
             from: userPhoneNumber,
             operation: 'processImageAnalysis'
