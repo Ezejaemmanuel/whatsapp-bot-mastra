@@ -4,7 +4,7 @@ import { fetchQuery, fetchMutation } from "convex/nextjs";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 
-import { sendDebugMessage, logToolCall, logInfo, logSuccess, logToolResult, logError, logToolError, isValidConvexId } from './utils';
+import {  logToolCall, logInfo, logSuccess, logToolResult, logError, logToolError, isValidConvexId } from './utils';
 
 
 /**
@@ -26,13 +26,13 @@ export const getCurrentRatesTool = createTool({
 
         // Send debug message about tool start
         if (phoneNumber) {
-            await sendDebugMessage(phoneNumber, 'GET CURRENT RATES TOOL STARTED', {
-                toolId,
-                startTime: new Date(startTime).toISOString(),
-                operation: 'Fetching all exchange rates from database',
-                userId,
-                conversationId
-            });
+            // await sendDebugMessage(phoneNumber, 'GET CURRENT RATES TOOL STARTED', {
+            //     toolId,
+            //     startTime: new Date(startTime).toISOString(),
+            //     operation: 'Fetching all exchange rates from database',
+            //     userId,
+            //     conversationId
+            // });
         }
 
         logToolCall(toolId, {});
@@ -45,10 +45,10 @@ export const getCurrentRatesTool = createTool({
 
             // Send debug message about database query
             if (phoneNumber) {
-                await sendDebugMessage(phoneNumber, 'DATABASE QUERY STARTED', {
-                    operation: 'api.exchangeRates.getCurrentRates',
-                    parameters: 'No filters - fetching all rates'
-                });
+                // await sendDebugMessage(phoneNumber, 'DATABASE QUERY STARTED', {
+                //     operation: 'api.exchangeRates.getCurrentRates',
+                //     parameters: 'No filters - fetching all rates'
+                // });
             }
 
             // Always call without currencyPair to get all rates
@@ -65,15 +65,15 @@ export const getCurrentRatesTool = createTool({
 
             // Send debug message with results
             if (phoneNumber) {
-                await sendDebugMessage(phoneNumber, 'EXCHANGE RATES RETRIEVED', {
-                    success: true,
-                    totalRates: result.totalRates,
-                    executionTimeMs: executionTime,
-                    ratesPreview: Array.isArray(rates) ? rates.map(r => `${r.currencyPair}: ${r.currentMarketRate}`).slice(0, 5) : 'Single rate object'
-                });
+                // await sendDebugMessage(phoneNumber, 'EXCHANGE RATES RETRIEVED', {
+                //     success: true,
+                //     totalRates: result.totalRates,
+                //     executionTimeMs: executionTime,
+                //     ratesPreview: Array.isArray(rates) ? rates.map(r => `${r.currencyPair}: ${r.currentMarketRate}`).slice(0, 5) : 'Single rate object'
+                // });
 
-                // Send complete rates data
-                await sendDebugMessage(phoneNumber, 'COMPLETE RATES DATA', rates);
+                // // Send complete rates data
+                // await sendDebugMessage(phoneNumber, 'COMPLETE RATES DATA', rates);
             }
 
             logSuccess('All exchange rates retrieved successfully', {
@@ -92,12 +92,12 @@ export const getCurrentRatesTool = createTool({
 
             // Send debug message about error
             if (phoneNumber) {
-                await sendDebugMessage(phoneNumber, 'GET RATES ERROR', {
-                    error: errorMessage,
-                    errorType: error instanceof Error ? error.constructor.name : typeof error,
-                    executionTimeMs: executionTime,
-                    stack: error instanceof Error ? error.stack : undefined
-                });
+                // await sendDebugMessage(phoneNumber, 'GET RATES ERROR', {
+                //     error: errorMessage,
+                //     errorType: error instanceof Error ? error.constructor.name : typeof error,
+                //     executionTimeMs: executionTime,
+                //     stack: error instanceof Error ? error.stack : undefined
+                // });
             }
 
             logError('Failed to get exchange rates', error as Error, {
@@ -144,18 +144,18 @@ export const createTransactionTool = createTool({
 
         // Send debug message about tool start
         if (phoneNumber) {
-            await sendDebugMessage(phoneNumber, 'CREATE TRANSACTION TOOL STARTED', {
-                toolId,
-                startTime: new Date(startTime).toISOString(),
-                currencyFrom: context.currencyFrom,
-                currencyTo: context.currencyTo,
-                amountFrom: context.amountFrom,
-                amountTo: context.amountTo,
-                negotiatedRate: context.negotiatedRate,
-                hasNegotiationHistory: !!context.negotiationHistory && context.negotiationHistory.length > 0,
-                userId,
-                conversationId
-            });
+            // await sendDebugMessage(phoneNumber, 'CREATE TRANSACTION TOOL STARTED', {
+            //     toolId,
+            //     startTime: new Date(startTime).toISOString(),
+            //     currencyFrom: context.currencyFrom,
+            //     currencyTo: context.currencyTo,
+            //     amountFrom: context.amountFrom,
+            //     amountTo: context.amountTo,
+            //     negotiatedRate: context.negotiatedRate,
+            //     hasNegotiationHistory: !!context.negotiationHistory && context.negotiationHistory.length > 0,
+            //     userId,
+            //     conversationId
+            // });
         }
 
         logToolCall(toolId, context);
@@ -166,13 +166,13 @@ export const createTransactionTool = createTool({
                 const errorMsg = 'Unable to extract userId and conversationId from runtime context. Make sure the agent is called with proper context configuration.';
 
                 if (phoneNumber) {
-                    await sendDebugMessage(phoneNumber, 'CONTEXT EXTRACTION ERROR', {
-                        error: errorMsg,
-                        userId: userId || 'missing',
-                        conversationId: conversationId || 'missing',
-                        phoneNumber: phoneNumber || 'missing',
-                        runtimeContextKeys: runtimeContext ? Object.keys(runtimeContext) : 'No runtime context'
-                    });
+                    // await sendDebugMessage(phoneNumber, 'CONTEXT EXTRACTION ERROR', {
+                    //     error: errorMsg,
+                    //     userId: userId || 'missing',
+                    //     conversationId: conversationId || 'missing',
+                    //     phoneNumber: phoneNumber || 'missing',
+                    //     runtimeContextKeys: runtimeContext ? Object.keys(runtimeContext) : 'No runtime context'
+                    // });
                 }
 
                 throw new Error(errorMsg);
@@ -180,13 +180,13 @@ export const createTransactionTool = createTool({
 
             // Send debug message about extracted context
             if (phoneNumber) {
-                await sendDebugMessage(phoneNumber, 'CONTEXT EXTRACTED SUCCESSFULLY', {
-                    userId,
-                    conversationId,
-                    phoneNumber,
-                    userIdType: typeof userId,
-                    conversationIdType: typeof conversationId
-                });
+                // await sendDebugMessage(phoneNumber, 'CONTEXT EXTRACTED SUCCESSFULLY', {
+                //     userId,
+                //     conversationId,
+                //     phoneNumber,
+                //     userIdType: typeof userId,
+                //     conversationIdType: typeof conversationId
+                // });
             }
 
             logInfo('Creating new transaction with extracted context', {
@@ -203,19 +203,19 @@ export const createTransactionTool = createTool({
 
             // Send debug message about database mutation
             if (phoneNumber) {
-                await sendDebugMessage(phoneNumber, 'DATABASE MUTATION STARTED', {
-                    operation: 'api.transactions.createTransaction',
-                    parameters: {
-                        userId,
-                        conversationId,
-                        currencyFrom: context.currencyFrom,
-                        currencyTo: context.currencyTo,
-                        amountFrom: context.amountFrom,
-                        amountTo: context.amountTo,
-                        negotiatedRate: context.negotiatedRate,
-                        negotiationHistoryLength: context.negotiationHistory?.length || 0
-                    }
-                });
+                // await sendDebugMessage(phoneNumber, 'DATABASE MUTATION STARTED', {
+                //     operation: 'api.transactions.createTransaction',
+                //     parameters: {
+                //         userId,
+                //         conversationId,
+                //         currencyFrom: context.currencyFrom,
+                //         currencyTo: context.currencyTo,
+                //         amountFrom: context.amountFrom,
+                //         amountTo: context.amountTo,
+                //         negotiatedRate: context.negotiatedRate,
+                //         negotiationHistoryLength: context.negotiationHistory?.length || 0
+                //     }
+                // });
             }
 
             const transaction = await fetchMutation(api.transactions.createTransaction, {
@@ -241,19 +241,19 @@ export const createTransactionTool = createTool({
 
             // Send debug message with successful result
             if (phoneNumber) {
-                await sendDebugMessage(phoneNumber, 'TRANSACTION CREATED SUCCESSFULLY', {
-                    success: true,
-                    transactionId: transaction,
-                    executionTimeMs: executionTime,
-                    currencyPair: `${context.currencyFrom}_${context.currencyTo}`,
-                    amountFrom: context.amountFrom,
-                    amountTo: context.amountTo,
-                    negotiatedRate: context.negotiatedRate,
-                    workingMemoryUpdate: result.workingMemoryUpdate
-                });
+                // await sendDebugMessage(phoneNumber, 'TRANSACTION CREATED SUCCESSFULLY', {
+                //     success: true,
+                //     transactionId: transaction,
+                //     executionTimeMs: executionTime,
+                //     currencyPair: `${context.currencyFrom}_${context.currencyTo}`,
+                //     amountFrom: context.amountFrom,
+                //     amountTo: context.amountTo,
+                //     negotiatedRate: context.negotiatedRate,
+                //     workingMemoryUpdate: result.workingMemoryUpdate
+                // });
 
-                // Send complete transaction result
-                await sendDebugMessage(phoneNumber, 'COMPLETE TRANSACTION RESULT', result);
+                // // Send complete transaction result
+                // await sendDebugMessage(phoneNumber, 'COMPLETE TRANSACTION RESULT', result);
             }
 
             logSuccess('Transaction created successfully', {
@@ -277,20 +277,20 @@ export const createTransactionTool = createTool({
 
             // Send debug message about error
             if (phoneNumber) {
-                await sendDebugMessage(phoneNumber, 'CREATE TRANSACTION ERROR', {
-                    error: errorMessage,
-                    errorType: error instanceof Error ? error.constructor.name : typeof error,
-                    executionTimeMs: executionTime,
-                    userId,
-                    conversationId,
-                    transactionData: {
-                        currencyFrom: context.currencyFrom,
-                        currencyTo: context.currencyTo,
-                        amountFrom: context.amountFrom,
-                        negotiatedRate: context.negotiatedRate
-                    },
-                    stack: error instanceof Error ? error.stack : undefined
-                });
+                // await sendDebugMessage(phoneNumber, 'CREATE TRANSACTION ERROR', {
+                //     error: errorMessage,
+                //     errorType: error instanceof Error ? error.constructor.name : typeof error,
+                //     executionTimeMs: executionTime,
+                //     userId,
+                //     conversationId,
+                //     transactionData: {
+                //         currencyFrom: context.currencyFrom,
+                //         currencyTo: context.currencyTo,
+                //         amountFrom: context.amountFrom,
+                //         negotiatedRate: context.negotiatedRate
+                //     },
+                //     stack: error instanceof Error ? error.stack : undefined
+                // });
             }
 
             logError('Failed to create transaction', error as Error, {
@@ -335,17 +335,17 @@ export const updateTransactionStatusTool = createTool({
 
         // Send debug message about tool start
         if (phoneNumber) {
-            await sendDebugMessage(phoneNumber, 'UPDATE TRANSACTION STATUS TOOL STARTED', {
-                toolId,
-                startTime: new Date(startTime).toISOString(),
-                transactionId: context.transactionId,
-                newStatus: context.status,
-                hasPaymentReference: !!context.paymentReference,
-                hasReceiptImage: !!context.receiptImageUrl,
-                hasExtractedDetails: !!context.extractedDetails && Object.keys(context.extractedDetails).length > 0,
-                userId,
-                conversationId
-            });
+            // await sendDebugMessage(phoneNumber, 'UPDATE TRANSACTION STATUS TOOL STARTED', {
+            //     toolId,
+            //     startTime: new Date(startTime).toISOString(),
+            //     transactionId: context.transactionId,
+            //     newStatus: context.status,
+            //     hasPaymentReference: !!context.paymentReference,
+            //     hasReceiptImage: !!context.receiptImageUrl,
+            //     hasExtractedDetails: !!context.extractedDetails && Object.keys(context.extractedDetails).length > 0,
+            //     userId,
+            //     conversationId
+            // });
         }
 
         logToolCall(toolId, context);
@@ -360,14 +360,14 @@ export const updateTransactionStatusTool = createTool({
                 };
 
                 if (phoneNumber) {
-                    await sendDebugMessage(phoneNumber, 'USER ID EXTRACTION FAILED', {
-                        error: result.message,
-                        suggestion: result.suggestion,
-                        runtimeContextAvailable: !!runtimeContext,
-                        userId: userId || 'missing',
-                        conversationId: conversationId || 'missing',
-                        phoneNumber: phoneNumber || 'missing'
-                    });
+                    // await sendDebugMessage(phoneNumber, 'USER ID EXTRACTION FAILED', {
+                    //     error: result.message,
+                    //     suggestion: result.suggestion,
+                    //     runtimeContextAvailable: !!runtimeContext,
+                    //     userId: userId || 'missing',
+                    //     conversationId: conversationId || 'missing',
+                    //     phoneNumber: phoneNumber || 'missing'
+                    // });
                 }
 
                 logToolResult(toolId, result, Date.now() - startTime);
@@ -376,11 +376,11 @@ export const updateTransactionStatusTool = createTool({
 
             // Send debug message about validation start
             if (phoneNumber) {
-                await sendDebugMessage(phoneNumber, 'TRANSACTION VALIDATION STARTED', {
-                    transactionId: context.transactionId,
-                    userId,
-                    operation: 'Validating transaction ID format and ownership'
-                });
+                // await sendDebugMessage(phoneNumber, 'TRANSACTION VALIDATION STARTED', {
+                //     transactionId: context.transactionId,
+                //     userId,
+                //     operation: 'Validating transaction ID format and ownership'
+                // });
             }
 
             // First validate the transaction ID format
@@ -393,11 +393,11 @@ export const updateTransactionStatusTool = createTool({
                 };
 
                 if (phoneNumber) {
-                    await sendDebugMessage(phoneNumber, 'INVALID TRANSACTION ID FORMAT', {
-                        transactionId: context.transactionId,
-                        expectedFormat: '16+ alphanumeric characters',
-                        suggestion: result.suggestion
-                    });
+                    // await sendDebugMessage(phoneNumber, 'INVALID TRANSACTION ID FORMAT', {
+                    //     transactionId: context.transactionId,
+                    //     expectedFormat: '16+ alphanumeric characters',
+                    //     suggestion: result.suggestion
+                    // });
                 }
 
                 logToolResult(toolId, result, Date.now() - startTime);
@@ -444,14 +444,14 @@ export const updateTransactionStatusTool = createTool({
 
             // Send debug message about status update
             if (phoneNumber) {
-                await sendDebugMessage(phoneNumber, 'TRANSACTION STATUS UPDATE STARTED', {
-                    transactionId: context.transactionId,
-                    currentStatus: transaction.status,
-                    newStatus: context.status,
-                    paymentReference: context.paymentReference,
-                    receiptImageUrl: context.receiptImageUrl,
-                    extractedDetailsKeys: context.extractedDetails ? Object.keys(context.extractedDetails) : []
-                });
+                // await sendDebugMessage(phoneNumber, 'TRANSACTION STATUS UPDATE STARTED', {
+                //     transactionId: context.transactionId,
+                //     currentStatus: transaction.status,
+                //     newStatus: context.status,
+                //     paymentReference: context.paymentReference,
+                //     receiptImageUrl: context.receiptImageUrl,
+                //     extractedDetailsKeys: context.extractedDetails ? Object.keys(context.extractedDetails) : []
+                // });
             }
 
             await fetchMutation(api.transactions.updateTransactionStatus, {
@@ -475,17 +475,17 @@ export const updateTransactionStatusTool = createTool({
 
             // Send debug message about successful update
             if (phoneNumber) {
-                await sendDebugMessage(phoneNumber, 'TRANSACTION STATUS UPDATED SUCCESSFULLY', {
-                    success: true,
-                    transactionId: context.transactionId,
-                    previousStatus: transaction.status,
-                    newStatus: context.status,
-                    executionTimeMs: executionTime,
-                    workingMemoryUpdate: result.workingMemoryUpdate
-                });
+                // await sendDebugMessage(phoneNumber, 'TRANSACTION STATUS UPDATED SUCCESSFULLY', {
+                //     success: true,
+                //     transactionId: context.transactionId,
+                //     previousStatus: transaction.status,
+                //     newStatus: context.status,
+                //     executionTimeMs: executionTime,
+                //     workingMemoryUpdate: result.workingMemoryUpdate
+                // });
 
                 // Send complete result
-                await sendDebugMessage(phoneNumber, 'COMPLETE UPDATE RESULT', result);
+                // await sendDebugMessage(phoneNumber, 'COMPLETE UPDATE RESULT', result);
             }
 
             logSuccess('Transaction status updated successfully', {
@@ -506,14 +506,14 @@ export const updateTransactionStatusTool = createTool({
 
             // Send debug message about error
             if (phoneNumber) {
-                await sendDebugMessage(phoneNumber, 'UPDATE TRANSACTION STATUS ERROR', {
-                    error: errorMessage,
-                    errorType: error instanceof Error ? error.constructor.name : typeof error,
-                    transactionId: context.transactionId,
-                    newStatus: context.status,
-                    executionTimeMs: executionTime,
-                    stack: error instanceof Error ? error.stack : undefined
-                });
+                // await sendDebugMessage(phoneNumber, 'UPDATE TRANSACTION STATUS ERROR', {
+                //     error: errorMessage,
+                //     errorType: error instanceof Error ? error.constructor.name : typeof error,
+                //     transactionId: context.transactionId,
+                //     newStatus: context.status,
+                //     executionTimeMs: executionTime,
+                //     stack: error instanceof Error ? error.stack : undefined
+                // });
             }
 
             logError('Failed to update transaction status', error as Error, {

@@ -101,20 +101,16 @@ export async function processIncomingMessage(
     contactName?: string
 ): Promise<void> {
     const botPhoneNumber = process.env.WHATSAPP_PHONE_NUMBER;
-    await sendDebugMessage(message.from, 'Processing incoming message', {
+    await sendDebugMessage(message.from, 'DEBUG: processIncomingMessage', {
         messageId: message.id,
         from: message.from,
         type: message.type,
-        botPhoneNumber: botPhoneNumber
+        botPhoneNumber,
+        fullMessage: message
     });
+
     if (message.from === botPhoneNumber) {
-        logInfo('Ignoring outgoing message received by webhook  because it was sent by the bot', {
-            messageId: message.id,
-            from: message.from,
-            type: message.type,
-            botPhoneNumber: botPhoneNumber
-        });
-      await  sendDebugMessage(message.from, 'Ignoring outgoing message received by webhook because it was sent by the bot ', {
+        logInfo('Ignoring outgoing message received by webhook', {
             messageId: message.id,
             from: message.from,
             type: message.type,

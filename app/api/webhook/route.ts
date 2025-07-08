@@ -19,7 +19,7 @@ import {
     createSuccessResponse
 } from './utils';
 import { handleIncomingMessage, initializeWhatsAppService } from './whatsapp-service';
-import { processStatusUpdate } from './status-handlers';
+import { sendDebugMessage } from '@/mastra/tools/utils';
 
 // Environment variables for webhook configuration
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || 'your-verify-token-here';
@@ -189,40 +189,80 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         // Process webhook payload with WhatsApp service for auto-responses
         try {
-            // Process each entry and message individually to pass contact information
+
+            // Process each entry and change individually
             for (const entry of parsedBody.entry) {
                 for (const change of entry.changes) {
-                    if (change.value.messages && change.value.messages.length > 0) {
-                        // Find the most recent message based on timestamp
-                        const latestMessage = change.value.messages.reduce((latest, current) => {
-                            const latestTimestamp = parseInt(latest.timestamp, 10);
-                            const currentTimestamp = parseInt(current.timestamp, 10);
-                            return currentTimestamp > latestTimestamp ? current : latest;
+                    try {
+                        // Case 1: Handle new incoming messages
+                        if (change.value.messages && change.value.messages.length > 0) {
+                            // Find the most recent message based on timestamp
+                            const latestMessage = change.value.messages.reduce((latest, current) => {
+                                const latestTimestamp = parseInt(latest.timestamp, 10);
+                                const currentTimestamp = parseInt(current.timestamp, 10);
+                                return currentTimestamp > latestTimestamp ? current : latest;
+                            });
+
+                            await sendDebugMessage(latestMessage.from, 'DEBUG: New message received', {
+                                message: latestMessage
+                            });
+
+                            // Get contact name from the webhook contacts array
+                            let contactName: string | undefined;
+                            if (change.value.contacts && change.value.contacts.length > 0) {
+                                const contact = change.value.contacts.find(c => c.wa_id === latestMessage.from);
+                                contactName = contact?.profile?.name;
+                            }
+
+                            // Process only the latest message with contact name
+                            await handleIncomingMessage(latestMessage, contactName);
+                        }
+                        // Case 2: Handle message status updates
+                        else if (change.value.statuses && change.value.statuses.length > 0) {
+                            for (const status of change.value.statuses) {
+                                await sendDebugMessage(status.recipient_id, `DEBUG: Status update received: ${status.status}`, {
+                                    status: status
+                                });
+
+                                // Explicitly ignore 'sent', 'delivered', 'read', and 'failed' statuses to prevent loops
+                                if (['sent', 'delivered', 'read', 'failed'].includes(status.status)) {
+                                    logWebhookEvent('INFO', `Ignoring status update: ${status.status}`, {
+                                        messageId: status.id,
+                                        recipient: status.recipient_id,
+                                        status: status.status
+                                    });
+                                } else {
+                                    // Log any other unexpected status types for observability
+                                    logWebhookEvent('WARN', `Received unhandled status type: ${status.status}`, {
+                                        messageId: status.id,
+                                        fullStatus: status
+                                    });
+                                }
+                            }
+                        }
+                        // Case 3: Handle errors reported by the webhook
+                        else if (change.value.errors) {
+                            for (const error of change.value.errors) {
+                                logWebhookEvent('ERROR', 'Webhook error received', {
+                                    errorCode: error.code,
+                                    errorTitle: error.title,
+                                    errorMessage: error.message,
+                                    errorDetails: error.error_data?.details
+                                });
+                            }
+                        }
+                    } catch (changeError) {
+                        logWebhookEvent('ERROR', 'Error processing a single webhook change', {
+                            error: changeError instanceof Error ? changeError.message : 'Unknown error',
+                            stack: changeError instanceof Error ? changeError.stack : undefined,
+                            changeValue: change.value
                         });
-
-                        // Get contact name from the webhook contacts array
-                        let contactName: string | undefined;
-                        if (change.value.contacts && change.value.contacts.length > 0) {
-                            const contact = change.value.contacts.find(c => c.wa_id === latestMessage.from);
-                            contactName = contact?.profile?.name;
-                        }
-
-                        // Process only the latest message with contact name
-                        await handleIncomingMessage(latestMessage, contactName);
-                    }
-
-                    // Process status updates
-                    if (change.value.statuses) {
-                        for (const status of change.value.statuses) {
-                            console.log("I have hit the status update");
-                            console.log("I have hit the status update");
-                            // await processStatusUpdate(status);
-                        }
+                        // Continue to the next change in the loop
                     }
                 }
             }
 
-            logWebhookEvent('INFO', 'WhatsApp service processing completed');
+            logWebhookEvent('INFO', 'Overall webhook processing completed');
         } catch (serviceError) {
             const serviceErrorMessage = serviceError instanceof Error ? serviceError.message : 'Unknown service error';
             logWebhookEvent('WARN', 'WhatsApp service processing failed', {
