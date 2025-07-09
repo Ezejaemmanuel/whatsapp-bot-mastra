@@ -256,14 +256,14 @@ export async function processIncomingMessage(
             };
         }
 
-        // Step 4: Mark message as read (non-blocking)
-      await  markMessageAsRead(whatsappClient, messageInfo.id, '').catch(readError => {
-            logWarning('Failed to mark message as read (non-critical)', {
-                messageId: messageInfo.id,
-                error: readError instanceof Error ? readError.message : String(readError),
-                operation: 'processIncomingMessage:mark_read'
-            });
-        });
+    //     // Step 4: Mark message as read (non-blocking)
+    //   await  markMessageAsRead(whatsappClient, messageInfo.id, '').catch(readError => {
+    //         logWarning('Failed to mark message as read (non-critical)', {
+    //             messageId: messageInfo.id,
+    //             error: readError instanceof Error ? readError.message : String(readError),
+    //             operation: 'processIncomingMessage:mark_read'
+    //         });
+    //     });
 
         // Step 5: Process message based on type
         try {
