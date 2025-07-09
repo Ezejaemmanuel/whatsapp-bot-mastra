@@ -21,9 +21,9 @@
  * ⚠️ WARNING: In TEST_MODE, sensitive data like bank details and transaction info will be sent via WhatsApp
  * Only enable this for development/debugging purposes, never in production
  */
-export const TEST_MODE = true; // Set to false in production
+export const TEST_MODE = false; // Set to false in production
 
 
 
-export const WHATSAPP_TEST_MODE = true;
+export const WHATSAPP_TEST_MODE = false;
 
