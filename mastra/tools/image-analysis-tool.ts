@@ -82,17 +82,10 @@ function getMimeTypeFromUrl(url: string): string {
     }
 }
 
-// Schema for OCR extraction
-export const receiptSchema = z.object({
+// Schema for OCR extraction - simplified to only return what's actually used
+export const ocrSchema = z.object({
     ocrResults: z.object({
-        rawText: z.string().describe("Complete raw text extracted from the image"),
-        formattedText: z.object({
-            lines: z.array(z.string()).describe("Text split into lines, preserving formatting"),
-            sections: z.array(z.object({
-                content: z.string(),
-                type: z.enum(['text', 'numbers', 'date', 'alphanumeric']).optional()
-            })).describe("Text organized into sections with type hints")
-        }).describe("Structured representation of the extracted text")
+        rawText: z.string().describe("Complete raw text extracted from the image")
     }),
 
     // Basic image quality assessment
@@ -114,7 +107,7 @@ export async function analyzeImageDirectly(
     imageUrl: string,
     phoneNumber?: string,
     context?: string
-): Promise<z.infer<typeof receiptSchema>> {
+): Promise<z.infer<typeof ocrSchema>> {
     const startTime = Date.now();
 
     // Send debug message about function start
@@ -181,13 +174,7 @@ export async function analyzeImageDirectly(
    - Keep dates and times in original format
    - Extract any numbers and amounts precisely
 
-2. ORGANIZE TEXT:
-   - Split into lines as shown in image
-   - Group related text into sections
-   - Label sections by content type (text/numbers/date/alphanumeric)
-   - Preserve spatial relationships in formatting
-
-3. QUALITY CHECK:
+2. QUALITY ASSESSMENT:
    - Note any unclear or unreadable text
    - Report confidence in extraction accuracy
    - Flag any image quality issues
@@ -233,7 +220,7 @@ Extract all text now, maintaining exact formatting:`;
                     ]
                 }
             ],
-            schema: receiptSchema,
+            schema: ocrSchema,
         });
 
         const executionTime = Date.now() - startTime;
@@ -373,11 +360,7 @@ Extract all text now, maintaining exact formatting:`;
         // Return a structured error response instead of throwing
         return {
             ocrResults: {
-                rawText: "Error analyzing image",
-                formattedText: {
-                    lines: [],
-                    sections: []
-                }
+                rawText: "Error analyzing image"
             },
             imageQuality: {
                 quality: 'poor' as const,
