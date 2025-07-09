@@ -270,194 +270,157 @@ export async function handleMediaMessage(
 
         // Handle different media types
         if (messageInfo.type === 'image') {
-            let shouldContinueProcessing = true;
-            
-            // Check for stored message ID
             if (!storedMessageId) {
-                shouldContinueProcessing = false;
                 logWarning('Stored message not found, cannot process image', {
                     messageId: messageInfo.id,
                     from: messageInfo.from,
                     operation: 'handleMediaMessage'
                 });
+                await sendErrorResponse(
+                    whatsappClient,
+                    messageInfo.from,
+                    'I received your image but couldn\'t process it right now. Please try sending it again.',
+                    new Error('Stored message ID not available for image processing')
+                );
+                return;
+            }
+
+            // Process the image and wait for the URL
+            const mediaResult = await processAndStoreMediaSafely(mediaUploadService, message, storedMessageId, messageInfo.from);
+            const imageUrl = mediaResult.success ? mediaResult.storedUrl : null;
+
+            // Update the stored message with the image URL for UI rendering
+            if (imageUrl && storedMessageId) {
                 try {
-                    await sendAndStoreTextReply(
-                        whatsappClient,
-                        databaseService,
-                        messageInfo.from,
-                        'I received your image but couldn\'t process it right now. Please try sending it again.',
-                        conversationId,
-                        messageInfo.id
-                    );
-                } catch (replyError) {
-                    logError('Failed to send stored message error response', replyError as Error, {
+                    await databaseService.updateMessageWithMediaUrl(storedMessageId, imageUrl);
+                    logInfo('Updated message with image URL for UI rendering', {
                         messageId: messageInfo.id,
-                        from: messageInfo.from,
-                        operation: 'handleMediaMessage:stored_message_error'
+                        storedMessageId,
+                        imageUrl: imageUrl.substring(0, 100) + '...',
+                        operation: 'handleMediaMessage'
                     });
-                    // Use error response as final fallback
-                    await sendErrorResponse(
-                        whatsappClient,
-                        messageInfo.from,
-                        'I\'m having trouble processing your image. Please try again in a moment.',
-                        replyError
-                    );
+                } catch (updateError) {
+                    logWarning('Failed to update message with image URL', {
+                        messageId: messageInfo.id,
+                        storedMessageId,
+                        error: updateError instanceof Error ? updateError.message : String(updateError),
+                        operation: 'handleMediaMessage'
+                    });
                 }
             }
 
-            if (shouldContinueProcessing) {
-                // Process the image and wait for the URL
-                const mediaResult = await processAndStoreMediaSafely(mediaUploadService, message, storedMessageId!, messageInfo.from);
-                const imageUrl = mediaResult.success ? mediaResult.storedUrl : null;
+            // Analyze the image directly if URL is available
+            let imageAnalysisResults = null;
+            if (imageUrl) {
+                const analysisResult = await processImageAnalysis(
+                    imageUrl,
+                    messageInfo.from,
+                    messageInfo.id,
+                    messageInfo.mediaInfo?.caption
+                );
+                imageAnalysisResults = analysisResult.success ? analysisResult.analysisResults : null;
+            }
 
-                // Update the stored message with the image URL for UI rendering
-                if (imageUrl && storedMessageId) {
-                    try {
-                        await databaseService.updateMessageWithMediaUrl(storedMessageId, imageUrl);
-                        logInfo('Updated message with image URL for UI rendering', {
-                            messageId: messageInfo.id,
-                            storedMessageId,
-                            imageUrl: imageUrl.substring(0, 100) + '...',
-                            operation: 'handleMediaMessage'
-                        });
-                    } catch (updateError) {
-                        logWarning('Failed to update message with image URL', {
-                            messageId: messageInfo.id,
-                            storedMessageId,
-                            error: updateError instanceof Error ? updateError.message : String(updateError),
-                            operation: 'handleMediaMessage'
-                        });
+            // Prepare text content for agent - include extracted text if available
+            const caption = messageInfo.mediaInfo?.caption ?? null;
+            const agentContent = generateImageAgentContent(imageUrl ?? null, imageAnalysisResults, caption as string | null);
+
+            let response: string;
+
+            try {
+                // Get user and conversation for proper memory context
+                const user = await databaseService.getOrCreateUser(messageInfo.from);
+                const userName = user.profileName || user.phoneNumber || messageInfo.from;
+                const conversation = await databaseService.getOrCreateConversation(user._id, userName);
+
+                // Create runtime context with memory context for tools
+                const runtimeContext = new RuntimeContext<{
+                    userId: string;
+                    conversationId: string;
+                    phoneNumber: string;
+                }>();
+                runtimeContext.set('userId', user._id);
+                runtimeContext.set('conversationId', conversation._id);
+                runtimeContext.set('phoneNumber', messageInfo.from);
+
+                // Process image with exchange agent for receipt analysis
+                const agent = mastra.getAgent('whatsappAgent');
+                const agentResponse = await agent.generate([
+                    {
+                        role: 'user',
+                        content: agentContent,
                     }
-                }
+                ], {
+                    memory: {
+                        thread: `whatsapp-${messageInfo.from}`,
+                        resource: messageInfo.from,
+                    },
+                    runtimeContext,
+                    temperature: HANDLE_IMAGE_AGENT_TEMPRETURE,
+                });
 
-                // Analyze the image directly if URL is available
-                let imageAnalysisResults = null;
-                if (imageUrl) {
-                    const analysisResult = await processImageAnalysis(
-                        imageUrl,
-                        messageInfo.from,
-                        messageInfo.id,
-                        messageInfo.mediaInfo?.caption
-                    );
-                    imageAnalysisResults = analysisResult.success ? analysisResult.analysisResults : null;
-                }
+                response = agentResponse.text || 'Got your receipt! 📸 Let me analyze the details...';
 
-                // Prepare text content for agent - include extracted text if available
-                const caption = messageInfo.mediaInfo?.caption ?? null;
-                const agentContent = generateImageAgentContent(imageUrl ?? null, imageAnalysisResults, caption as string | null);
+                logInfo('Generated exchange agent response for image', {
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    responseLength: response.length,
+                    threadId: `whatsapp-${messageInfo.from}`,
+                    hasImageUrl: !!imageUrl,
+                    hasToolCalls: agentResponse.toolCalls && agentResponse.toolCalls.length > 0,
+                    toolCallsCount: agentResponse.toolCalls?.length || 0,
+                    operation: 'handleMediaMessage'
+                });
 
-                let response: string;
+            } catch (agentError) {
+                const agentErrorMessage = agentError instanceof Error ? agentError.message : 'Unknown agent error';
 
-                try {
-                    // Get user and conversation for proper memory context
-                    const user = await databaseService.getOrCreateUser(messageInfo.from);
-                    const userName = user.profileName || user.phoneNumber || messageInfo.from;
-                    const conversation = await databaseService.getOrCreateConversation(user._id, userName);
+                logError('Exchange agent failed to process image message', agentError as Error, {
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    hasImageUrl: !!imageUrl,
+                    imageUrl: imageUrl ? 'provided' : 'missing',
+                    threadId: `whatsapp-${messageInfo.from}`,
+                    agentErrorMessage,
+                    operation: 'handleMediaMessage',
+                    fallbackUsed: true
+                });
 
-                    // Create runtime context with memory context for tools
-                    const runtimeContext = new RuntimeContext<{
-                        userId: string;
-                        conversationId: string;
-                        phoneNumber: string;
-                    }>();
-                    runtimeContext.set('userId', user._id);
-                    runtimeContext.set('conversationId', conversation._id);
-                    runtimeContext.set('phoneNumber', messageInfo.from);
+                // Fallback response when agent fails for images - use test mode formatting if enabled
+                response = formatErrorForTestMode(agentError, {
+                    operation: 'handleMediaMessage',
+                    messageId: messageInfo.id,
+                    from: messageInfo.from,
+                    hasImageUrl: !!imageUrl,
+                    imageUrl: imageUrl ? 'provided' : 'missing',
+                    threadId: `whatsapp-${messageInfo.from}`,
+                    errorType: 'agent_error_media'
+                });
 
-                    // Process image with exchange agent for receipt analysis
-                    const agent = mastra.getAgent('whatsappAgent');
-                    const agentResponse = await agent.generate([
-                        {
-                            role: 'user',
-                            content: agentContent,
-                        }
-                    ], {
-                        memory: {
-                            thread: `whatsapp-${messageInfo.from}`,
-                            resource: messageInfo.from,
-                        },
-                        runtimeContext,
-                        temperature: HANDLE_IMAGE_AGENT_TEMPRETURE,
-                    });
-
-                    response = agentResponse.text || 'Got your receipt! 📸 Let me analyze the details...';
-
-                    logInfo('Generated exchange agent response for image', {
-                        messageId: messageInfo.id,
-                        from: messageInfo.from,
-                        responseLength: response.length,
-                        threadId: `whatsapp-${messageInfo.from}`,
-                        hasImageUrl: !!imageUrl,
-                        hasToolCalls: agentResponse.toolCalls && agentResponse.toolCalls.length > 0,
-                        toolCallsCount: agentResponse.toolCalls?.length || 0,
-                        operation: 'handleMediaMessage'
-                    });
-
-                } catch (agentError) {
-                    const agentErrorMessage = agentError instanceof Error ? agentError.message : 'Unknown agent error';
-
-                    logError('Exchange agent failed to process image message', agentError as Error, {
-                        messageId: messageInfo.id,
-                        from: messageInfo.from,
-                        hasImageUrl: !!imageUrl,
-                        imageUrl: imageUrl ? 'provided' : 'missing',
-                        threadId: `whatsapp-${messageInfo.from}`,
-                        agentErrorMessage,
-                        operation: 'handleMediaMessage',
-                        fallbackUsed: true
-                    });
-
-                    // Fallback response when agent fails for images - use test mode formatting if enabled
-                    response = formatErrorForTestMode(agentError, {
-                        operation: 'handleMediaMessage',
-                        messageId: messageInfo.id,
-                        from: messageInfo.from,
-                        hasImageUrl: !!imageUrl,
-                        imageUrl: imageUrl ? 'provided' : 'missing',
-                        threadId: `whatsapp-${messageInfo.from}`,
-                        errorType: 'agent_error_media'
-                    });
-
-                    // If not in test mode, use friendly fallback
-                    if (!TEST_MODE) {
-                        response = imageUrl ?
-                            'I received your receipt image but had trouble analyzing it. Could you try sending it again or provide the transaction details as text?' :
-                            'I had trouble processing your image. Could you try sending it again or send me the transaction details as text?';
-                    }
-                }
-
-                try {
-                    await sendAndStoreTextReply(
-                        whatsappClient,
-                        databaseService,
-                        messageInfo.from,
-                        response,
-                        conversationId,
-                        messageInfo.id
-                    );
-
-                    logSuccess('Image receipt processed successfully with vision analysis', {
-                        messageId: messageInfo.id,
-                        from: messageInfo.from,
-                        hasImageUrl: !!imageUrl,
-                        imageUrl: imageUrl ? 'provided' : 'missing',
-                        operation: 'handleMediaMessage'
-                    });
-                } catch (replyError) {
-                    logError('Failed to send image processing response', replyError as Error, {
-                        messageId: messageInfo.id,
-                        from: messageInfo.from,
-                        operation: 'handleMediaMessage:send_reply'
-                    });
-                    // Use error response as final fallback
-                    await sendErrorResponse(
-                        whatsappClient,
-                        messageInfo.from,
-                        'I had trouble sending my analysis of your image. Please try again in a moment.',
-                        replyError
-                    );
+                // If not in test mode, use friendly fallback
+                if (!TEST_MODE) {
+                    response = imageUrl ?
+                        'I received your receipt image but had trouble analyzing it. Could you try sending it again or provide the transaction details as text?' :
+                        'I had trouble processing your image. Could you try sending it again or send me the transaction details as text?';
                 }
             }
+
+            await sendAndStoreTextReply(
+                whatsappClient,
+                databaseService,
+                messageInfo.from,
+                response,
+                conversationId,
+                messageInfo.id
+            );
+
+            logSuccess('Image receipt processed successfully with vision analysis', {
+                messageId: messageInfo.id,
+                from: messageInfo.from,
+                hasImageUrl: !!imageUrl,
+                imageUrl: imageUrl ? 'provided' : 'missing',
+                operation: 'handleMediaMessage'
+            });
 
         } else {
             // For other media types, do not process, just inform user.
@@ -467,40 +430,25 @@ export async function handleMediaMessage(
                 from: messageInfo.from,
             });
 
-            try {
-                // Handle unsupported media types
-                const response = `Hey! I can only work with text messages and images right now 📱
+            // Handle unsupported media types
+            const response = `Hey! I can only work with text messages and images right now 📱
 Send me a text or share your payment receipt as an image, and I'll help you out! 😊`;
 
-                await sendAndStoreTextReply(
-                    whatsappClient,
-                    databaseService,
-                    messageInfo.from,
-                    response,
-                    conversationId,
-                    messageInfo.id
-                );
+            await sendAndStoreTextReply(
+                whatsappClient,
+                databaseService,
+                messageInfo.from,
+                response,
+                conversationId,
+                messageInfo.id
+            );
 
-                logInfo('Unsupported media type handled', {
-                    messageType: messageInfo.type,
-                    messageId: messageInfo.id,
-                    from: messageInfo.from,
-                    operation: 'handleMediaMessage'
-                });
-            } catch (replyError) {
-                logError('Failed to send unsupported media type response', replyError as Error, {
-                    messageId: messageInfo.id,
-                    from: messageInfo.from,
-                    operation: 'handleMediaMessage:unsupported_media'
-                });
-                // Use error response as final fallback
-                await sendErrorResponse(
-                    whatsappClient,
-                    messageInfo.from,
-                    'I\'m having trouble processing your media. Please try sending a text message or image instead.',
-                    replyError
-                );
-            }
+            logInfo('Unsupported media type handled', {
+                messageType: messageInfo.type,
+                messageId: messageInfo.id,
+                from: messageInfo.from,
+                operation: 'handleMediaMessage'
+            });
         }
 
     } catch (error) {
