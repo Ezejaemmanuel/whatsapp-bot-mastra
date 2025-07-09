@@ -56,7 +56,7 @@ const memory = new Memory({
         outputDimensionality: 768, // Optional: adjust dimensions
     }),
     options: {
-        lastMessages: 4, // Increased to capture more conversation context
+        lastMessages: 12, // Increased to capture more conversation context
         semanticRecall: {
             topK: 5, // Increased for better context retrieval
             messageRange: 3, // Enhanced context range
