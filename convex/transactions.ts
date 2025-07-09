@@ -244,6 +244,32 @@ export const cancelTransaction = mutation({
 });
 
 /**
+ * Mark a transaction as read
+ */
+export const markTransactionAsRead = mutation({
+    args: {
+        transactionId: v.id("transactions"),
+    },
+    handler: async (ctx, args) => {
+        const transaction = await ctx.db.get(args.transactionId);
+        if (!transaction) {
+            throw new Error("Transaction not found");
+        }
+
+        if (transaction.isRead) {
+            // Already read, no need to update
+            return;
+        }
+
+        return await ctx.db.patch(args.transactionId, {
+            isRead: true,
+            lastReadAt: Date.now(),
+        });
+    },
+});
+
+
+/**
  * Get transaction statistics
  */
 export const getTransactionStats = query({

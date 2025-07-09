@@ -287,7 +287,7 @@ const TransactionCard: React.FC<TransactionCardProps> = ({
 }) => (
   <div
     onClick={() => onSelect(transaction._id)}
-    className={`rounded-lg mb-2 transition-all duration-200 ${isSelected ? 'bg-whatsapp-active shadow-md' : 'bg-whatsapp-bg hover:bg-whatsapp-hover'}`}
+    className={`rounded-lg mb-2 transition-all duration-200 ${isSelected ? 'bg-whatsapp-active shadow-md' : 'bg-whatsapp-bg hover:bg-whatsapp-hover'} ${!transaction.isRead ? 'border-l-4 border-whatsapp-unread' : ''}`}
   >
     <div className="p-3 cursor-pointer">
       <div className="flex items-start gap-3">

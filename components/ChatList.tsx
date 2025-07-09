@@ -19,7 +19,7 @@ interface ChatListProps {
   onChatSelect: (chatId: Id<"conversations">) => void;
   isMobile?: boolean;
   activeTab?: string;
-  onTabChange?: (tab: 'chats' | 'transactions' | 'settings' | 'calls') => void;
+  onTabChange?: (tab: 'chats' | 'transactions' | 'settings' | 'calls' | 'updates') => void;
 }
 
 export const ChatList: React.FC<ChatListProps> = ({
@@ -158,49 +158,6 @@ export const ChatList: React.FC<ChatListProps> = ({
           )}
         </div>
       </ScrollArea>
-
-      {/* Mobile Bottom Navigation */}
-      {isMobile && (
-        <div className="border-t border-whatsapp-border bg-whatsapp-panel-bg flex-shrink-0">
-          <div className="flex items-center justify-around py-2">
-            <Button variant="ghost" className="flex flex-col items-center gap-1 text-whatsapp-text-muted">
-              <div className="w-6 h-6 bg-whatsapp-primary rounded-full"></div>
-              <span className="text-xs">Updates</span>
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => onTabChange?.('calls')}
-              className="flex flex-col items-center gap-1 text-whatsapp-text-muted"
-            >
-              <Phone className="w-6 h-6" />
-              <span className="text-xs">Calls</span>
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => onTabChange?.('transactions')}
-              className="flex flex-col items-center gap-1 text-whatsapp-text-muted"
-            >
-              <Receipt className="w-6 h-6" />
-              <span className="text-xs">Transactions</span>
-            </Button>
-            <div className="flex flex-col items-center gap-1 text-whatsapp-primary relative">
-              <MessageCircle className="w-6 h-6" />
-              <span className="text-xs">Chats</span>
-              <Badge className="bg-whatsapp-unread text-white text-xs min-w-[20px] h-5 flex items-center justify-center rounded-full absolute -top-1 -right-1">
-                8
-              </Badge>
-            </div>
-            <Button
-              variant="ghost"
-              onClick={() => onTabChange?.('settings')}
-              className="flex flex-col items-center gap-1 text-whatsapp-text-muted"
-            >
-              <Settings className="w-6 h-6" />
-              <span className="text-xs">Settings</span>
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

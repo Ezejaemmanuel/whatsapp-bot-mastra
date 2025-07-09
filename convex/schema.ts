@@ -139,6 +139,8 @@ export default defineSchema({
         createdAt: v.number(), // Transaction creation timestamp
         updatedAt: v.number(), // Last update timestamp
         metadata: v.optional(v.any()), // Additional transaction metadata
+        isRead: v.optional(v.boolean()), // Whether the transaction has been read by an admin/agent
+        lastReadAt: v.optional(v.number()), // Timestamp when it was last read
     })
         .index("by_user_id", ["userId"])
         .index("by_conversation_id", ["conversationId"])

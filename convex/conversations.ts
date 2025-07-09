@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { ConversationStatusUnion, ConversationStatus, InChargeUnion, InCharge } from "./schemaUnions";
+import { ConversationStatusUnion, ConversationStatus, InChargeUnion, InCharge, MessageStatusUnion, MessageStatus } from "./schemaUnions";
 
 /**
  * Get or create a conversation for a user
@@ -201,9 +201,33 @@ export const markConversationAsRead = mutation({
         conversationId: v.id("conversations"),
     },
     handler: async (ctx, args) => {
+        // Reset unread count on the conversation
         await ctx.db.patch(args.conversationId, {
             unreadCount: 0,
         });
+
+        // Find all unread inbound messages for this conversation
+        const unreadMessages = await ctx.db
+            .query("messages")
+            .withIndex("by_conversation_id", (q) =>
+                q.eq("conversationId", args.conversationId)
+            )
+            .filter((q) =>
+                q.and(
+                    q.eq(q.field("direction"), "inbound"),
+                    q.neq(q.field("status"), "read" as MessageStatus)
+                )
+            )
+            .collect();
+
+        // Mark all of them as read
+        await Promise.all(
+            unreadMessages.map((message) =>
+                ctx.db.patch(message._id, {
+                    status: "read" as MessageStatus,
+                })
+            )
+        );
     },
 });
 

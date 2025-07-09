@@ -6,7 +6,7 @@ import profileAvatar from '@/assets/avatar-male-1.jpg';
 
 interface SideNavigationProps {
   activeTab: string;
-  onTabChange: (tab: 'chats' | 'transactions' | 'settings' | 'calls') => void;
+  onTabChange: (tab: 'chats' | 'transactions' | 'settings' | 'calls' | 'updates') => void;
 }
 
 export const SideNavigation: React.FC<SideNavigationProps> = ({ activeTab, onTabChange }) => {
@@ -36,7 +36,7 @@ export const SideNavigation: React.FC<SideNavigationProps> = ({ activeTab, onTab
               key={item.id}
               variant="ghost"
               size="icon"
-              onClick={() => onTabChange(item.id as 'chats' | 'transactions' | 'settings' | 'calls')}
+              onClick={() => onTabChange(item.id as 'chats' | 'transactions' | 'settings' | 'calls' | 'updates')}
               className={`w-10 h-10 mx-auto relative ${isActive
                 ? 'text-whatsapp-primary bg-whatsapp-hover'
                 : 'text-whatsapp-text-muted hover:text-whatsapp-text-secondary hover:bg-whatsapp-hover'
