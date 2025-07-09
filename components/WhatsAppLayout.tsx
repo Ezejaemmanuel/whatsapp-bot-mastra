@@ -416,13 +416,20 @@ const WhatsAppLayoutContent: React.FC = () => {
                 <div className="space-y-1">
                   <p className="text-whatsapp-text-muted text-sm">Receipt</p>
                   <div className="bg-whatsapp-panel-bg p-2 rounded-lg border border-whatsapp-divider">
-                    <Image
-                      src={selectedTransaction.receiptImageUrl}
-                      alt="Transaction Receipt"
-                      width={500}
-                      height={300}
-                      className="rounded-md max-w-full h-auto"
-                    />
+                    {(() => {
+                      console.log('Receipt Image URL:', selectedTransaction.receiptImageUrl);
+                      console.log('Receipt Image URL type:', typeof selectedTransaction.receiptImageUrl);
+                      console.log('Receipt Image URL length:', selectedTransaction.receiptImageUrl?.length);
+                      return (
+                        <Image
+                          src={selectedTransaction.receiptImageUrl}
+                          alt="Transaction Receipt"
+                          width={500}
+                          height={300}
+                          className="rounded-md max-w-full h-auto"
+                        />
+                      );
+                    })()}
                   </div>
                 </div>
               )}
