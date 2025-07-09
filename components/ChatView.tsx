@@ -6,7 +6,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { usePaginatedQuery, useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { Id } from '@/convex/_generated/dataModel';
+import { Id, Doc } from '@/convex/_generated/dataModel';
 import avatarMale1 from '@/assets/avatar-male-1.jpg';
 import Image from 'next/image';
 import { useWhatsAppStore } from '@/lib/store';
@@ -235,7 +235,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
             <div ref={loadMoreRef} className="h-1" />
           )}
 
-          {messages.map((msg: any, index: number) => {
+          {messages.map((msg: Doc<"messages">, index: number) => {
             const prevMsg = messages[index - 1];
             const isOwn = msg.senderRole === 'admin' || msg.senderRole === 'bot';
             const isConsecutive = prevMsg && prevMsg.senderRole === msg.senderRole;
