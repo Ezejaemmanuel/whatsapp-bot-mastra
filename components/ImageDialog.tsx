@@ -15,7 +15,7 @@ export const ImageDialog: React.FC = () => {
 
     return (
         <Dialog open={imageDialog.isOpen} onOpenChange={closeImageDialog}>
-            <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/90 border-none">
+            <DialogContent className="p-0 bg-black/90 border-none w-screen h-screen max-w-full max-h-full sm:max-w-[95vw] sm:max-h-[95vh] sm:rounded-lg">
                 <DialogHeader className="absolute top-4 left-4 right-4 z-10">
                     <div className="flex items-center justify-between">
                         <DialogTitle className="text-white text-lg">
@@ -31,14 +31,14 @@ export const ImageDialog: React.FC = () => {
                         </Button>
                     </div>
                 </DialogHeader>
-                <div className="flex items-center justify-center w-full h-full p-4">
+                <div className="flex items-center justify-center w-full h-full p-4 pt-16 sm:pt-4">
                     {imageDialog.imageUrl && (
                         <Image
                             src={imageDialog.imageUrl}
                             alt={imageDialog.title || 'Full Size Image'}
                             width={1200}
                             height={800}
-                            className="max-w-full max-h-full object-contain rounded-lg"
+                            className="max-w-full max-h-full object-contain"
                             priority
                         />
                     )}

@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Doc, Id } from '@/convex/_generated/dataModel';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
     Select,
     SelectContent,
@@ -14,9 +14,11 @@ import {
 } from "@/components/ui/select";
 import { MarkdownText } from '@/components/MarkdownText';
 import { ClickableImage } from '@/components/ClickableImage';
+import { Button } from '@/components/ui/button';
 
 interface TransactionDetailViewProps {
     transaction: Doc<"transactions"> & {
+        receiptImageUrls?: string[];
         user?: {
             profileName?: string;
             phoneNumber?: string;
@@ -38,6 +40,21 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
     isMobile = false,
 }) => {
     const updateTransactionStatus = useMutation(api.transactions.updateTransactionStatus);
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+    const imageUrls = transaction.receiptImageUrls || [];
+
+    useEffect(() => {
+        setCurrentImageIndex(0);
+    }, [transaction._id]);
+
+    const handlePrevImage = () => {
+        setCurrentImageIndex((prev) => (prev === 0 ? imageUrls.length - 1 : prev - 1));
+    };
+
+    const handleNextImage = () => {
+        setCurrentImageIndex((prev) => (prev === imageUrls.length - 1 ? 0 : prev + 1));
+    };
 
     const handleUpdateTransactionStatus = async (
         transactionId: Id<"transactions">,
@@ -145,17 +162,31 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                     </div>
                 </div>
 
-                {transaction.receiptImageUrl && (
+                {(imageUrls.length > 0) && (
                     <div className="space-y-1 mt-4">
-                        <p className="text-whatsapp-text-muted text-sm">Receipt</p>
-                        <div className="bg-whatsapp-panel-bg p-2 rounded-lg border border-whatsapp-divider">
+                        <p className="text-whatsapp-text-muted text-sm">Receipts</p>
+                        <div className="bg-whatsapp-panel-bg p-2 rounded-lg border border-whatsapp-divider relative">
                             <ClickableImage
-                                src={transaction.receiptImageUrl}
-                                alt="Transaction Receipt"
-                                title="Receipt Image"
+                                src={imageUrls[currentImageIndex]}
+                                alt={`Transaction Receipt ${currentImageIndex + 1}`}
+                                title={`Receipt ${currentImageIndex + 1} of ${imageUrls.length}`}
                                 width={500}
                                 height={300}
+                                className="object-contain w-full h-auto"
                             />
+                            {imageUrls.length > 1 && (
+                                <>
+                                    <Button onClick={handlePrevImage} variant="ghost" size="icon" className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white">
+                                        <ChevronLeft className="w-6 h-6" />
+                                    </Button>
+                                    <Button onClick={handleNextImage} variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white">
+                                        <ChevronRight className="w-6 h-6" />
+                                    </Button>
+                                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
+                                        {currentImageIndex + 1} / {imageUrls.length}
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 )}
@@ -252,6 +283,35 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                     </div>
                 </div>
 
+                {(imageUrls.length > 0) && (
+                    <div className="col-span-2 space-y-2">
+                        <p className="text-whatsapp-text-muted">Receipts</p>
+                        <div className="bg-whatsapp-panel-bg p-4 rounded-lg border border-whatsapp-divider relative aspect-video">
+                            <ClickableImage
+                                src={imageUrls[currentImageIndex]}
+                                alt={`Transaction Receipt ${currentImageIndex + 1}`}
+                                title={`Receipt ${currentImageIndex + 1} of ${imageUrls.length}`}
+                                width={800}
+                                height={600}
+                                className="object-contain w-full h-full"
+                            />
+                            {imageUrls.length > 1 && (
+                                <>
+                                    <Button onClick={handlePrevImage} variant="ghost" size="icon" className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white">
+                                        <ChevronLeft className="w-6 h-6" />
+                                    </Button>
+                                    <Button onClick={handleNextImage} variant="ghost" size="icon" className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white">
+                                        <ChevronRight className="w-6 h-6" />
+                                    </Button>
+                                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
+                                        {currentImageIndex + 1} / {imageUrls.length}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 <div className="space-y-2">
                     <p className="text-whatsapp-text-muted text-sm">User Details</p>
                     <div className="bg-whatsapp-panel-bg p-4 rounded-lg space-y-3 text-sm">
@@ -305,24 +365,9 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                     </div>
                 )}
 
-                {transaction.receiptImageUrl && (
-                    <div className="space-y-1">
-                        <p className="text-whatsapp-text-muted text-sm">Receipt</p>
-                        <div className="bg-whatsapp-panel-bg p-2 rounded-lg border border-whatsapp-divider">
-                            <ClickableImage
-                                src={transaction.receiptImageUrl}
-                                alt="Transaction Receipt"
-                                title="Receipt Image"
-                                width={500}
-                                height={300}
-                            />
-                        </div>
-                    </div>
-                )}
-
                 {transaction.negotiationHistory && transaction.negotiationHistory.length > 0 && (
-                    <div className="space-y-1">
-                        <p className="text-whatsapp-text-muted text-sm">Negotiation History</p>
+                    <div className="space-y-2">
+                        <p className="text-whatsapp-text-muted">Negotiation History</p>
                         <div className="bg-whatsapp-panel-bg p-3 rounded-lg border border-whatsapp-divider max-h-40 overflow-y-auto space-y-2 text-xs">
                             {transaction.negotiationHistory.map((item, index) => (
                                 <div key={index} className="p-2 bg-whatsapp-bg rounded-md">

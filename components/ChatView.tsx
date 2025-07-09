@@ -117,7 +117,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-whatsapp-chat-bg whatsapp-chat-pattern h-full overflow-hidden">
+    <div className="flex-1 flex flex-col bg-whatsapp-chat-bg whatsapp-chat-pattern h-full overflow-x-hidden">
       {/* Header */}
       <div className={`flex items-center gap-3 bg-whatsapp-panel-bg border-b border-whatsapp-border flex-shrink-0 ${isMobile ? 'px-4 py-3' : 'px-4 py-4'
         }`}>
@@ -203,10 +203,10 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
                       </div>
                     ) : null}
                     {msg.content && (
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
                     )}
                     {msg.messageType === 'image' && msg.caption && (
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap mt-1">{msg.caption}</p>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-words mt-1">{msg.caption}</p>
                     )}
                     <div className="flex items-center justify-end mt-1 gap-1">
                       <span className={`text-xs opacity-70 ${isOwn ? 'text-white' : 'text-whatsapp-text-muted'}`}>

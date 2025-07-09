@@ -105,10 +105,28 @@ export const getTransaction = query({
         const user = await ctx.db.get(transaction.userId);
         const conversation = await ctx.db.get(transaction.conversationId);
 
+        // Find the last 4 image messages in the conversation to use as receipts
+        const receiptImageMessages = await ctx.db
+            .query("messages")
+            .withIndex("by_conversation_id", (q) =>
+                q.eq("conversationId", transaction.conversationId)
+            )
+            .filter((q) => q.eq(q.field("messageType"), "image"))
+            .order("desc")
+            .take(4);
+
+        const receiptImageUrls = receiptImageMessages
+            .map((msg) => msg.mediaUrl)
+            .filter((url): url is string => !!url)
+            .reverse(); // Newest is last, so reverse to show oldest of the 4 first
+
+
         return {
             ...transaction,
             user,
             conversation,
+            receiptImageUrl: transaction.receiptImageUrl ?? receiptImageUrls[0],
+            receiptImageUrls: receiptImageUrls,
         };
     },
 });
