@@ -289,6 +289,26 @@ export async function handleMediaMessage(
             const mediaResult = await processAndStoreMediaSafely(mediaUploadService, message, storedMessageId, messageInfo.from);
             const imageUrl = mediaResult.success ? mediaResult.storedUrl : null;
 
+            // Update the stored message with the image URL for UI rendering
+            if (imageUrl && storedMessageId) {
+                try {
+                    await databaseService.updateMessageWithMediaUrl(storedMessageId, imageUrl);
+                    logInfo('Updated message with image URL for UI rendering', {
+                        messageId: messageInfo.id,
+                        storedMessageId,
+                        imageUrl: imageUrl.substring(0, 100) + '...',
+                        operation: 'handleMediaMessage'
+                    });
+                } catch (updateError) {
+                    logWarning('Failed to update message with image URL', {
+                        messageId: messageInfo.id,
+                        storedMessageId,
+                        error: updateError instanceof Error ? updateError.message : String(updateError),
+                        operation: 'handleMediaMessage'
+                    });
+                }
+            }
+
             // Analyze the image directly if URL is available
             let imageAnalysisResults = null;
             if (imageUrl) {

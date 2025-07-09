@@ -179,7 +179,7 @@ export async function analyzeImageDirectly(
    - Preserve exact formatting and line breaks
    - Maintain all numbers, symbols, and special characters
    - Keep dates and times in original format
-   - Extract account numbers and amounts precisely
+   - Extract any numbers and amounts precisely
 
 2. ORGANIZE TEXT:
    - Split into lines as shown in image

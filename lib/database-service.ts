@@ -276,6 +276,21 @@ export class DatabaseService {
     }
 
     /**
+     * Update message with media URL for UI rendering
+     */
+    async updateMessageWithMediaUrl(messageId: Id<"messages">, mediaUrl: string): Promise<void> {
+        try {
+            await fetchMutation(api.messages.updateMessageMediaUrl, {
+                messageId,
+                mediaUrl
+            });
+        } catch (error) {
+            console.error('Error in updateMessageWithMediaUrl:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Archive conversation
      */
     async archiveConversation(conversationId: Id<"conversations">): Promise<void> {

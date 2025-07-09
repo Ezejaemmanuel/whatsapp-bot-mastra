@@ -160,6 +160,22 @@ export const updateMessageStatus = mutation({
 });
 
 /**
+ * Update message with media URL
+ */
+export const updateMessageMediaUrl = mutation({
+    args: {
+        messageId: v.id("messages"),
+        mediaUrl: v.string(),
+    },
+    handler: async (ctx, args) => {
+        await ctx.db.patch(args.messageId, {
+            mediaUrl: args.mediaUrl,
+        });
+        return await ctx.db.get(args.messageId);
+    },
+});
+
+/**
  * Get recent media messages
  */
 export const getRecentMediaMessages = query({

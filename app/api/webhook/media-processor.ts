@@ -130,7 +130,7 @@ export async function processAndStoreMediaSafely(
 }
 
 /**
- * Process image analysis for receipt processing
+ * Process image analysis for OCR processing
  */
 export async function processImageAnalysis(
     imageUrl: string,
@@ -139,13 +139,13 @@ export async function processImageAnalysis(
     caption?: string
 ): Promise<{ success: boolean; analysisResults?: unknown; error?: string }> {
     try {
-        logInfo('Starting direct image analysis for receipt processing', {
+        logInfo('Starting direct image analysis for OCR processing', {
             messageId,
             from: userPhoneNumber,
             operation: 'processImageAnalysis'
         });
 
-        await sendDebugMessage(userPhoneNumber, 'STARTING DIRECT IMAGE ANALYSIS FOR RECEIPT PROCESSING', {
+        await sendDebugMessage(userPhoneNumber, 'STARTING DIRECT IMAGE ANALYSIS FOR OCR PROCESSING', {
             messageId,
             from: userPhoneNumber,
             operation: 'processImageAnalysis'
@@ -154,7 +154,7 @@ export async function processImageAnalysis(
         const imageAnalysisResults = await analyzeImageDirectly(
             imageUrl,
             userPhoneNumber,
-            `Receipt image from WhatsApp message. ${caption ? `User caption: ${caption}` : ''}`
+            `Image from WhatsApp message. ${caption ? `User caption: ${caption}` : 'No caption provided.'}`
         );
 
         await sendDebugMessage(userPhoneNumber, 'DIRECT IMAGE ANALYSIS COMPLETED SUCCESSFULLY', {
@@ -202,18 +202,18 @@ export function generateImageAgentContent(
 ): string {
     const results = imageAnalysisResults as any;
     if (imageUrl && results && results.ocrResults?.rawText) {
-        return `Customer sent a receipt image. I have extracted the following text from the image:
+        return `The user sent an image. I have extracted the following text from the image:
 
-EXTRACTED TEXT FROM RECEIPT:
+OCR EXTRACTED TEXT:
 ${results.ocrResults.rawText}
 
 IMAGE QUALITY: ${results.imageQuality?.quality} (confidence: ${results.imageQuality?.confidence})
 ${results.imageQuality?.issues?.length ? `Issues: ${results.imageQuality.issues.join(', ')}` : ''}
 
-Please help the customer with their currency exchange based on this receipt information.${caption ? `\n\nCustomer's caption: ${caption}` : ''}`;
+Please help the user based on this image and extracted text.${caption ? `\n\nUser's caption: ${caption}` : ''}`;
     } else if (imageUrl) {
-        return `Customer sent a receipt image but I couldn't extract the text from it. Please help them by asking for the transaction details manually.${caption ? `\n\nCustomer's caption: ${caption}` : ''}`;
+        return `The user sent an image but I couldn't extract any text from it. Please help them by asking for details about what they need assistance with.${caption ? `\n\nUser's caption: ${caption}` : ''}`;
     } else {
-        return `Customer sent a receipt image but it couldn't be processed. ${caption ? `Caption: ${caption}` : ''} Please help them resolve this issue.`;
+        return `The user sent an image but it couldn't be processed. ${caption ? `Caption: ${caption}` : ''} Please help them resolve this issue.`;
     }
 } 

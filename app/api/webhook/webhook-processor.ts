@@ -119,6 +119,30 @@ export async function processIncomingMessage(
         return;
     }
 
+    // Check for duplicate messages before processing
+    try {
+        const existingMessage = await databaseService.getMessageByWhatsAppId(message.id);
+        if (existingMessage) {
+            logInfo('Ignoring duplicate message', {
+                messageId: message.id,
+                from: message.from,
+                type: message.type,
+                existingMessageId: existingMessage._id,
+                existingTimestamp: existingMessage.timestamp,
+                operation: 'processIncomingMessage:duplicate_check'
+            });
+            return; // Exit early for duplicate messages
+        }
+    } catch (duplicateCheckError) {
+        logWarning('Failed to check for duplicate messages, continuing with processing', {
+            messageId: message.id,
+            from: message.from,
+            error: duplicateCheckError instanceof Error ? duplicateCheckError.message : String(duplicateCheckError),
+            operation: 'processIncomingMessage:duplicate_check'
+        });
+        // Continue processing even if duplicate check fails
+    }
+
     let messageInfo: ReturnType<typeof extractMessageInfo>;
     let user: User;
     let conversation: Conversation;
