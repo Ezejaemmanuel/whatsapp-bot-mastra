@@ -419,6 +419,7 @@ export function extractRequestMetadata(request: Request): {
 
 /**
  * Create error response with proper typing
+ * Always returns HTTP 200 to prevent Meta from retrying webhooks
  */
 export function createErrorResponse(
     message: string,
@@ -427,22 +428,25 @@ export function createErrorResponse(
 ): NextResponse {
     logWebhookEvent('ERROR', message, { statusCode, details });
 
-    return new NextResponse(message, {
-        status: statusCode,
-        headers: {
-            'Content-Type': 'text/plain'
-        }
+    return NextResponse.json({
+        message,
+        originalStatusCode: statusCode,
+        details,
+        status: 'acknowledged_with_error'
+    }, {
+        status: 200
     });
 }
 
 /**
  * Create success response
+ * Always returns HTTP 200 with JSON format
  */
 export function createSuccessResponse(message: string = 'OK'): NextResponse {
-    return new NextResponse(message, {
-        status: 200,
-        headers: {
-            'Content-Type': 'text/plain'
-        }
+    return NextResponse.json({
+        message,
+        status: 'acknowledged'
+    }, {
+        status: 200
     });
 } 

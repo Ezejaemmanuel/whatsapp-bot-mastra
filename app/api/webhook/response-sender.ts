@@ -6,6 +6,7 @@ import { MessageType } from '@/convex/schemaUnions';
 
 /**
  * Send a text reply to a message
+ * Now handles errors gracefully without throwing to ensure HTTP 200 response
  */
 export async function sendTextReply(
     whatsappClient: WhatsAppCloudApiClient,
@@ -42,12 +43,13 @@ export async function sendTextReply(
             isReply: !!replyToMessageId,
             operation: 'sendTextReply'
         });
-        throw error;
+        // Don't throw - let the main route return HTTP 200
     }
 }
 
 /**
  * Send a template message
+ * Now handles errors gracefully without throwing to ensure HTTP 200 response
  */
 export async function sendTemplateMessage(
     whatsappClient: WhatsAppCloudApiClient,
@@ -79,7 +81,7 @@ export async function sendTemplateMessage(
             languageCode,
             operation: 'sendTemplateMessage'
         });
-        throw error;
+        // Don't throw - let the main route return HTTP 200
     }
 }
 
@@ -120,6 +122,7 @@ export async function markMessageAsRead(
 
 /**
  * Store outgoing message in database
+ * Now handles errors gracefully without throwing to ensure HTTP 200 response
  */
 export async function storeOutgoingMessage(
     databaseService: DatabaseService,
@@ -159,12 +162,13 @@ export async function storeOutgoingMessage(
             conversationId,
             operation: 'storeOutgoingMessage'
         });
-        throw error;
+        // Don't throw - let the main route return HTTP 200
     }
 }
 
 /**
  * Send text reply and store in database
+ * Now handles errors gracefully without throwing to ensure HTTP 200 response
  */
 export async function sendAndStoreTextReply(
     whatsappClient: WhatsAppCloudApiClient,
@@ -174,19 +178,30 @@ export async function sendAndStoreTextReply(
     conversationId: Id<"conversations">,
     replyToMessageId?: string
 ): Promise<void> {
-    // Send the message
-    await sendTextReply(whatsappClient, to, text, replyToMessageId);
+    try {
+        // Send the message
+        await sendTextReply(whatsappClient, to, text, replyToMessageId);
 
-    // Store in database
-    await storeOutgoingMessage(
-        databaseService,
-        to,
-        'text',
-        text,
-        conversationId,
-        'bot',
-        'Bot',
-        undefined,
-        replyToMessageId
-    );
+        // Store in database
+        await storeOutgoingMessage(
+            databaseService,
+            to,
+            'text',
+            text,
+            conversationId,
+            'bot',
+            'Bot',
+            undefined,
+            replyToMessageId
+        );
+    } catch (error) {
+        logError('Failed to send and store text reply', error as Error, {
+            to,
+            textLength: text.length,
+            conversationId,
+            replyToMessageId,
+            operation: 'sendAndStoreTextReply'
+        });
+        // Don't throw - let the main route return HTTP 200
+    }
 } 

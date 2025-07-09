@@ -117,7 +117,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
         if (verificationResult.success && verificationResult.response) {
             logWebhookEvent('INFO', 'Webhook verification successful');
-            return new NextResponse(verificationResult.response, { status: 200 });
+            return NextResponse.json({ message: 'Verification successful', challenge: verificationResult.response }, { status: 200 });
         } else {
             logWebhookEvent('WARN', 'Webhook verification failed', {
                 expectedMode: 'subscribe',
@@ -125,7 +125,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
                 tokenMatch: token === VERIFY_TOKEN,
                 error: verificationResult.error
             });
-            return new NextResponse('Forbidden', { status: 403 });
+            // Still return 200 to prevent Meta from retrying
+            return NextResponse.json({ message: 'Verification failed', error: verificationResult.error }, { status: 200 });
         }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -135,7 +136,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
             error: errorMessage,
             stack: errorStack
         });
-        return new NextResponse('Internal Server Error', { status: 500 });
+        // Always return 200 to prevent Meta from retrying
+        return NextResponse.json({ message: 'Internal Server Error', error: errorMessage }, { status: 200 });
     }
 }
 
@@ -155,13 +157,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             logWebhookEvent('ERROR', 'WhatsApp service is not initialized', {
                 error: 'Service initialization failed during module load'
             });
-            return createErrorResponse('Service Not Initialized', 500);
+            // Return 200 to prevent Meta from retrying
+            return NextResponse.json({ message: 'Service Not Initialized', status: 'acknowledged' }, { status: 200 });
         }
 
         // Verify webhook signature if secret is configured
         if (WEBHOOK_SECRET && !verifyWebhookSignature(body, signature, WEBHOOK_SECRET)) {
             logWebhookEvent('ERROR', 'Webhook signature verification failed');
-            return createErrorResponse('Unauthorized', 401);
+            // Return 200 to prevent Meta from retrying
+            return NextResponse.json({ message: 'Unauthorized', status: 'acknowledged' }, { status: 200 });
         }
 
         // Parse the webhook payload
@@ -170,7 +174,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             logWebhookEvent('ERROR', 'Failed to parse webhook payload', {
                 rawBody: body.substring(0, 500) // Log first 500 chars for debugging
             });
-            return createErrorResponse('Bad Request - Invalid JSON', 400);
+            // Return 200 to prevent Meta from retrying
+            return NextResponse.json({ message: 'Bad Request - Invalid JSON', status: 'acknowledged' }, { status: 200 });
         }
 
         // Process and log the webhook data
@@ -257,7 +262,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                             stack: changeError instanceof Error ? changeError.stack : undefined,
                             changeValue: change.value
                         });
-                        // Continue to the next change in the loop
+                        // Continue to the next change in the loop - don't return early
                     }
                 }
             }
@@ -268,7 +273,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             logWebhookEvent('WARN', 'WhatsApp service processing failed', {
                 error: serviceErrorMessage
             });
-            // Continue processing even if service fails
+            // Continue processing even if service fails - don't return early
         }
 
         // Log detailed information about each entry
@@ -352,8 +357,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             status: 'success'
         });
 
-        // Return success response
-        return createSuccessResponse();
+        // Always return 200 success response to acknowledge receipt to Meta
+        return NextResponse.json({
+            message: 'Webhook processed successfully',
+            status: 'acknowledged',
+            processingTimeMs: processingTime
+        }, { status: 200 });
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -364,7 +373,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             stack: errorStack
         });
 
-        return createErrorResponse('Internal Server Error', 500);
+        // Always return 200 even for unexpected errors to prevent Meta from retrying
+        return NextResponse.json({
+            message: 'Internal Server Error',
+            error: errorMessage,
+            status: 'acknowledged_with_error'
+        }, { status: 200 });
     }
 }
 
@@ -373,15 +387,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
  */
 export async function PUT(): Promise<NextResponse> {
     logWebhookEvent('WARN', 'Unsupported method: PUT');
-    return new NextResponse('Method Not Allowed', { status: 405 });
+    return NextResponse.json({ message: 'Method Not Allowed', status: 'acknowledged' }, { status: 200 });
 }
 
 export async function DELETE(): Promise<NextResponse> {
     logWebhookEvent('WARN', 'Unsupported method: DELETE');
-    return new NextResponse('Method Not Allowed', { status: 405 });
+    return NextResponse.json({ message: 'Method Not Allowed', status: 'acknowledged' }, { status: 200 });
 }
 
 export async function PATCH(): Promise<NextResponse> {
     logWebhookEvent('WARN', 'Unsupported method: PATCH');
-    return new NextResponse('Method Not Allowed', { status: 405 });
+    return NextResponse.json({ message: 'Method Not Allowed', status: 'acknowledged' }, { status: 200 });
 } 

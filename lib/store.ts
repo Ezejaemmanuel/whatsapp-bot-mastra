@@ -87,6 +87,11 @@ interface UIState {
     chatFilter: 'all' | 'unread' | 'groups' | 'favorites';
     isTyping: boolean;
     onlineUsers: Set<string>;
+    imageDialog: {
+        isOpen: boolean;
+        imageUrl: string;
+        title?: string;
+    };
 }
 
 // Main store interface
@@ -124,6 +129,8 @@ interface WhatsAppStore {
     setChatFilter: (filter: 'all' | 'unread' | 'groups' | 'favorites') => void;
     setIsTyping: (isTyping: boolean) => void;
     setUserOnline: (userId: string, isOnline: boolean) => void;
+    openImageDialog: (imageUrl: string, title?: string) => void;
+    closeImageDialog: () => void;
 
     // Computed selectors
     getUserById: (userId: Id<"users">) => User | undefined;
@@ -147,6 +154,11 @@ export const useWhatsAppStore = create<WhatsAppStore>()(
                 chatFilter: 'all',
                 isTyping: false,
                 onlineUsers: new Set(),
+                imageDialog: {
+                    isOpen: false,
+                    imageUrl: '',
+                    title: undefined,
+                },
             },
 
             // User actions
@@ -244,6 +256,28 @@ export const useWhatsAppStore = create<WhatsAppStore>()(
                 };
             }),
 
+            openImageDialog: (imageUrl, title) => set((state) => ({
+                ui: {
+                    ...state.ui,
+                    imageDialog: {
+                        isOpen: true,
+                        imageUrl,
+                        title,
+                    }
+                }
+            })),
+
+            closeImageDialog: () => set((state) => ({
+                ui: {
+                    ...state.ui,
+                    imageDialog: {
+                        isOpen: false,
+                        imageUrl: '',
+                        title: undefined,
+                    }
+                }
+            })),
+
             // Selectors
             getUserById: (userId) => {
                 const state = get();
@@ -300,5 +334,7 @@ export const {
     setChatFilter,
     setIsTyping,
     setUserOnline,
-    handleBack
+    handleBack,
+    openImageDialog,
+    closeImageDialog
 } = useWhatsAppStore.getState();
