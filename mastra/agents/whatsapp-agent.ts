@@ -5,7 +5,6 @@ import { google } from '@ai-sdk/google';
 import { WHATSAPP_AGENT_NAME, WHATSAPP_AGENT_INSTRUCTIONS, GEMINI_MODEL } from './agent-instructions';
 import { getCurrentRatesTool, createTransactionTool, updateTransactionStatusTool } from '../tools/exchange-tools';
 import { getUserTransactionsTool, getLatestUserTransactionTool, getAdminBankDetailsTool, getUserTool, updateUserBankDetailsTool } from '../tools/exchange-tools-2';
-import { endTransactionAndResetMemoryTool } from '../tools/memory-reset-tool';
 
 
 const GOOGLE_GENERATIVE_AI_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
@@ -157,6 +156,5 @@ export const whatsappAgent = new Agent({
         getAdminBankDetailsTool,
         getUserTool,
         updateUserBankDetailsTool,
-        endTransactionAndResetMemoryTool,
     },
 }); 

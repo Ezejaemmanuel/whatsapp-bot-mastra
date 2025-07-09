@@ -49,6 +49,8 @@ export const endTransactionAndResetMemoryTool = createTool({
             // 5. Execute all deletion commands in one go
             await pipeline.exec();
 
+            
+
             return {
                 success: true,
                 message: 'Conversation history and working memory have been successfully deleted. Ready for a new conversation.'
