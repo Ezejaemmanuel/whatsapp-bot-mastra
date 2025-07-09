@@ -118,6 +118,7 @@ interface WhatsAppStore {
     setSelectedConversation: (conversationId: Id<"conversations">) => void;
     setSelectedTransaction: (transactionId: Id<"transactions">) => void;
     setActiveTab: (tab: 'chats' | 'transactions' | 'settings' | 'calls') => void;
+    handleBack: () => void;
     setIsMobile: (isMobile: boolean) => void;
     setSearchQuery: (query: string) => void;
     setChatFilter: (filter: 'all' | 'unread' | 'groups' | 'favorites') => void;
@@ -215,13 +216,13 @@ export const useWhatsAppStore = create<WhatsAppStore>()(
                 ui: { ...state.ui, activeTab: tab, selectedConversationId: undefined, selectedTransactionId: undefined }
             })),
 
-            setIsMobile: (isMobile) => set((state) => ({
-                ui: { ...state.ui, isMobile }
+            handleBack: () => set((state) => ({
+                ui: { ...state.ui, selectedConversationId: undefined, selectedTransactionId: undefined }
             })),
 
-            setSearchQuery: (query) => set((state) => ({
-                ui: { ...state.ui, searchQuery: query }
-            })),
+            setIsMobile: (isMobile) => set((state) => ({ ui: { ...state.ui, isMobile } })),
+
+            setSearchQuery: (query) => set((state) => ({ ui: { ...state.ui, searchQuery: query } })),
 
             setChatFilter: (filter) => set((state) => ({
                 ui: { ...state.ui, chatFilter: filter }
@@ -298,5 +299,6 @@ export const {
     setSearchQuery,
     setChatFilter,
     setIsTyping,
-    setUserOnline
+    setUserOnline,
+    handleBack
 } = useWhatsAppStore.getState();
