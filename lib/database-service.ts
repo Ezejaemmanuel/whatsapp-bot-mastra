@@ -230,21 +230,21 @@ export class DatabaseService {
         }
     }
 
-    /**
-     * Get conversation history
-     */
-    async getConversationHistory(conversationId: Id<"conversations">, limit: number = 50, offset: number = 0): Promise<Message[]> {
-        try {
-            return await fetchQuery(api.messages.getConversationHistory, {
-                conversationId,
-                limit,
-                offset
-            });
-        } catch (error) {
-            console.error('Error in getConversationHistory:', error);
-            throw error;
-        }
-    }
+    // /**
+    //  * Get conversation history
+    //  */
+    // async getConversationHistory(conversationId: Id<"conversations">, limit: number = 50, offset: number = 0): Promise<Message[]> {
+    //     try {
+    //         return await fetchQuery(api.messages.getConversationHistory, {
+    //             conversationId,
+    //             limit,
+    //             offset
+    //         });
+    //     } catch (error) {
+    //         console.error('Error in getConversationHistory:', error);
+    //         throw error;
+    //     }
+    // }
 
     /**
      * Get user conversations
