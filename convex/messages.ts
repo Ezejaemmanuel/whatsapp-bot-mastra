@@ -103,18 +103,19 @@ export const storeOutgoingMessage = mutation({
 export const getConversationHistory = query({
     args: {
         conversationId: v.id("conversations"),
-        limit: v.optional(v.number()),
-        offset: v.optional(v.number()),
+        paginationOpts: v.any(),
     },
     handler: async (ctx, args) => {
-        const limit = args.limit || 50;
         const messages = await ctx.db
             .query("messages")
             .withIndex("by_conversation_id", (q) => q.eq("conversationId", args.conversationId))
             .order("desc")
-            .take(limit);
+            .paginate(args.paginationOpts);
 
-        return messages.reverse(); // Return in chronological order
+        return {
+            ...messages,
+            page: messages.page.reverse(),
+        };
     },
 });
 

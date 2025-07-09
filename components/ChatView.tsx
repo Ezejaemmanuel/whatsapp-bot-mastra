@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Phone, Video, MoreVertical, Smile, Paperclip, Mic, Send, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Phone, Video, MoreVertical, Smile, Paperclip, Mic, Send, X, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useQuery, useMutation } from 'convex/react';
+import { usePaginatedQuery, useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import avatarMale1 from '@/assets/avatar-male-1.jpg';
 import Image from 'next/image';
+import { useWhatsAppStore } from '@/lib/store';
+import { useInView } from 'react-intersection-observer';
+
 
 interface ChatViewProps {
   chatId?: Id<"conversations">;
@@ -21,17 +24,73 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
   const [isRecording, setIsRecording] = useState(false);
   const [attachment, setAttachment] = useState<File | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [showNewMessageIndicator, setShowNewMessageIndicator] = useState(false);
+  const prevMessagesLength = useRef(0);
+
+  const { ref: loadMoreRef, inView: loadMoreInView } = useInView();
+
+
+  const { openImageDialog } = useWhatsAppStore();
 
   // Get conversation and messages from Convex
   const conversation = useQuery(api.conversations.getConversationById,
     chatId ? { conversationId: chatId } : "skip"
   );
-  const messages = useQuery(api.messages.getConversationHistory,
-    chatId ? { conversationId: chatId } : "skip"
+  const {
+    results: messages,
+    status: messagesStatus,
+    loadMore,
+  } = usePaginatedQuery(
+    api.messages.getConversationHistory,
+    chatId ? { conversationId: chatId } : "skip",
+    { initialNumItems: 20 }
   );
 
   // Mutations
   const storeMessage = useMutation(api.messages.storeOutgoingMessage);
+
+  // Effect to load more messages when the top is reached
+  useEffect(() => {
+    if (loadMoreInView) {
+      loadMore(20);
+    }
+  }, [loadMoreInView, loadMore]);
+
+  const scrollToBottom = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  };
+
+  // Effect to scroll to bottom on new messages
+  useEffect(() => {
+    const wasAtBottom = isAtBottom;
+
+    if (wasAtBottom) {
+      scrollToBottom();
+    }
+
+    if (messages.length > prevMessagesLength.current) {
+      if (!wasAtBottom) {
+        setShowNewMessageIndicator(true);
+      }
+    }
+    prevMessagesLength.current = messages.length;
+  }, [messages, isAtBottom]);
+
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    const atBottom = scrollHeight - scrollTop - clientHeight < 10;
+    setIsAtBottom(atBottom);
+    if (atBottom) {
+      setShowNewMessageIndicator(false);
+    }
+  };
+
 
   if (!chatId) {
     return (
@@ -164,9 +223,19 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
       </div>
 
       {/* Messages - Scrollable Area */}
-      <ScrollArea className="flex-1 whatsapp-scrollbar">
+      <div className="flex-1 overflow-y-auto whatsapp-scrollbar relative" ref={scrollRef} onScroll={handleScroll}>
         <div className="p-4 space-y-3">
-          {messages?.map((msg, index) => {
+          {messagesStatus === 'LoadingFirstPage' && (
+            <div className="flex justify-center items-center h-full">
+              <p>Loading messages...</p>
+            </div>
+          )}
+
+          {messagesStatus !== 'LoadingFirstPage' && (
+            <div ref={loadMoreRef} className="h-1" />
+          )}
+
+          {messages.map((msg: any, index: number) => {
             const prevMsg = messages[index - 1];
             const isOwn = msg.senderRole === 'admin' || msg.senderRole === 'bot';
             const isConsecutive = prevMsg && prevMsg.senderRole === msg.senderRole;
@@ -192,7 +261,10 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
                   )}
                   <div className="flex flex-col">
                     {msg.messageType === 'image' && msg.mediaUrl ? (
-                      <div className="relative w-64 h-64 mb-1">
+                      <div
+                        className="relative w-64 h-64 mb-1 cursor-pointer"
+                        onClick={() => openImageDialog(msg.mediaUrl as string, msg.caption || 'Image')}
+                      >
                         <Image
                           src={msg.mediaUrl}
                           alt={msg.caption || 'Image'}
@@ -226,7 +298,16 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
             );
           })}
         </div>
-      </ScrollArea>
+        {showNewMessageIndicator && (
+          <Button
+            variant="secondary"
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full h-10 w-10 p-2 shadow-lg"
+            onClick={scrollToBottom}
+          >
+            <ChevronDown className="h-6 w-6" />
+          </Button>
+        )}
+      </div>
 
       {/* Message Input */}
       <div className={`flex items-center gap-3 bg-whatsapp-panel-bg border-t border-whatsapp-border flex-shrink-0 ${isMobile ? 'px-3 py-2' : 'px-4 py-3'

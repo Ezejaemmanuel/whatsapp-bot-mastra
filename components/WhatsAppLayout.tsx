@@ -136,7 +136,7 @@ const WhatsAppLayoutContent: React.FC = () => {
 
   if (isMobile) {
     return (
-      <div className="h-screen bg-whatsapp-bg">
+      <div className="h-[100dvh] bg-whatsapp-bg">
         <div className="h-full pb-16 overflow-y-auto">
           {selectedConversationId ? (
             <ChatView chatId={selectedConversationId} onBack={handleBack} isMobile={true} />

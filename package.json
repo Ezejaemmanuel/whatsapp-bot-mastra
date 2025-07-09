@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prepare": "tailwindcss-patch",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -106,6 +107,7 @@
     "postcss": "^8.4.49",
     "swagger-typescript-api": "^13.2.4",
     "tailwindcss": "^3.4.15",
+    "tailwindcss-patch": "^7.1.1",
     "tsc-watch": "^7.1.1",
     "tsx": "^4.20.3",
     "typescript": "^5"

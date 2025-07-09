@@ -12,7 +12,7 @@ This project provides a complete WhatsApp Bot solution built with Next.js, Mastr
 
 ## 📁 Project Structure
 
-```
+`
 whatsapp-bot-mastra/
 ├── app/                          # Next.js app directory
 │   ├── mastra/                   # Mastra configuration
@@ -31,49 +31,49 @@ whatsapp-bot-mastra/
 ├── whatsapp-cloud-api-openapi.json   # OpenAPI specification (JSON)
 ├── whatsapp-cloud-api-openapi.yaml   # OpenAPI specification (YAML)
 └── WhatsApp-Cloud-API.postman_collection.json # Original Postman collection
-```
+`
 
 ## 🛠️ Installation
 
 1. **Clone the repository**
-   ```bash
+   `bash
    git clone <repository-url>
    cd whatsapp-bot-mastra
-   ```
+   `
 
 2. **Install dependencies**
-   ```bash
+   `bash
    pnpm install
-   ```
+   `
 
 3. **Generate API client** (if not already generated)
-   ```bash
+   `bash
    # Convert Postman collection to OpenAPI
    pnpm run convert:postman
    
    # Generate TypeScript API client
    pnpm run generate:api
-   ```
+   `
 
 ## 🚀 Quick Start
 
 ### 1. Development Server
 
-```bash
+`bash
 pnpm dev
-```
+`
 
 Open [http://localhost:3000](http://localhost:3000) to view the application.
 
 ### 2. Mastra Development
 
-```bash
+`bash
 pnpm run dev:mastra
-```
+`
 
 ### 3. Using the WhatsApp API Client
 
-```typescript
+`typescript
 import WhatsAppCloudApiClient from './src/whatsapp-client-example';
 
 // Initialize the client
@@ -96,7 +96,7 @@ await client.sendTemplateMessage({
   templateName: 'hello_world',
   languageCode: 'en_US'
 });
-```
+`
 
 ## 📚 API Documentation
 
@@ -114,15 +114,15 @@ The generated TypeScript client provides type-safe access to all WhatsApp Cloud 
 
 ### Available Scripts
 
-| Script | Description |
-|--------|-------------|
-| `pnpm dev` | Start Next.js development server |
-| `pnpm build` | Build the Next.js application |
-| `pnpm start` | Start production server |
-| `pnpm dev:mastra` | Start Mastra development mode |
-| `pnpm build:mastra` | Build Mastra components |
+| Script                 | Description                           |
+| ---------------------- | ------------------------------------- |
+| `pnpm dev`             | Start Next.js development server      |
+| `pnpm build`           | Build the Next.js application         |
+| `pnpm start`           | Start production server               |
+| `pnpm dev:mastra`      | Start Mastra development mode         |
+| `pnpm build:mastra`    | Build Mastra components               |
 | `pnpm convert:postman` | Convert Postman collection to OpenAPI |
-| `pnpm generate:api` | Generate TypeScript API client |
+| `pnpm generate:api`    | Generate TypeScript API client        |
 
 | `pnpm lint` | Run ESLint |
 
@@ -131,13 +131,13 @@ The generated TypeScript client provides type-safe access to all WhatsApp Cloud 
 ### Environment Setup
 
 1. **Copy environment template**
-   ```bash
+   `bash
    cp .env.example .env
-   ```
+   `
 
 2. **Configure required variables**
    Edit `.env` and fill in your WhatsApp configuration:
-   ```env
+   `env
    # Required WhatsApp Configuration
    WHATSAPP_ACCESS_TOKEN=your_access_token_here
    WHATSAPP_PHONE_NUMBER_ID=your_phone_number_id_here
@@ -147,12 +147,12 @@ The generated TypeScript client provides type-safe access to all WhatsApp Cloud 
    # Optional Configuration
    WHATSAPP_API_VERSION=v23.0
    WHATSAPP_BASE_URL=https://graph.facebook.com
-   ```
+   `
 
 3. **Start the application**
-   ```bash
+   `bash
    pnpm run dev
-   ```
+   `
    
    The application will automatically validate environment variables on startup and show descriptive error messages if any are missing.
 
@@ -180,16 +180,16 @@ The generated TypeScript client provides type-safe access to all WhatsApp Cloud 
 
 ### Environment Variables Reference
 
-| Variable | Required | Description | Example |
-|----------|----------|-------------|---------|
-| `WHATSAPP_ACCESS_TOKEN` | ✅ | WhatsApp Business API access token | `EAAxxxxx...` |
-| `WHATSAPP_PHONE_NUMBER_ID` | ✅ | Phone number ID from Meta Business | `123456789012345` |
-| `WHATSAPP_BUSINESS_ACCOUNT_ID` | ✅ | WhatsApp Business Account ID (WABA) | `987654321098765` |
-| `WHATSAPP_TEST_NUMBER` | ✅ | Test phone number with country code | `+1234567890` |
-| `WHATSAPP_API_VERSION` | ❌ | WhatsApp API version (default: v23.0) | `v23.0` |
-| `WHATSAPP_BASE_URL` | ❌ | API base URL (default: Graph API) | `https://graph.facebook.com` |
-| `DATABASE_URL` | ❌ | Database connection string | `postgresql://...` |
-| `UPLOADTHING_TOKEN` | ❌ | UploadThing token for media storage | `sk_live_...` |
+| Variable                       | Required | Description                           | Example                      |
+| ------------------------------ | -------- | ------------------------------------- | ---------------------------- |
+| `WHATSAPP_ACCESS_TOKEN`        | ✅        | WhatsApp Business API access token    | `EAAxxxxx...`                |
+| `WHATSAPP_PHONE_NUMBER_ID`     | ✅        | Phone number ID from Meta Business    | `123456789012345`            |
+| `WHATSAPP_BUSINESS_ACCOUNT_ID` | ✅        | WhatsApp Business Account ID (WABA)   | `987654321098765`            |
+| `WHATSAPP_TEST_NUMBER`         | ✅        | Test phone number with country code   | `+1234567890`                |
+| `WHATSAPP_API_VERSION`         | ❌        | WhatsApp API version (default: v23.0) | `v23.0`                      |
+| `WHATSAPP_BASE_URL`            | ❌        | API base URL (default: Graph API)     | `https://graph.facebook.com` |
+| `DATABASE_URL`                 | ❌        | Database connection string            | `postgresql://...`           |
+| `UPLOADTHING_TOKEN`            | ❌        | UploadThing token for media storage   | `sk_live_...`                |
 
 ## 🤖 Mastra Integration
 
@@ -203,7 +203,7 @@ This project includes Mastra agents and tools for WhatsApp automation:
 
 ### Send Different Message Types
 
-```typescript
+`typescript
 // Text message
 await client.sendTextMessage({
   phoneNumberId: 'PHONE_NUMBER_ID',
@@ -236,11 +236,11 @@ await client.sendTemplateMessage({
     }
   ]
 });
-```
+`
 
 ### Business Profile Management
 
-```typescript
+`typescript
 // Get business profile
 const profile = await client.getBusinessProfile({
   phoneNumberId: 'PHONE_NUMBER_ID'
@@ -255,7 +255,7 @@ await client.updateBusinessProfile({
     websites: ['https://company.com']
   }
 });
-```
+`
 
 ## 🔗 API Reference
 
@@ -314,15 +314,15 @@ This warning indicates that the bot cannot mark incoming messages as read. This 
 
 **Solutions:**
 1. Verify your environment configuration:
-   ```bash
+   `bash
    pnpm config:validate
-   ```
+   `
 2. Check your WhatsApp Business API token permissions
 3. Ensure `WHATSAPP_ACCESS_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID` are correct
 4. Run diagnostic tests:
-   ```bash
+   `bash
    pnpm diagnose
-   ```
+   `
 
 #### "Failed to process media file"
 This error occurs when the bot cannot download and store media files (images, documents, etc.).
@@ -339,15 +339,15 @@ This error occurs when the bot cannot download and store media files (images, do
    - Add `UPLOADTHING_TOKEN=your_token` to `.env.local`
 2. Verify WhatsApp API permissions include media access
 3. Run diagnostic tests:
-   ```bash
+   `bash
    pnpm diagnose
-   ```
+   `
 
 ### Configuration Validation
 
 Before running the bot, validate your configuration:
 
-```bash
+`bash
 # Check if all required environment variables are set
 pnpm config:validate
 
@@ -356,7 +356,7 @@ pnpm diagnose
 
 # Initialize database
 pnpm db:setup
-```
+`
 
 ### Environment Setup
 
@@ -375,16 +375,16 @@ If you're missing environment variables, see the comprehensive setup guide:
 ## 🔧 Development Tools
 
 ### Configuration Management
-```bash
+`bash
 # Validate environment configuration
 pnpm config:validate
 
 # Test WhatsApp API connectivity
 pnpm diagnose
-```
+`
 
 ### Database Management
-```bash
+`bash
 # Setup database and run migrations
 pnpm db:setup
 
@@ -396,4 +396,4 @@ pnpm db:migrate
 
 # Open database studio
 pnpm db:studio
-```
+`
