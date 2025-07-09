@@ -233,7 +233,7 @@ export async function processIncomingMessage(
         }
 
         // Step 4: Mark message as read (non-blocking)
-        markMessageAsRead(whatsappClient, messageInfo.id, '').catch(readError => {
+      await  markMessageAsRead(whatsappClient, messageInfo.id, '').catch(readError => {
             logWarning('Failed to mark message as read (non-critical)', {
                 messageId: messageInfo.id,
                 error: readError instanceof Error ? readError.message : String(readError),
