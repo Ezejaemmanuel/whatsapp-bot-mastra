@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
 export const AdminStatusView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => {
+    const adminStatusSettings = useQuery(api.adminStatus.getAdminStatusSettings);
     const adminStatus = useQuery(api.adminStatus.getAdminStatus, {});
     const setAdminStatus = useMutation(api.adminStatus.setAdminStatus);
 
@@ -20,18 +21,14 @@ export const AdminStatusView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) 
     const [timezone, setTimezone] = useState('');
 
     useEffect(() => {
-        const status = adminStatus;
-        if (status) {
-            // @ts-ignore
-            setIsManualInactive(status.isManuallyInactive || false);
-            // @ts-ignore
-            setStartTime(status.recurringInactiveStart || '22:00');
-            // @ts-ignore
-            setEndTime(status.recurringInactiveEnd || '08:00');
-            // @ts-ignore
-            setTimezone(status.timezone || 'Africa/Nairobi');
+        const settings = adminStatusSettings;
+        if (settings) {
+            setIsManualInactive(settings.isManuallyInactive || false);
+            setStartTime(settings.recurringInactiveStart || '22:00');
+            setEndTime(settings.recurringInactiveEnd || '08:00');
+            setTimezone(settings.timezone || 'Africa/Nairobi');
         }
-    }, [adminStatus]);
+    }, [adminStatusSettings]);
 
     const handleSave = async () => {
         try {

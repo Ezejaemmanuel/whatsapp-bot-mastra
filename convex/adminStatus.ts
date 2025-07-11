@@ -82,6 +82,16 @@ export const getAdminStatus = query({
 });
 
 // =================================================================
+// Query: Get Admin Status Settings
+// =================================================================
+export const getAdminStatusSettings = query({
+    handler: async (ctx) => {
+        const adminStatus = await ctx.db.query("adminStatus").unique();
+        return adminStatus;
+    },
+});
+
+// =================================================================
 // Mutation: Set Admin Status (Singleton)
 // =================================================================
 export const setAdminStatus = mutation({
