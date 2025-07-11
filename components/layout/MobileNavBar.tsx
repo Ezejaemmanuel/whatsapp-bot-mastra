@@ -11,7 +11,11 @@ interface MobileNavBarProps {
 
 export const MobileNavBar: React.FC<MobileNavBarProps> = ({ activeTab, onTabChange, unreadCount = 0 }) => {
     const navItems = [
-        { id: 'updates', icon: <div className="w-6 h-6 bg-whatsapp-primary rounded-full"></div>, label: 'Updates' },
+        {
+            id: 'updates',
+            icon: <div className="w-6 h-6 bg-gradient-to-br from-whatsapp-primary to-whatsapp-accent rounded-full shadow-lg glow-purple"></div>,
+            label: 'Updates'
+        },
         { id: 'calls', icon: <Phone className="w-6 h-6" />, label: 'Calls' },
         { id: 'transactions', icon: <Receipt className="w-6 h-6" />, label: 'Transactions' },
         { id: 'chats', icon: <MessageCircle className="w-6 h-6" />, label: 'Chats', badge: unreadCount },
@@ -19,20 +23,37 @@ export const MobileNavBar: React.FC<MobileNavBarProps> = ({ activeTab, onTabChan
     ];
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 border-t border-whatsapp-border bg-whatsapp-panel-bg z-10">
-            <div className="flex items-center justify-around py-2">
+        <div className="fixed bottom-0 left-0 right-0 border-t border-whatsapp-border/50 glass-panel backdrop-blur-xl z-50 shadow-2xl">
+            {/* Decorative top border */}
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-whatsapp-primary to-transparent opacity-50"></div>
+
+            <div className="flex items-center justify-around py-3 px-2">
                 {navItems.map(item => (
                     <Button
                         key={item.id}
                         variant="ghost"
                         onClick={() => onTabChange(item.id as any)}
-                        className={`flex flex-col items-center gap-1 h-full px-2 py-1 relative ${activeTab === item.id ? 'text-whatsapp-primary' : 'text-whatsapp-text-muted'
+                        className={`flex flex-col items-center gap-1.5 h-full px-3 py-2 relative transition-all duration-300 hover:scale-110 ${activeTab === item.id
+                                ? 'text-whatsapp-primary bg-whatsapp-primary/10 backdrop-blur-sm rounded-lg shadow-lg glow-purple'
+                                : 'text-whatsapp-text-muted hover:text-whatsapp-primary hover:bg-whatsapp-hover/50'
                             }`}
                     >
-                        {item.icon}
-                        <span className="text-xs">{item.label}</span>
+                        <div className={`transition-all duration-300 ${activeTab === item.id ? 'drop-shadow-lg' : ''}`}>
+                            {item.icon}
+                        </div>
+                        <span className={`text-xs font-medium transition-all duration-300 ${activeTab === item.id ? 'text-whatsapp-primary font-semibold' : ''
+                            }`}>
+                            {item.label}
+                        </span>
+
+                        {/* Active indicator */}
+                        {activeTab === item.id && (
+                            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-whatsapp-primary rounded-full shadow-lg"></div>
+                        )}
+
+                        {/* Chat badge */}
                         {item.id === 'chats' && item.badge && item.badge > 0 && (
-                            <Badge className="bg-whatsapp-unread text-white text-xs min-w-[20px] h-5 flex items-center justify-center rounded-full absolute -top-1 -right-1">
+                            <Badge className="bg-gradient-to-r from-whatsapp-unread to-whatsapp-accent text-white text-xs min-w-[20px] h-5 flex items-center justify-center rounded-full absolute -top-1 -right-1 shadow-lg pulse-purple border border-whatsapp-accent/50">
                                 {item.badge}
                             </Badge>
                         )}

@@ -75,38 +75,38 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
+        return <CheckCircle className="w-4 h-4 text-whatsapp-success" />;
       case 'pending':
-        return <Clock className="w-4 h-4 text-yellow-500" />;
+        return <Clock className="w-4 h-4 text-whatsapp-warning" />;
       case 'verified':
-        return <CheckCircle className="w-4 h-4 text-blue-500" />;
+        return <CheckCircle className="w-4 h-4 text-whatsapp-primary" />;
       case 'paid':
-        return <ArrowUpRight className="w-4 h-4 text-blue-500" />;
+        return <ArrowUpRight className="w-4 h-4 text-whatsapp-accent" />;
       case 'failed':
         return <XCircle className="w-4 h-4 text-red-500" />;
       case 'cancelled':
-        return <XCircle className="w-4 h-4 text-gray-500" />;
+        return <XCircle className="w-4 h-4 text-whatsapp-text-muted" />;
       default:
-        return <AlertCircle className="w-4 h-4 text-gray-500" />;
+        return <AlertCircle className="w-4 h-4 text-whatsapp-text-muted" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-whatsapp-success/20 text-whatsapp-success border border-whatsapp-success/30';
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-whatsapp-warning/20 text-whatsapp-warning border border-whatsapp-warning/30';
       case 'verified':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-whatsapp-primary/20 text-whatsapp-primary border border-whatsapp-primary/30';
       case 'paid':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-whatsapp-accent/20 text-whatsapp-accent border border-whatsapp-accent/30';
       case 'failed':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-500/20 text-red-400 border border-red-500/30';
       case 'cancelled':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-whatsapp-text-muted/20 text-whatsapp-text-muted border border-whatsapp-text-muted/30';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-whatsapp-text-muted/20 text-whatsapp-text-muted border border-whatsapp-text-muted/30';
     }
   };
 
@@ -143,7 +143,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-whatsapp-panel-bg border-r border-whatsapp-border">
+    <div className="flex flex-col h-full glass-panel border-r border-whatsapp-border backdrop-blur-xl">
       <TransactionListHeader />
       <TransactionSearchAndFilter
         searchQuery={searchQuery}
@@ -168,13 +168,13 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 };
 
 const TransactionListHeader = () => (
-  <div className="flex items-center justify-between p-4 bg-whatsapp-panel-bg border-b border-whatsapp-border flex-shrink-0">
-    <h1 className="text-xl font-medium text-whatsapp-text-primary">Transactions</h1>
+  <div className="flex items-center justify-between p-5 bg-gradient-to-r from-whatsapp-panel-bg to-whatsapp-panel-bg/80 border-b border-whatsapp-border/50 flex-shrink-0 backdrop-blur-sm">
+    <h1 className="text-xl font-semibold bg-gradient-to-r from-whatsapp-text-primary to-whatsapp-primary bg-clip-text text-transparent">Transactions</h1>
     <div className="flex items-center gap-2">
-      <Button variant="ghost" size="icon" className="text-whatsapp-text-secondary hover:bg-whatsapp-hover">
+      <Button variant="ghost" size="icon" className="text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105">
         <Plus className="w-5 h-5" />
       </Button>
-      <Button variant="ghost" size="icon" className="text-whatsapp-text-secondary hover:bg-whatsapp-hover">
+      <Button variant="ghost" size="icon" className="text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105">
         <MoreVertical className="w-5 h-5" />
       </Button>
     </div>
@@ -190,27 +190,27 @@ interface SearchAndFilterProps {
 }
 
 const TransactionSearchAndFilter: React.FC<SearchAndFilterProps> = ({ searchQuery, setSearchQuery, activeFilter, setActiveFilter, filters }) => (
-  <div className="p-3 bg-whatsapp-panel-bg flex-shrink-0">
-    <div className="relative mb-2">
-      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-whatsapp-text-muted" />
+  <div className="p-4 bg-gradient-to-r from-whatsapp-panel-bg/90 to-whatsapp-panel-bg/70 flex-shrink-0 backdrop-blur-sm">
+    <div className="relative mb-3 group">
+      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-whatsapp-text-muted group-focus-within:text-whatsapp-primary transition-colors duration-300" />
       <Input
         placeholder="Search by name, number, ref, ID..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        className="pl-10 bg-whatsapp-bg border-whatsapp-border text-whatsapp-text-primary"
+        className="pl-12 whatsapp-input bg-whatsapp-bg/80 border border-whatsapp-border/50 text-whatsapp-text-primary focus:ring-2 focus:ring-whatsapp-primary/30 focus:border-whatsapp-primary transition-all duration-300"
       />
     </div>
     <ScrollArea className="w-full">
-      <div className="flex gap-2 pb-2">
+      <div className="flex gap-3">
         {filters.map((filter) => (
           <Button
             key={filter}
             variant={activeFilter === filter ? "default" : "secondary"}
             size="sm"
             onClick={() => setActiveFilter(filter)}
-            className={`whitespace-nowrap ${activeFilter === filter
-              ? 'bg-whatsapp-primary text-white'
-              : 'bg-whatsapp-hover text-whatsapp-text-secondary'
+            className={`whitespace-nowrap transition-all duration-300 hover:scale-105 ${activeFilter === filter
+              ? 'bg-gradient-to-r from-whatsapp-primary to-whatsapp-accent text-white hover:from-whatsapp-primary/90 hover:to-whatsapp-accent/90 shadow-lg glow-purple'
+              : 'bg-whatsapp-hover/60 text-whatsapp-text-secondary hover:bg-whatsapp-border/60 hover:text-whatsapp-primary backdrop-blur-sm border border-whatsapp-border/30'
               }`}
           >
             {filter}
@@ -244,8 +244,8 @@ const TransactionItems: React.FC<TransactionItemsProps> = ({
   handleStatusUpdate,
   loadMoreRef
 }) => (
-  <ScrollArea className="flex-1">
-    <div className="flex flex-col p-2">
+  <ScrollArea className="flex-1 whatsapp-scrollbar">
+    <div className="space-y-2 p-3">
       {transactions?.map((transaction) => (
         <TransactionCard
           key={transaction._id}
@@ -259,7 +259,7 @@ const TransactionItems: React.FC<TransactionItemsProps> = ({
           onStatusUpdate={handleStatusUpdate}
         />
       ))}
-      <div ref={loadMoreRef} />
+      <div ref={loadMoreRef} className="h-1" />
     </div>
   </ScrollArea>
 );
@@ -287,54 +287,102 @@ const TransactionCard: React.FC<TransactionCardProps> = ({
 }) => (
   <div
     onClick={() => onSelect(transaction._id)}
-    className={`rounded-lg mb-2 transition-all duration-200 ${isSelected ? 'bg-whatsapp-active shadow-md' : 'bg-whatsapp-bg hover:bg-whatsapp-hover'} ${!transaction.isRead ? 'border-l-4 border-whatsapp-unread' : ''}`}
+    className={`p-4 border border-whatsapp-border/50 rounded-xl cursor-pointer transition-all duration-300 hover:bg-whatsapp-hover/40 hover:backdrop-blur-sm hover:border-whatsapp-primary/30 hover:scale-[1.02] hover:shadow-lg group ${isSelected
+      ? 'bg-gradient-to-r from-whatsapp-active to-whatsapp-active/80 border-whatsapp-primary shadow-lg glow-purple backdrop-blur-sm'
+      : 'bg-whatsapp-panel-bg/50 backdrop-blur-sm'
+      }`}
   >
-    <div className="p-3 cursor-pointer">
-      <div className="flex items-start gap-3">
-        <Avatar className="w-10 h-10 border">
-          <AvatarImage src={undefined} alt={transaction.user?.profileName} />
-          <AvatarFallback>{transaction.user?.profileName?.charAt(0) || 'U'}</AvatarFallback>
-        </Avatar>
-        <div className="flex-1">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center">
-              <h3 className="font-semibold text-sm text-whatsapp-text-primary">{transaction.user?.profileName || 'Unknown User'}</h3>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-whatsapp-text-muted text-xs">{formatTimeAgo(transaction.createdAt)}</span>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-whatsapp-text-muted">
-                    <MoreVertical className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                  {transactionStatuses.map((status) => (
-                    <DropdownMenuItem key={status} onClick={(e) => onStatusUpdate(e, transaction._id, status)}>
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-          <p className="text-xs text-whatsapp-text-muted mb-2">{transaction.user?.phoneNumber}</p>
-
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="font-bold text-whatsapp-text-primary">{formatCurrency(transaction.amountFrom, transaction.currencyFrom)}</span>
-              <ArrowRight className="w-4 h-4 text-whatsapp-text-muted" />
-              <span className="font-bold text-whatsapp-text-primary">{formatCurrency(transaction.amountTo, transaction.currencyTo)}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between mt-2">
-            <Badge variant="outline" className={`text-xs ${getStatusColor(transaction.status)}`}>
-              <span className="mr-1">{getStatusIcon(transaction.status)}</span>
-              {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
-            </Badge>
-          </div>
+    <div className="flex items-start justify-between mb-3">
+      <div className="flex items-center gap-3">
+        <div className="relative">
+          <Avatar className="w-10 h-10 ring-2 ring-whatsapp-border/30 transition-all duration-300 group-hover:ring-whatsapp-primary/50">
+            <AvatarImage src={'/assets/avatar-male-1.jpg'} alt={transaction.user?.profileName} className="object-cover" />
+            <AvatarFallback className="bg-gradient-to-br from-whatsapp-primary to-whatsapp-accent text-white text-sm font-semibold">
+              {transaction.user?.profileName?.charAt(0) || 'U'}
+            </AvatarFallback>
+          </Avatar>
+          {!transaction.isRead && (
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-whatsapp-accent rounded-full border-2 border-whatsapp-panel-bg pulse-purple"></div>
+          )}
         </div>
+        <div className="flex-1">
+          <h3 className="font-semibold text-whatsapp-text-primary text-sm group-hover:text-whatsapp-primary transition-colors duration-300">
+            {transaction.user?.profileName || 'Unknown User'}
+          </h3>
+          <p className="text-xs text-whatsapp-text-muted">
+            {transaction.user?.phoneNumber}
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-col items-end gap-1">
+        <Badge className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor(transaction.status)} backdrop-blur-sm`}>
+          <span className="flex items-center gap-1">
+            {getStatusIcon(transaction.status)}
+            {transaction.status}
+          </span>
+        </Badge>
+        <span className="text-xs text-whatsapp-text-muted font-medium">
+          {formatTimeAgo(transaction.createdAt)}
+        </span>
+      </div>
+    </div>
+
+    <div className="grid grid-cols-2 gap-4 mb-3">
+      <div className="glass-panel p-3 rounded-lg backdrop-blur-sm border border-whatsapp-border/30">
+        <p className="text-xs text-whatsapp-text-muted mb-1">From</p>
+        <p className="font-bold text-whatsapp-text-primary text-lg">
+          {formatCurrency(transaction.amountFrom, transaction.currencyFrom)}
+        </p>
+        <p className="text-xs text-whatsapp-text-secondary">{transaction.currencyFrom}</p>
+      </div>
+      <div className="glass-panel p-3 rounded-lg backdrop-blur-sm border border-whatsapp-border/30">
+        <p className="text-xs text-whatsapp-text-muted mb-1">To</p>
+        <p className="font-bold text-whatsapp-primary text-lg">
+          {formatCurrency(transaction.amountTo, transaction.currencyTo)}
+        </p>
+        <p className="text-xs text-whatsapp-text-secondary">{transaction.currencyTo}</p>
+      </div>
+    </div>
+
+    <div className="flex items-center justify-between text-xs">
+      <div className="flex items-center gap-4">
+        <span className="text-whatsapp-text-muted">
+          ID: {transaction._id.slice(-8)}
+        </span>
+        {transaction.paymentReference && (
+          <span className="text-whatsapp-text-muted">
+            Ref: {transaction.paymentReference}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300"
+              onClick={(e) => e.stopPropagation()}
+            >
+              Update Status
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="glass-panel border border-whatsapp-border/50 backdrop-blur-xl">
+            {transactionStatuses.map((status) => (
+              <DropdownMenuItem
+                key={status}
+                onClick={(e) => onStatusUpdate(e, transaction._id, status)}
+                className="text-whatsapp-text-primary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 cursor-pointer"
+              >
+                <span className="flex items-center gap-2">
+                  {getStatusIcon(status)}
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <ArrowRight className="w-4 h-4 text-whatsapp-text-muted group-hover:text-whatsapp-primary transition-colors duration-300" />
       </div>
     </div>
   </div>

@@ -2,133 +2,132 @@
 @tailwind components;
 @tailwind utilities;
 
-/* WhatsApp-inspired Design System - Dark Theme
+/* Modern Purple WhatsApp-inspired Design System - Dark Theme
 All colors MUST be HSL.
 */
 
 @layer base {
   :root {
-    /* WhatsApp Dark Theme Colors */
-    --background: 0 0% 7%;
-    --foreground: 0 0% 88%;
+    /* Modern Purple Dark Theme Colors */
+    --background: 0 0% 4%;
+    --foreground: 0 0% 90%;
 
-    --card: 0 0% 9%;
-    --card-foreground: 0 0% 88%;
+    --card: 0 0% 6%;
+    --card-foreground: 0 0% 90%;
 
-    --popover: 0 0% 11%;
-    --popover-foreground: 0 0% 88%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 90%;
 
-    --primary: 152 69% 52%;
-    /* WhatsApp Green */
+    --primary: 270 100% 75%;
+    /* Modern Purple */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 0 0% 70%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 270 30% 80%;
 
-    --muted: 0 0% 13%;
-    --muted-foreground: 0 0% 50%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 270 15% 60%;
 
-    --accent: 0 0% 15%;
-    --accent-foreground: 0 0% 88%;
+    --accent: 270 50% 15%;
+    --accent-foreground: 270 30% 85%;
 
     --destructive: 0 62.8% 50%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 15%;
-    --ring: 152 69% 52%;
+    --border: 270 30% 15%;
+    --input: 270 30% 12%;
+    --ring: 270 100% 75%;
 
-    /* WhatsApp specific colors */
-    --whatsapp-primary: 152 69% 52%;
-    /* #25D366 */
-    --whatsapp-dark: 152 100% 20%;
-    /* Dark green for hover states */
-    --whatsapp-bg: 0 0% 7%;
-    /* Main background */
-    --whatsapp-chat-bg: 0 0% 9%;
-    /* Chat area background */
-    --whatsapp-panel-bg: 0 0% 11%;
-    /* Side panel background */
-    --whatsapp-message-bg: 0 0% 13%;
+    /* Modern Purple WhatsApp specific colors */
+    --whatsapp-primary: 270 100% 75%;
+    /* Bright Purple */
+    --whatsapp-dark: 270 100% 25%;
+    /* Dark purple for hover states */
+    --whatsapp-bg: 0 0% 4%;
+    /* Main background - deep black */
+    --whatsapp-chat-bg: 0 0% 6%;
+    /* Chat area background - slightly lighter black */
+    --whatsapp-panel-bg: 270 20% 8%;
+    /* Side panel background - subtle purple tint */
+    --whatsapp-message-bg: 270 30% 10%;
     /* Message bubble background */
-    --whatsapp-inbound: 0 0% 15%;
-    /* Incoming message background */
-    --whatsapp-outbound: 152 69% 52%;
-    /* Outgoing message background */
-    --whatsapp-hover: 0 0% 15%;
-    /* Hover state */
-    --whatsapp-active: 0 0% 13%;
-    /* Active chat background */
-    --whatsapp-border: 0 0% 20%;
-    /* Borders */
-    --whatsapp-divider: 0 0% 15%;
+    --whatsapp-inbound: 270 40% 12%;
+    /* Incoming message background - subtle purple */
+    --whatsapp-outbound: 270 100% 65%;
+    /* Outgoing message background - purple gradient */
+    --whatsapp-hover: 270 50% 10%;
+    /* Hover state - purple tint */
+    --whatsapp-active: 270 60% 12%;
+    /* Active chat background - more purple */
+    --whatsapp-border: 270 30% 15%;
+    /* Borders - purple tinted */
+    --whatsapp-divider: 270 20% 12%;
     /* Divider lines */
-    --whatsapp-text-primary: 0 0% 88%;
-    /* Primary text */
-    --whatsapp-text-secondary: 0 0% 70%;
-    /* Secondary text */
-    --whatsapp-text-muted: 0 0% 50%;
-    /* Muted text */
-    --whatsapp-online: 152 69% 52%;
-    /* Online status */
-    --whatsapp-unread: 152 69% 52%;
-    /* Unread count */
+    --whatsapp-text-primary: 270 20% 92%;
+    /* Primary text - slight purple tint */
+    --whatsapp-text-secondary: 270 25% 75%;
+    /* Secondary text - purple tinted */
+    --whatsapp-text-muted: 270 20% 55%;
+    /* Muted text - purple tinted */
+    --whatsapp-online: 120 100% 50%;
+    /* Online status - green */
+    --whatsapp-unread: 270 100% 75%;
+    /* Unread count - purple */
+    --whatsapp-accent: 285 100% 70%;
+    /* Accent color - pink-purple */
+    --whatsapp-success: 120 60% 50%;
+    /* Success color */
+    --whatsapp-warning: 45 100% 60%;
+    /* Warning color */
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 270 20% 6%;
+    --sidebar-foreground: 270 20% 85%;
+    --sidebar-primary: 270 100% 70%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 270 30% 10%;
+    --sidebar-accent-foreground: 270 20% 85%;
+    --sidebar-border: 270 30% 12%;
+    --sidebar-ring: 270 100% 75%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 0 0% 4%;
+    --foreground: 270 20% 92%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 270 20% 6%;
+    --card-foreground: 270 20% 92%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 270 20% 6%;
+    --popover-foreground: 270 20% 92%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 270 100% 75%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 270 30% 12%;
+    --secondary-foreground: 270 20% 85%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 270 30% 12%;
+    --muted-foreground: 270 20% 65%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 270 30% 12%;
+    --accent-foreground: 270 20% 85%;
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 270 20% 92%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --border: 270 30% 15%;
+    --input: 270 30% 12%;
+    --ring: 270 100% 75%;
+    --sidebar-background: 270 20% 8%;
+    --sidebar-foreground: 270 20% 85%;
+    --sidebar-primary: 270 100% 70%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 270 30% 12%;
+    --sidebar-accent-foreground: 270 20% 85%;
+    --sidebar-border: 270 30% 12%;
+    --sidebar-ring: 270 100% 75%;
   }
 }
 
@@ -142,25 +141,26 @@ All colors MUST be HSL.
   }
 }
 
-/* WhatsApp Chat Background Pattern */
+/* Modern Purple Chat Background Pattern */
 .whatsapp-chat-pattern {
-  background-image: 
-    radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
-    radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
-    radial-gradient(circle at 25% 75%, rgba(255, 255, 255, 0.01) 0%, transparent 50%),
-    radial-gradient(circle at 75% 25%, rgba(255, 255, 255, 0.01) 0%, transparent 50%);
-  background-size: 100px 100px, 100px 100px, 100px 100px, 100px 100px;
-  background-position: 0 0, 50px 50px, 0 50px, 50px 0;
+  background-image:
+    radial-gradient(circle at 25% 25%, rgba(150, 100, 255, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(180, 120, 255, 0.02) 0%, transparent 50%),
+    radial-gradient(circle at 25% 75%, rgba(160, 110, 255, 0.015) 0%, transparent 50%),
+    radial-gradient(circle at 75% 25%, rgba(170, 90, 255, 0.02) 0%, transparent 50%);
+  background-size: 120px 120px, 100px 100px, 80px 80px, 140px 140px;
+  background-position: 0 0, 60px 60px, 0 40px, 70px 0;
 }
 
-/* WhatsApp Message Bubble Styles */
+/* Modern Purple Message Bubble Styles */
 .message-bubble {
   position: relative;
-  border-radius: 8px;
-  padding: 8px 12px;
+  border-radius: 12px;
+  padding: 10px 14px;
   max-width: 80%;
   word-wrap: break-word;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(120, 60, 200, 0.1);
+  backdrop-filter: blur(10px);
 }
 
 .message-bubble::before {
@@ -172,16 +172,17 @@ All colors MUST be HSL.
 }
 
 .message-bubble.outgoing {
-  background-color: hsl(var(--whatsapp-outbound));
+  background: linear-gradient(135deg, hsl(var(--whatsapp-outbound)) 0%, hsl(285 100% 70%) 100%);
   color: white;
   margin-left: auto;
-  border-bottom-right-radius: 2px;
+  border-bottom-right-radius: 4px;
+  box-shadow: 0 3px 12px rgba(120, 60, 200, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 .message-bubble.outgoing::before {
   right: -8px;
   bottom: 0;
-  border-width: 0 0 8px 8px;
+  border-width: 0 0 10px 10px;
   border-color: transparent transparent hsl(var(--whatsapp-outbound)) transparent;
 }
 
@@ -189,39 +190,42 @@ All colors MUST be HSL.
   background-color: hsl(var(--whatsapp-inbound));
   color: hsl(var(--whatsapp-text-primary));
   margin-right: auto;
-  border-bottom-left-radius: 2px;
+  border-bottom-left-radius: 4px;
+  border: 1px solid hsl(270 30% 20%);
 }
 
 .message-bubble.incoming::before {
   left: -8px;
   bottom: 0;
-  border-width: 0 8px 8px 0;
+  border-width: 0 10px 10px 0;
   border-color: transparent hsl(var(--whatsapp-inbound)) transparent transparent;
 }
 
 /* Admin message styling */
 .message-bubble.admin {
-  background-color: hsl(152 69% 45%);
+  background: linear-gradient(135deg, hsl(285 100% 60%) 0%, hsl(300 100% 65%) 100%);
   color: white;
+  box-shadow: 0 3px 12px rgba(180, 60, 200, 0.4);
 }
 
 .message-bubble.admin::before {
-  border-color: transparent transparent hsl(152 69% 45%) transparent;
+  border-color: transparent transparent hsl(285 100% 60%) transparent;
 }
 
 /* Bot message styling */
 .message-bubble.bot {
-  background-color: hsl(210 100% 50%);
+  background: linear-gradient(135deg, hsl(260 100% 65%) 0%, hsl(240 100% 70%) 100%);
   color: white;
+  box-shadow: 0 3px 12px rgba(100, 80, 255, 0.4);
 }
 
 .message-bubble.bot::before {
-  border-color: transparent hsl(210 100% 50%) transparent transparent;
+  border-color: transparent hsl(260 100% 65%) transparent transparent;
 }
 
-/* Scrollbar styling for WhatsApp look */
+/* Modern Scrollbar styling */
 .whatsapp-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 .whatsapp-scrollbar::-webkit-scrollbar-track {
@@ -229,31 +233,36 @@ All colors MUST be HSL.
 }
 
 .whatsapp-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
+  background: linear-gradient(45deg, rgba(150, 100, 255, 0.3), rgba(180, 120, 255, 0.5));
+  border-radius: 6px;
+  border: 1px solid rgba(120, 80, 200, 0.2);
 }
 
 .whatsapp-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: linear-gradient(45deg, rgba(150, 100, 255, 0.5), rgba(180, 120, 255, 0.7));
 }
 
-/* Chat list item hover effect */
+/* Modern Chat list item hover effect */
 .chat-item:hover {
   background-color: hsl(var(--whatsapp-hover));
-  transition: background-color 0.15s ease;
+  transition: all 0.2s ease;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(120, 60, 200, 0.15);
 }
 
 .chat-item.active {
-  background-color: hsl(var(--whatsapp-active));
-  border-left: 3px solid hsl(var(--whatsapp-primary));
+  background: linear-gradient(135deg, hsl(var(--whatsapp-active)) 0%, hsl(280 50% 15%) 100%);
+  border-left: 4px solid hsl(var(--whatsapp-primary));
+  box-shadow: 0 4px 16px rgba(120, 60, 200, 0.25);
 }
 
 /* Message timestamp styling */
 .message-time {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.8);
   margin-top: 4px;
   text-align: right;
+  font-weight: 500;
 }
 
 .message-time.incoming {
@@ -270,26 +279,68 @@ All colors MUST be HSL.
 .message-status svg {
   width: 16px;
   height: 16px;
-  fill: rgba(255, 255, 255, 0.7);
+  fill: rgba(255, 255, 255, 0.8);
 }
 
-/* Input field styling */
+/* Modern Input field styling */
 .whatsapp-input {
-  background-color: hsl(var(--whatsapp-panel-bg));
+  background: linear-gradient(135deg, hsl(var(--whatsapp-panel-bg)) 0%, hsl(275 25% 10%) 100%);
   border: 1px solid hsl(var(--whatsapp-border));
-  border-radius: 20px;
-  padding: 8px 16px;
+  border-radius: 24px;
+  padding: 12px 20px;
   color: hsl(var(--whatsapp-text-primary));
   font-size: 14px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
 }
 
 .whatsapp-input:focus {
   outline: none;
   border-color: hsl(var(--whatsapp-primary));
+  box-shadow: 0 0 0 3px rgba(120, 60, 200, 0.2), 0 4px 12px rgba(120, 60, 200, 0.15);
+  transform: translateY(-1px);
 }
 
 .whatsapp-input::placeholder {
   color: hsl(var(--whatsapp-text-muted));
+}
+
+/* Modern button styles */
+.modern-button {
+  background: linear-gradient(135deg, hsl(var(--whatsapp-primary)) 0%, hsl(285 100% 70%) 100%);
+  border: none;
+  border-radius: 12px;
+  padding: 10px 20px;
+  color: white;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(120, 60, 200, 0.3);
+}
+
+.modern-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(120, 60, 200, 0.4);
+}
+
+.modern-button:active {
+  transform: translateY(0);
+}
+
+/* Glassmorphism effect for panels */
+.glass-panel {
+  background: rgba(120, 60, 200, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(120, 60, 200, 0.1);
+  border-radius: 16px;
+}
+
+/* Glow effects */
+.glow-purple {
+  box-shadow: 0 0 20px rgba(120, 60, 200, 0.3);
+}
+
+.glow-purple-strong {
+  box-shadow: 0 0 30px rgba(120, 60, 200, 0.5), 0 0 60px rgba(120, 60, 200, 0.2);
 }
 
 #root {
@@ -307,11 +358,11 @@ All colors MUST be HSL.
 }
 
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+  filter: drop-shadow(0 0 2em #9f7aea);
 }
 
 .logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+  filter: drop-shadow(0 0 2em #b794f6);
 }
 
 @keyframes logo-spin {
@@ -324,6 +375,22 @@ All colors MUST be HSL.
   }
 }
 
+@keyframes pulse-purple {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(120, 60, 200, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 30px rgba(120, 60, 200, 0.6);
+  }
+}
+
+.pulse-purple {
+  animation: pulse-purple 2s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   a:nth-of-type(2) .logo {
     animation: logo-spin infinite 20s linear;
@@ -332,8 +399,12 @@ All colors MUST be HSL.
 
 .card {
   padding: 2em;
+  background: linear-gradient(135deg, hsl(var(--whatsapp-panel-bg)) 0%, hsl(275 25% 10%) 100%);
+  border: 1px solid hsl(var(--whatsapp-border));
+  border-radius: 16px;
+  backdrop-filter: blur(20px);
 }
 
 .read-the-docs {
-  color: #888;
+  color: hsl(var(--whatsapp-text-muted));
 }

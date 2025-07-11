@@ -94,26 +94,32 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
 
   if (!chatId) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-whatsapp-chat-bg whatsapp-chat-pattern">
-        <div className="text-center">
-          <div className="w-64 h-64 mx-auto mb-8 opacity-20">
-            <svg viewBox="0 0 303 172" className="w-full h-full">
+      <div className="flex-1 flex items-center justify-center bg-whatsapp-chat-bg whatsapp-chat-pattern relative overflow-hidden">
+        {/* Background decorative elements */}
+        <div className="absolute inset-0 bg-gradient-to-br from-whatsapp-primary/5 via-transparent to-whatsapp-accent/5"></div>
+        <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-whatsapp-primary/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-48 h-48 bg-whatsapp-accent/10 rounded-full blur-3xl"></div>
+
+        <div className="text-center relative z-10">
+          <div className="w-72 h-72 mx-auto mb-8 opacity-30 relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-whatsapp-primary/20 to-whatsapp-accent/20 rounded-full blur-2xl"></div>
+            <svg viewBox="0 0 303 172" className="w-full h-full relative z-10">
               <defs>
                 <linearGradient id="a" x1="50%" x2="50%" y1="100%" y2="0%">
-                  <stop offset="0%" stopColor="#25D366" stopOpacity=".05"></stop>
-                  <stop offset="100%" stopColor="#25D366" stopOpacity=".3"></stop>
+                  <stop offset="0%" stopColor="#9f7aea" stopOpacity=".05"></stop>
+                  <stop offset="100%" stopColor="#b794f6" stopOpacity=".3"></stop>
                 </linearGradient>
               </defs>
               <path fill="url(#a)" d="M229.221 63.241L51.638 63.241C23.097 63.241-.5 86.838-.5 115.379L-.5 171.5L303 171.5L303 115.379C303 86.838 279.403 63.241 250.862 63.241L229.221 63.241Z"></path>
             </svg>
           </div>
-          <h2 className="text-2xl font-light text-whatsapp-text-primary mb-2">WhatsApp Web</h2>
-          <p className="text-whatsapp-text-secondary mb-8">
+          <h2 className="text-3xl font-light bg-gradient-to-r from-whatsapp-text-primary to-whatsapp-primary bg-clip-text text-transparent mb-3">WhatsApp Web</h2>
+          <p className="text-whatsapp-text-secondary mb-8 max-w-md mx-auto leading-relaxed">
             Send and receive messages without keeping your phone online.<br />
             Use WhatsApp on up to 4 linked devices and 1 phone at the same time.
           </p>
-          <div className="flex items-center justify-center text-whatsapp-text-muted">
-            <div className="w-2 h-2 bg-whatsapp-text-muted rounded-full mr-2"></div>
+          <div className="flex items-center justify-center text-whatsapp-text-muted glass-panel px-4 py-2 rounded-full max-w-lg mx-auto">
+            <div className="w-2 h-2 bg-whatsapp-primary rounded-full mr-3 animate-pulse"></div>
             <span className="text-sm">Messages and calls are end-to-end encrypted. Only people in this chat can read, listen, or share them. Click to learn more</span>
           </div>
         </div>
@@ -176,46 +182,52 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-whatsapp-chat-bg whatsapp-chat-pattern h-full overflow-x-hidden">
+    <div className="flex-1 flex flex-col bg-whatsapp-chat-bg whatsapp-chat-pattern h-full overflow-x-hidden relative">
+      {/* Background decorative gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-whatsapp-primary/5 via-transparent to-whatsapp-accent/5 pointer-events-none"></div>
+
       {/* Header */}
-      <div className={`flex items-center gap-3 bg-whatsapp-panel-bg border-b border-whatsapp-border flex-shrink-0 ${isMobile ? 'px-4 py-3' : 'px-4 py-4'
+      <div className={`flex items-center gap-3 glass-panel border-b border-whatsapp-border/50 flex-shrink-0 backdrop-blur-xl relative z-10 ${isMobile ? 'px-4 py-3' : 'px-5 py-4'
         }`}>
         {isMobile && (
-          <Button variant="ghost" size="icon" onClick={onBack} className="text-whatsapp-text-secondary -ml-2">
+          <Button variant="ghost" size="icon" onClick={onBack} className="text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 -ml-2">
             <ArrowLeft className="w-6 h-6" />
           </Button>
         )}
 
-        <Avatar className={`${isMobile ? 'w-9 h-9' : 'w-10 h-10'}`}>
-          <AvatarImage src={avatarMale1.src} alt={conversation?.userName || "User"} />
-          <AvatarFallback className="bg-whatsapp-primary text-white">
-            {conversation?.userName?.charAt(0) || "U"}
-          </AvatarFallback>
-        </Avatar>
+        <div className="relative">
+          <Avatar className={`ring-2 ring-whatsapp-border/30 transition-all duration-300 hover:ring-whatsapp-primary/50 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'}`}>
+            <AvatarImage src={avatarMale1.src} alt={conversation?.userName || "User"} className="object-cover" />
+            <AvatarFallback className="bg-gradient-to-br from-whatsapp-primary to-whatsapp-accent text-white font-semibold">
+              {conversation?.userName?.charAt(0) || "U"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-whatsapp-online rounded-full border-2 border-whatsapp-panel-bg shadow-lg"></div>
+        </div>
 
         <div className="flex-1 min-w-0">
-          <h3 className={`font-medium text-whatsapp-text-primary truncate ${isMobile ? 'text-base' : 'text-lg'
+          <h3 className={`font-semibold text-whatsapp-text-primary truncate ${isMobile ? 'text-base' : 'text-lg'
             }`}>
             {conversation?.userName || "Loading..."}
           </h3>
           <p className={`text-whatsapp-text-muted truncate ${isMobile ? 'text-xs' : 'text-sm'
             }`}>
             {conversation?.inCharge === 'bot'
-              ? 'Conversation handled by Khaliwid Bot'
-              : 'An admin is handling this conversation'}
+              ? '🤖 Conversation handled by Khaliwid Bot'
+              : '👤 An admin is handling this conversation'}
           </p>
         </div>
 
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover ${isMobile ? 'w-8 h-8' : 'w-10 h-10'
+          <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-8 h-8' : 'w-10 h-10'
             }`}>
             <Video className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
           </Button>
-          <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover ${isMobile ? 'w-8 h-8' : 'w-10 h-10'
+          <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-8 h-8' : 'w-10 h-10'
             }`}>
             <Phone className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
           </Button>
-          <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover ${isMobile ? 'w-8 h-8' : 'w-10 h-10'
+          <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-8 h-8' : 'w-10 h-10'
             }`}>
             <MoreVertical className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
           </Button>
@@ -223,11 +235,14 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
       </div>
 
       {/* Messages - Scrollable Area */}
-      <div className="flex-1 overflow-y-auto whatsapp-scrollbar relative" ref={scrollRef} onScroll={handleScroll}>
+      <div className="flex-1 overflow-y-auto whatsapp-scrollbar relative z-10" ref={scrollRef} onScroll={handleScroll}>
         <div className="p-4 space-y-3">
           {messagesStatus === 'LoadingFirstPage' && (
             <div className="flex justify-center items-center h-full">
-              <p>Loading messages...</p>
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 border-2 border-whatsapp-primary border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-whatsapp-text-muted font-medium">Loading messages...</p>
+              </div>
             </div>
           )}
 
@@ -242,7 +257,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
             const showTime = !isConsecutive || (prevMsg && new Date(msg.timestamp).getTime() - new Date(prevMsg.timestamp).getTime() > 300000); // 5 minutes
 
             const getBubbleClasses = () => {
-              let classes = 'message-bubble ';
+              let classes = 'message-bubble transition-all duration-300 hover:scale-105 ';
               if (msg.senderRole === 'admin') {
                 classes += 'outgoing admin';
               } else if (msg.senderRole === 'bot') {
@@ -262,7 +277,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
                   <div className="flex flex-col">
                     {msg.messageType === 'image' && msg.mediaUrl ? (
                       <div
-                        className="relative w-64 h-64 mb-1 cursor-pointer"
+                        className="relative w-64 h-64 mb-1 cursor-pointer group"
                         onClick={() => openImageDialog(msg.mediaUrl as string, msg.caption || 'Image')}
                       >
                         <Image
@@ -270,8 +285,15 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
                           alt={msg.caption || 'Image'}
                           layout="fill"
                           objectFit="cover"
-                          className="rounded-md"
+                          className="rounded-md transition-all duration-300 group-hover:brightness-110"
                         />
+                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md flex items-center justify-center">
+                          <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                          </div>
+                        </div>
                       </div>
                     ) : null}
                     {msg.content && (
@@ -281,12 +303,12 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
                       <p className="text-sm leading-relaxed whitespace-pre-wrap break-words mt-1">{msg.caption}</p>
                     )}
                     <div className="flex items-center justify-end mt-1 gap-1">
-                      <span className={`text-xs opacity-70 ${isOwn ? 'text-white' : 'text-whatsapp-text-muted'}`}>
+                      <span className={`text-xs opacity-70 font-medium ${isOwn ? 'text-white' : 'text-whatsapp-text-muted'}`}>
                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                       {isOwn && (
                         <div className="message-status">
-                          <svg viewBox="0 0 16 15" className="w-4 h-4 fill-current">
+                          <svg viewBox="0 0 16 15" className="w-4 h-4 fill-current opacity-80">
                             <path d="m15.01 3.316-.478-.372a.365.365 0 0 0-.51.063L8.666 9.879a.32.32 0 0 1-.484.033l-.358-.325a.319.319 0 0 0-.484.032l-.378.483a.418.418 0 0 0 .036.541l1.32 1.266c.143.14.361.125.484-.033l6.272-8.048a.366.366 0 0 0-.063-.51zm-4.1 0-.478-.372a.365.365 0 0 0-.51.063L4.566 9.879a.32.32 0 0 1-.484.033L1.891 7.769a.319.319 0 0 0-.484.032l-.378.483a.418.418 0 0 0 .036.541l3.61 3.466c.143.14.361.125.484-.033L10.91 3.379a.366.366 0 0 0-.063-.51z" />
                           </svg>
                         </div>
@@ -301,7 +323,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
         {showNewMessageIndicator && (
           <Button
             variant="secondary"
-            className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full h-10 w-10 p-2 shadow-lg"
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full h-10 w-10 p-2 shadow-lg glow-purple bg-whatsapp-primary/90 hover:bg-whatsapp-primary text-white border border-whatsapp-primary/50 backdrop-blur-sm"
             onClick={scrollToBottom}
           >
             <ChevronDown className="h-6 w-6" />
@@ -310,14 +332,14 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
       </div>
 
       {/* Message Input */}
-      <div className={`flex items-center gap-3 bg-whatsapp-panel-bg border-t border-whatsapp-border flex-shrink-0 ${isMobile ? 'px-3 py-2' : 'px-4 py-3'
+      <div className={`flex items-center gap-3 glass-panel border-t border-whatsapp-border/50 flex-shrink-0 backdrop-blur-xl relative z-10 ${isMobile ? 'px-3 py-2' : 'px-4 py-3'
         }`}>
-        <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover ${isMobile ? 'w-9 h-9' : 'w-10 h-10'
+        <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'
           }`}>
           <Smile className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
         </Button>
 
-        <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover ${isMobile ? 'w-9 h-9' : 'w-10 h-10'
+        <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'
           }`}
           onClick={handleAttachmentClick}
         >
@@ -332,11 +354,13 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
         />
 
         {attachment && (
-          <div className="absolute bottom-12 left-0 right-0 p-2 bg-whatsapp-panel-bg">
-            <div className="flex items-center gap-2">
-              <Image src={URL.createObjectURL(attachment)} alt="preview" width={40} height={40} className="rounded" />
-              <span className="text-sm text-whatsapp-text-primary truncate">{attachment.name}</span>
-              <Button variant="ghost" size="icon" onClick={handleRemoveAttachment} className="ml-auto text-whatsapp-text-secondary">
+          <div className="absolute bottom-12 left-0 right-0 p-3 glass-panel border-t border-whatsapp-border/50 backdrop-blur-xl">
+            <div className="flex items-center gap-3">
+              <div className="relative w-10 h-10 rounded-lg overflow-hidden ring-2 ring-whatsapp-primary/30">
+                <Image src={URL.createObjectURL(attachment)} alt="preview" layout="fill" objectFit="cover" />
+              </div>
+              <span className="text-sm text-whatsapp-text-primary truncate flex-1 font-medium">{attachment.name}</span>
+              <Button variant="ghost" size="icon" onClick={handleRemoveAttachment} className="text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-red-400 transition-all duration-300">
                 <X className="w-4 h-4" />
               </Button>
             </div>
@@ -349,30 +373,30 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            className="whatsapp-input"
+            className="whatsapp-input bg-whatsapp-bg/80 border border-whatsapp-border/50 focus:ring-2 focus:ring-whatsapp-primary/30 focus:border-whatsapp-primary transition-all duration-300"
           />
         </div>
 
-        {message.trim() ? (
+        {message.trim() || attachment ? (
           <Button
             onClick={handleSendMessage}
             size="icon"
-            className={`bg-whatsapp-primary hover:bg-whatsapp-dark text-white ${isMobile ? 'w-9 h-9' : 'w-10 h-10'
+            className={`modern-button transition-all duration-300 hover:scale-110 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'
               }`}
           >
-            <Send className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
+            <Send className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
           </Button>
         ) : (
           <Button
             variant="ghost"
             size="icon"
-            className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover ${isMobile ? 'w-9 h-9' : 'w-10 h-10'
-              }`}
+            className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'
+              } ${isRecording ? 'text-red-400 bg-red-500/10' : ''}`}
             onMouseDown={() => setIsRecording(true)}
             onMouseUp={() => setIsRecording(false)}
             onMouseLeave={() => setIsRecording(false)}
           >
-            <Mic className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'} ${isRecording ? 'text-red-500' : ''}`} />
+            <Mic className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'} transition-all duration-300 ${isRecording ? 'scale-110' : ''}`} />
           </Button>
         )}
       </div>
