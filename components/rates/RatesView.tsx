@@ -51,6 +51,9 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
         }
     };
 
+    const fromCode = fromCurrencyCode || 'SOURCE';
+    const toCode = toCurrencyCode || 'TARGET';
+
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -76,14 +79,27 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
             <div className="grid gap-2">
                 <Label htmlFor="currentMarketRate">Current Market Rate</Label>
                 <Input id="currentMarketRate" type="number" value={currentMarketRate} onChange={(e) => setCurrentMarketRate(parseFloat(e.target.value))} />
+                <p className="text-xs text-whatsapp-text-muted">This is for your reference only and is not used by the bot for negotiation.</p>
             </div>
-            <div className="grid gap-2">
-                <Label htmlFor="minRate">Minimum Rate</Label>
-                <Input id="minRate" type="number" value={minRate} onChange={(e) => setMinRate(parseFloat(e.target.value))} />
-            </div>
-            <div className="grid gap-2">
-                <Label htmlFor="maxRate">Maximum Rate</Label>
-                <Input id="maxRate" type="number" value={maxRate} onChange={(e) => setMaxRate(parseFloat(e.target.value))} />
+            <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                    <Label htmlFor="minRate">Your Minimum Rate</Label>
+                    <Input id="minRate" type="number" value={minRate} onChange={(e) => setMinRate(parseFloat(e.target.value))} />
+                    <p className="text-xs text-whatsapp-text-muted">
+                        The bot will not offer less than this.
+                        <br />
+                        (e.g., for 1 {fromCode}, you'll pay at least this amount in {toCode})
+                    </p>
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="maxRate">Your Maximum Rate</Label>
+                    <Input id="maxRate" type="number" value={maxRate} onChange={(e) => setMaxRate(parseFloat(e.target.value))} />
+                    <p className="text-xs text-whatsapp-text-muted">
+                        The bot will not offer more than this.
+                        <br />
+                        (e.g., for 1 {fromCode}, you'll pay at most this amount in {toCode})
+                    </p>
+                </div>
             </div>
             <DialogFooter>
                 <Button type="submit">Save Rate</Button>
@@ -192,10 +208,18 @@ export const RatesView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="grid gap-2 text-sm">
-                                <p><strong>Market Rate:</strong> {rate.currentMarketRate}</p>
-                                <p><strong>Min Rate:</strong> {rate.minRate}</p>
-                                <p><strong>Max Rate:</strong> {rate.maxRate}</p>
-                                <p className="text-xs text-whatsapp-text-muted">Last Updated: {new Date(rate.lastUpdated).toLocaleString()}</p>
+                                <div>
+                                    <p><strong>Your Offer Range</strong></p>
+                                    <p className="text-lg font-semibold">{rate.minRate} - {rate.maxRate} {rate.toCurrencyCode}</p>
+                                    <p className="text-xs text-whatsapp-text-muted">
+                                        For every 1 {rate.fromCurrencyCode}, the bot will offer between {rate.minRate} and {rate.maxRate} {rate.toCurrencyCode}.
+                                    </p>
+                                </div>
+                                <div>
+                                    <p><strong>Market Rate (Reference)</strong></p>
+                                    <p>{rate.currentMarketRate}</p>
+                                </div>
+                                <p className="text-xs text-whatsapp-text-muted pt-2">Last Updated: {new Date(rate.lastUpdated).toLocaleString()}</p>
                             </CardContent>
                             <CardFooter className="flex justify-end gap-2">
                                 <Button variant="outline" size="sm" onClick={() => handleEdit(rate)}><Edit className="w-4 h-4 mr-2" /> Edit</Button>
