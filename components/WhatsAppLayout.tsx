@@ -10,6 +10,7 @@ import { ImageDialog } from './ImageDialog';
 import { MobileNavBar } from './layout/MobileNavBar';
 import { RatesView } from './rates/RatesView';
 import { BankDetailsView } from './bank-details/BankDetailsView';
+import { AdminStatusView } from './settings/AdminStatusView';
 import { useWhatsAppStore, useUIState } from '@/lib/store';
 import { usePaginatedQuery, useMutation as useConvexMutation, useQuery } from 'convex/react';
 import { useMutation } from '@tanstack/react-query';
@@ -227,6 +228,8 @@ const WhatsAppLayoutContent: React.FC = () => {
         return <RatesView isMobile={true} />;
       case 'bank':
         return <BankDetailsView isMobile={true} />;
+      case 'settings':
+        return <AdminStatusView isMobile={true} />;
       case 'chats':
       default:
         return <ChatList
@@ -293,6 +296,8 @@ const WhatsAppLayoutContent: React.FC = () => {
           onConfirmStatusUpdate={confirmStatusUpdate}
           onCancelStatusUpdate={() => setIsStatusUpdateDialogOpen(false)}
         />;
+      case 'settings':
+        return <AdminStatusView isMobile={false} />;
       default:
         return (
           <div className="flex items-center justify-center h-full bg-whatsapp-panel-bg">
@@ -303,60 +308,54 @@ const WhatsAppLayoutContent: React.FC = () => {
   };
 
   const renderMainContent = () => {
-    if (activeTab === 'chats') {
-      return <ChatView chatId={selectedConversationId} isMobile={false} />;
-    }
-    if (activeTab === 'transactions' && selectedTransactionId && selectedTransaction) {
-      return <TransactionDetailView transaction={selectedTransaction as any} isMobile={false} />;
-    }
-    if (activeTab === 'rates') {
-      return <RatesView isMobile={false} />;
-    }
-    if (activeTab === 'bank') {
-      return <BankDetailsView isMobile={false} />;
-    }
-
-    const emptyStateInfo = {
-      transactions: {
-        icon: <Wallet />,
-        title: "Select a Transaction",
-        message: "Choose a transaction from the list on the left to see its details."
-      },
-      rates: {
-        icon: <AreaChart />,
-        title: "Exchange Rates",
-        message: "This feature is under construction. Soon you'll be able to view rates here."
-      },
-      bank: {
-        icon: <Landmark />,
-        title: "Bank Details",
-        message: "This feature is under construction. Soon you'll be able to manage bank details here."
-      },
-      settings: {
-        icon: <Settings />,
-        title: "Settings",
-        message: "This feature is under construction. Soon you'll be able to manage your settings here."
-      },
-      chats: {
-        icon: <MessageSquare />,
-        title: "WhatsApp Chat",
-        message: "Select a chat to start messaging."
+    if (selectedConversationId) {
+      const chat = conversations.find(c => c._id === selectedConversationId);
+      if (chat) {
+        return <ChatView chatId={selectedConversationId} onBack={handleBack} isMobile={false} />;
       }
-    }[activeTab] || {
-      icon: <MessageSquare />,
-      title: "Welcome",
-      message: "Select a feature from the sidebar to get started."
-    };
+    }
 
-    return (
-      <div className="flex items-center justify-center h-full bg-whatsapp-chat-bg">
-        <EmptyState
-          icon={emptyStateInfo.icon}
-          title={emptyStateInfo.title}
-          message={emptyStateInfo.message}
+    if (selectedTransactionId && selectedTransaction) {
+      return (
+        <TransactionDetailView
+          transaction={selectedTransaction as any}
+          isMobile={false}
         />
-      </div>
-    );
+      );
+    }
+
+    switch (activeTab) {
+      case 'transactions':
+        return <TransactionList
+          transactions={sortedTransactions}
+          status={transactionsStatus}
+          loadMore={loadMoreTransactions}
+          selectedTransactionId={selectedTransactionId}
+          onTransactionSelect={handleTransactionSelect}
+          onUpdateStatus={handleUpdateTransactionStatus}
+          isStatusUpdateDialogOpen={isStatusUpdateDialogOpen}
+          statusUpdateInfo={statusUpdateInfo}
+          onConfirmStatusUpdate={confirmStatusUpdate}
+          onCancelStatusUpdate={() => setIsStatusUpdateDialogOpen(false)}
+        />;
+      case 'rates':
+        return <RatesView />;
+      case 'bank':
+        return <BankDetailsView />;
+      case 'settings':
+        return <AdminStatusView />;
+      case 'chats':
+      default:
+        return (
+          <div className="h-full flex items-center justify-center bg-whatsapp-light-bg dark:bg-whatsapp-dark-bg">
+            <EmptyState
+              icon={<MessageSquare />}
+              title="Select a chat to start messaging"
+              message="Your conversations will appear here."
+            />
+          </div>
+        );
+    }
   };
 
   return (

@@ -164,5 +164,19 @@ export default defineSchema({
         metadata: v.optional(v.any()), // Additional account metadata
     })
         .index("by_account_number", ["accountNumber"])
-        .index("by_is_main", ["isMain"])
+        .index("by_is_main", ["isMain"]),
+
+    /**
+     * Admin status table - stores admin's manual and scheduled availability, along with their timezone
+     */
+    adminStatus: defineTable({
+        isManuallyInactive: v.boolean(),
+        recurringInactiveStart: v.string(), // "HH:mm" in 24-hour format
+        recurringInactiveEnd: v.string(), // "HH:mm" in 24-hour format
+        timezone: v.string(), // e.g., "Africa/Nairobi"
+    })
+        .index("by_is_manually_inactive", ["isManuallyInactive"])
+        .index("by_recurring_inactive_start", ["recurringInactiveStart"])
+        .index("by_recurring_inactive_end", ["recurringInactiveEnd"])
+        .index("by_timezone", ["timezone"]),
 }); 

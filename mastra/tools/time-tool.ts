@@ -19,9 +19,9 @@ export const getKenyaTimeTool = createTool({
             const hour = parseInt(timeString.split(':')[0], 10);
 
             let partOfDay;
-            if (hour >= 5 && hour < 12) {
+            if (hour >= 0 && hour < 12) {
                 partOfDay = 'morning';
-            } else if (hour >= 12 && hour < 18) {
+            } else if (hour >= 12 && hour < 16) {
                 partOfDay = 'afternoon';
             } else {
                 partOfDay = 'evening';

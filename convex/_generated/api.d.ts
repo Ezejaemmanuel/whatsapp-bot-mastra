@@ -14,6 +14,7 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as adminBankDetails from "../adminBankDetails.js";
+import type * as adminStatus from "../adminStatus.js";
 import type * as conversations from "../conversations.js";
 import type * as exchangeRates from "../exchangeRates.js";
 import type * as mediaFiles from "../mediaFiles.js";
@@ -34,6 +35,7 @@ import type * as users from "../users.js";
  */
 declare const fullApi: ApiFromModules<{
   adminBankDetails: typeof adminBankDetails;
+  adminStatus: typeof adminStatus;
   conversations: typeof conversations;
   exchangeRates: typeof exchangeRates;
   mediaFiles: typeof mediaFiles;

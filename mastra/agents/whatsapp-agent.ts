@@ -6,6 +6,7 @@ import { WHATSAPP_AGENT_NAME, WHATSAPP_AGENT_INSTRUCTIONS, GEMINI_MODEL } from '
 import { getCurrentRatesTool, createTransactionTool, updateTransactionStatusTool } from '../tools/exchange-tools';
 import { getUserTransactionsTool, getLatestUserTransactionTool, getAdminBankDetailsTool, getUserTool, updateUserBankDetailsTool } from '../tools/exchange-tools-2';
 import { getKenyaTimeTool } from '../tools/time-tool';
+import { getAdminStatusTool } from '../tools/admin-status-tool';
 
 
 const GOOGLE_GENERATIVE_AI_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
@@ -158,5 +159,6 @@ export const whatsappAgent = new Agent({
         getUserTool,
         updateUserBankDetailsTool,
         getKenyaTimeTool,
+        getAdminStatusTool,
     },
 }); 
