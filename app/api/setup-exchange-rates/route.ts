@@ -109,6 +109,8 @@ const DEFAULT_EXCHANGE_RATES: ExchangeRateConfig[] = [
 
 
 
+
+
 export async function GET(request: NextRequest) {
     try {
         console.log('🏦 Exchange Rates Setup Started - Always Reset Mode', {
