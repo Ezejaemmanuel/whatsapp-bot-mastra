@@ -112,12 +112,10 @@ export default defineSchema({
         minRate: v.number(), // Minimum acceptable rate for the business
         maxRate: v.number(), // Maximum rate offered to customers
         currentMarketRate: v.number(), // Current market rate for reference
-        isActive: v.boolean(), // Whether this rate is currently active
         lastUpdated: v.number(), // Last update timestamp
         metadata: v.optional(v.any()), // Additional rate metadata
     })
         .index("by_currency_pair", ["currencyPair"])
-        .index("by_is_active", ["isActive"])
         .index("by_last_updated", ["lastUpdated"]),
 
     /**
@@ -155,15 +153,14 @@ export default defineSchema({
         accountNumber: v.string(), // Admin account number
         accountName: v.string(), // Admin account holder name
         bankName: v.string(), // Admin bank name
-        isActive: v.boolean(), // Whether this account is currently active for receiving payments
-        isMain: v.boolean(), // Whether this is the default account
         description: v.optional(v.string()), // Optional description for the account
+        isActive: v.boolean(), // Whether this account is currently active for receiving payments
+        isMain: v.optional(v.boolean()), // Whether this is the default account
         createdAt: v.number(), // Account creation timestamp
         updatedAt: v.number(), // Last update timestamp
         metadata: v.optional(v.any()), // Additional account metadata
     })
-        .index("by_is_active", ["isActive"])
+        .index("by_account_number", ["accountNumber"])
         .index("by_is_main", ["isMain"])
-        .index("by_bank_name", ["bankName"])
-        .index("by_created_at", ["createdAt"]),
+        .index("by_is_active", ["isActive"]),
 }); 

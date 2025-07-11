@@ -11,14 +11,12 @@ export const getCurrentRates = query({
             return await ctx.db
                 .query("exchangeRates")
                 .withIndex("by_currency_pair", (q) => q.eq("currencyPair", args.currencyPair!))
-                .filter((q) => q.eq(q.field("isActive"), true))
                 .first();
         }
 
         // Return all active rates if no specific pair requested
         return await ctx.db
             .query("exchangeRates")
-            .withIndex("by_is_active", (q) => q.eq("isActive", true))
             .collect();
     },
 });
@@ -31,7 +29,6 @@ export const getAllActiveCurrencyPairs = query({
     handler: async (ctx) => {
         return await ctx.db
             .query("exchangeRates")
-            .withIndex("by_is_active", (q) => q.eq("isActive", true))
             .collect();
     },
 });
@@ -45,7 +42,6 @@ export const upsertExchangeRate = mutation({
         minRate: v.number(),
         maxRate: v.number(),
         currentMarketRate: v.number(),
-        isActive: v.optional(v.boolean()),
         metadata: v.optional(v.any()),
     },
     handler: async (ctx, args) => {
@@ -62,7 +58,6 @@ export const upsertExchangeRate = mutation({
                 minRate: args.minRate,
                 maxRate: args.maxRate,
                 currentMarketRate: args.currentMarketRate,
-                isActive: args.isActive ?? existingRate.isActive,
                 lastUpdated: now,
                 metadata: args.metadata ?? existingRate.metadata,
             });
@@ -73,7 +68,6 @@ export const upsertExchangeRate = mutation({
                 minRate: args.minRate,
                 maxRate: args.maxRate,
                 currentMarketRate: args.currentMarketRate,
-                isActive: args.isActive ?? true,
                 lastUpdated: now,
                 metadata: args.metadata,
             });
@@ -122,7 +116,6 @@ export const deactivateRate = mutation({
         }
 
         return await ctx.db.patch(rate._id, {
-            isActive: false,
             lastUpdated: Date.now(),
         });
     },
@@ -160,7 +153,6 @@ export const validateNegotiatedRate = query({
         const rate = await ctx.db
             .query("exchangeRates")
             .withIndex("by_currency_pair", (q) => q.eq("currencyPair", args.currencyPair))
-            .filter((q) => q.eq(q.field("isActive"), true))
             .first();
 
         if (!rate) {
