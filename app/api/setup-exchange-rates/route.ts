@@ -16,7 +16,6 @@ interface ExchangeRateConfig {
     minRate: number;
     maxRate: number;
     currentMarketRate: number;
-    isActive: boolean;
     metadata?: {
         description: string;
         baseCurrency: string;
@@ -33,7 +32,6 @@ const DEFAULT_EXCHANGE_RATES: ExchangeRateConfig[] = [
         minRate: 1650.00,
         maxRate: 1700.00,
         currentMarketRate: 1675.00,
-        isActive: true,
         metadata: {
             description: "US Dollar to Nigerian Naira",
             baseCurrency: "USD",
@@ -47,7 +45,6 @@ const DEFAULT_EXCHANGE_RATES: ExchangeRateConfig[] = [
         minRate: 2050.00,
         maxRate: 2120.00,
         currentMarketRate: 2085.00,
-        isActive: true,
         metadata: {
             description: "British Pound to Nigerian Naira",
             baseCurrency: "GBP",
@@ -61,7 +58,6 @@ const DEFAULT_EXCHANGE_RATES: ExchangeRateConfig[] = [
         minRate: 1750.00,
         maxRate: 1820.00,
         currentMarketRate: 1785.00,
-        isActive: true,
         metadata: {
             description: "Euro to Nigerian Naira",
             baseCurrency: "EUR",
@@ -75,7 +71,6 @@ const DEFAULT_EXCHANGE_RATES: ExchangeRateConfig[] = [
         minRate: 1200.00,
         maxRate: 1250.00,
         currentMarketRate: 1225.00,
-        isActive: true,
         metadata: {
             description: "Canadian Dollar to Nigerian Naira",
             baseCurrency: "CAD",
@@ -89,7 +84,6 @@ const DEFAULT_EXCHANGE_RATES: ExchangeRateConfig[] = [
         minRate: 1100.00,
         maxRate: 1150.00,
         currentMarketRate: 1125.00,
-        isActive: true,
         metadata: {
             description: "Australian Dollar to Nigerian Naira",
             baseCurrency: "AUD",
@@ -103,7 +97,6 @@ const DEFAULT_EXCHANGE_RATES: ExchangeRateConfig[] = [
         minRate: 1850.00,
         maxRate: 1920.00,
         currentMarketRate: 1885.00,
-        isActive: true,
         metadata: {
             description: "Swiss Franc to Nigerian Naira",
             baseCurrency: "CHF",
@@ -140,7 +133,6 @@ export async function GET(request: NextRequest) {
                     minRate: rateConfig.minRate,
                     maxRate: rateConfig.maxRate,
                     currentMarketRate: rateConfig.currentMarketRate,
-                    isActive: rateConfig.isActive,
                     metadata: rateConfig.metadata
                 });
 
