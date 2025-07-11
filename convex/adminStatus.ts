@@ -10,84 +10,78 @@ export const getAdminStatus = query({
         const adminStatus = await ctx.db.query("adminStatus").unique();
 
         if (!adminStatus) {
-            // If no status is set, assume admin is active
             return {
                 isInactive: false,
                 reason: "no_config",
+                settings: null,
             };
         }
 
-        // 1. Check for manual override
+        let status: {
+            isInactive: boolean;
+            reason: string;
+            activeTime?: string | null;
+        };
+
         if (adminStatus.isManuallyInactive) {
-            return {
+            status = {
                 isInactive: true,
                 reason: "manual_override",
                 activeTime: null,
             };
-        }
+        } else {
+            const { recurringInactiveStart, recurringInactiveEnd, timezone } = adminStatus;
 
-        // 2. Check recurring schedule
-        const { recurringInactiveStart, recurringInactiveEnd, timezone } = adminStatus;
-
-        if (!recurringInactiveStart || !recurringInactiveEnd || !timezone) {
-            return {
-                isInactive: false,
-                reason: "incomplete_schedule",
-            };
-        }
-
-        try {
-            const now = new Date();
-            const zonedNow = toDate(now, { timeZone: timezone });
-
-            const currentTime = formatInTimeZone(zonedNow, timezone, "HH:mm");
-
-            const startTime = recurringInactiveStart; // "HH:mm"
-            const endTime = recurringInactiveEnd; // "HH:mm"
-
-            let isInactive = false;
-
-            // Handle overnight schedule (e.g., 22:00 to 08:00)
-            if (startTime > endTime) {
-                if (currentTime >= startTime || currentTime < endTime) {
-                    isInactive = true;
-                }
-            } else { // Handle same-day schedule (e.g., 09:00 to 17:00)
-                if (currentTime >= startTime && currentTime < endTime) {
-                    isInactive = true;
-                }
-            }
-
-            if (isInactive) {
-                return {
-                    isInactive: true,
-                    reason: "recurring_schedule",
-                    activeTime: endTime,
+            if (!recurringInactiveStart || !recurringInactiveEnd || !timezone) {
+                status = {
+                    isInactive: false,
+                    reason: "incomplete_schedule",
                 };
+            } else {
+                try {
+                    const now = new Date();
+                    const zonedNow = toDate(now, { timeZone: timezone });
+                    const currentTime = formatInTimeZone(zonedNow, timezone, "HH:mm");
+                    const startTime = recurringInactiveStart;
+                    const endTime = recurringInactiveEnd;
+
+                    let isInactiveNow = false;
+                    if (startTime > endTime) {
+                        if (currentTime >= startTime || currentTime < endTime) {
+                            isInactiveNow = true;
+                        }
+                    } else {
+                        if (currentTime >= startTime && currentTime < endTime) {
+                            isInactiveNow = true;
+                        }
+                    }
+
+                    if (isInactiveNow) {
+                        status = {
+                            isInactive: true,
+                            reason: "recurring_schedule",
+                            activeTime: endTime,
+                        };
+                    } else {
+                        status = {
+                            isInactive: false,
+                            reason: "active_hours",
+                        };
+                    }
+                } catch (error) {
+                    console.error("Error checking admin status:", error);
+                    status = {
+                        isInactive: false,
+                        reason: "error",
+                    };
+                }
             }
-
-            return {
-                isInactive: false,
-                reason: "active_hours",
-            };
-        } catch (error) {
-            console.error("Error checking admin status:", error);
-            // Fallback to active in case of time parsing errors
-            return {
-                isInactive: false,
-                reason: "error",
-            };
         }
-    },
-});
 
-// =================================================================
-// Query: Get Admin Status Settings
-// =================================================================
-export const getAdminStatusSettings = query({
-    handler: async (ctx) => {
-        const adminStatus = await ctx.db.query("adminStatus").unique();
-        return adminStatus;
+        return {
+            ...status,
+            settings: adminStatus,
+        };
     },
 });
 
