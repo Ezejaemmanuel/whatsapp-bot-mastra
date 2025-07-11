@@ -11,35 +11,36 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const AdminStatusSkeleton: React.FC = () => (
-    <div className="p-4 h-full">
-        <Card>
+const AdminStatusSkeleton: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => (
+    <div className={`p-4 h-full ${!isMobile ? 'flex items-center justify-center' : ''}`}>
+        <Card className={`w-full ${!isMobile ? 'max-w-2xl' : ''}`}>
             <CardHeader>
-                <Skeleton className="h-6 w-1/4" />
-                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-8 w-1/2" />
+                <Skeleton className="h-4 w-3/4 mt-2" />
             </CardHeader>
-            <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <Skeleton className="h-5 w-1/3" />
-                    <Skeleton className="h-6 w-12" />
+            <CardContent className="space-y-8 pt-6">
+                <div className="p-4 border rounded-lg">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <Skeleton className="h-6 w-1/3" />
+                            <Skeleton className="h-4 w-2/3 mt-2" />
+                        </div>
+                        <Skeleton className="h-6 w-12 rounded-full" />
+                    </div>
                 </div>
-                <div className="space-y-2">
-                    <Skeleton className="h-5 w-1/2" />
+                <div className="p-4 border rounded-lg space-y-4">
+                    <Skeleton className="h-6 w-1/3" />
+                    <Skeleton className="h-4 w-3/4" />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1">
+                        <div className="space-y-2">
                             <Skeleton className="h-4 w-1/4" />
                             <Skeleton className="h-10 w-full" />
                         </div>
-                        <div className="space-y-1">
+                        <div className="space-y-2">
                             <Skeleton className="h-4 w-1/4" />
                             <Skeleton className="h-10 w-full" />
                         </div>
                     </div>
-                </div>
-                <div className="space-y-1">
-                    <Skeleton className="h-4 w-1/4" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-3 w-1/3" />
                 </div>
             </CardContent>
             <CardFooter>
@@ -82,7 +83,7 @@ export const AdminStatusView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) 
     };
 
     if (adminStatusData === undefined) {
-        return <AdminStatusSkeleton />;
+        return <AdminStatusSkeleton isMobile={isMobile} />;
     }
 
     const statusMessage = adminStatusData?.isInactive
@@ -90,19 +91,33 @@ export const AdminStatusView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) 
         : "Admin is currently online.";
 
     return (
-        <div className={`p-4 ${isMobile ? '' : 'h-full'}`}>
-            <Card>
+        <div className={`p-4 ${isMobile ? '' : 'h-full flex items-center justify-center bg-whatsapp-light-bg dark:bg-whatsapp-dark-bg'}`}>
+            <Card className={`w-full ${!isMobile ? 'max-w-2xl' : ''}`}>
                 <CardHeader>
-                    <CardTitle>Admin Status</CardTitle>
-                    <CardDescription>
-                        {statusMessage}
+                    <CardTitle className="text-2xl font-bold">Admin Status Settings</CardTitle>
+                    <CardDescription className="pt-2">
+                        Manage when the admin is available to respond to messages.
+                        The current status is: <span className={`font-semibold ${adminStatusData?.isInactive ? 'text-orange-500' : 'text-green-500'}`}>{adminStatusData?.isInactive ? 'Offline' : 'Online'}</span>.
+                        {adminStatusData?.isInactive && (
+                            <span className="text-xs">
+                                {` (Reason: ${adminStatusData.reason === 'recurring_schedule'
+                                    ? `Recurring Schedule - back at ${adminStatusData.settings?.recurringInactiveEnd}`
+                                    : 'Manual Override'
+                                    })`}
+                            </span>
+                        )}
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="flex items-center justify-between">
-                        <Label htmlFor="manual-override" className="font-semibold">
-                            Manual Override (Offline)
-                        </Label>
+                <CardContent className="space-y-8 pt-6">
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                            <Label htmlFor="manual-override" className="font-semibold text-base">
+                                Manual Override (Force Offline)
+                            </Label>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                Immediately set admin status to offline until turned off.
+                            </p>
+                        </div>
                         <Switch
                             id="manual-override"
                             checked={isManualInactive}
@@ -110,8 +125,11 @@ export const AdminStatusView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) 
                         />
                     </div>
 
-                    <div className="space-y-2">
-                        <h3 className="font-semibold">Recurring Inactive Schedule</h3>
+                    <div className={`p-4 border rounded-lg transition-opacity ${isManualInactive ? 'opacity-50' : 'opacity-100'}`}>
+                        <h3 className="font-semibold text-base">Recurring Inactive Schedule</h3>
+                        <p className="text-sm text-muted-foreground mt-1 mb-4">
+                            Set a daily schedule when the admin will be automatically offline.
+                        </p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-1">
                                 <Label htmlFor="start-time">Start Time</Label>
@@ -135,12 +153,10 @@ export const AdminStatusView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) 
                             </div>
                         </div>
                     </div>
-
-                  
                 </CardContent>
                 <CardFooter>
-                    <Button onClick={handleSave} className="ml-auto">
-                        Save Settings
+                    <Button onClick={handleSave} className="ml-auto" disabled={adminStatusData === undefined}>
+                        Save Changes
                     </Button>
                 </CardFooter>
             </Card>

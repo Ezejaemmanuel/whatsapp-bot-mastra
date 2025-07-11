@@ -18,9 +18,89 @@ import { api } from '@/convex/_generated/api';
 import { Doc, Id } from '@/convex/_generated/dataModel';
 import { EmptyState } from './ui/empty-state';
 import { ChatListLoader, TransactionListLoader, FullScreenLoader } from './ui/loader';
-import { MessageSquare, Wallet, Settings, Landmark, AreaChart } from 'lucide-react';
+import { MessageSquare, Wallet, Settings, Landmark, AreaChart, Send } from 'lucide-react';
 import { TransactionStatus } from '@/convex/schemaUnions';
 import { toast } from 'sonner';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { Textarea } from './ui/textarea';
+import { Label } from './ui/label';
+import { Button } from './ui/button';
+
+interface StatusUpdateDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  statusInfo: { transactionId: Id<"transactions">; status: TransactionStatus } | null;
+  onConfirm: (message?: string) => void;
+}
+
+const StatusUpdateDialog: React.FC<StatusUpdateDialogProps> = ({ isOpen, onClose, statusInfo, onConfirm }) => {
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    if (statusInfo?.status === 'confirmed_and_money_sent_to_user') {
+      setMessage('Your transaction has been processed and funds have been sent. Thank you for your business!');
+    } else {
+      setMessage('');
+    }
+  }, [statusInfo]);
+
+  if (!isOpen || !statusInfo) return null;
+
+  const { status } = statusInfo;
+  const isCancellation = status === 'cancelled';
+  const isConfirmation = status === 'confirmed_and_money_sent_to_user';
+
+  // This logic is to avoid showing the dialog for statuses that don't require a message.
+  // We can just confirm the status update directly.
+  const needsDialog = isCancellation || isConfirmation;
+
+  useEffect(() => {
+    if (isOpen && !needsDialog) {
+      onConfirm();
+    }
+  }, [isOpen, needsDialog, onConfirm]);
+
+
+  if (!needsDialog) {
+    return null;
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="glass-panel">
+        <DialogHeader>
+          <DialogTitle>Update Transaction Status to &quot;{status.replace(/_/g, ' ')}&quot;</DialogTitle>
+          <DialogDescription>
+            {isCancellation
+              ? "Optionally, provide a reason for cancelling this transaction. This will be sent to the user."
+              : "You can send a custom message to the user or use the default one below."}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <Label htmlFor="message" className="sr-only">
+            {isCancellation ? "Cancellation Reason" : "Message"}
+          </Label>
+          <Textarea
+            id="message"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder={isCancellation ? "e.g., Duplicate transaction..." : "Your message..."}
+          />
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+          </DialogClose>
+          <Button onClick={() => onConfirm(message)}>
+            <Send className="w-4 h-4 mr-2" />
+            Send Notification
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 
 const WhatsAppLayoutContent: React.FC = () => {
   const router = useRouter();
@@ -219,10 +299,6 @@ const WhatsAppLayoutContent: React.FC = () => {
           onTransactionSelect={handleTransactionSelect}
           onUpdateStatus={handleUpdateTransactionStatus}
           isMobile={true}
-          isStatusUpdateDialogOpen={isStatusUpdateDialogOpen}
-          statusUpdateInfo={statusUpdateInfo}
-          onConfirmStatusUpdate={confirmStatusUpdate}
-          onCancelStatusUpdate={() => setIsStatusUpdateDialogOpen(false)}
         />;
       case 'rates':
         return <RatesView isMobile={true} />;
@@ -291,10 +367,6 @@ const WhatsAppLayoutContent: React.FC = () => {
           onTransactionSelect={handleTransactionSelect}
           onUpdateStatus={handleUpdateTransactionStatus}
           isMobile={false}
-          isStatusUpdateDialogOpen={isStatusUpdateDialogOpen}
-          statusUpdateInfo={statusUpdateInfo}
-          onConfirmStatusUpdate={confirmStatusUpdate}
-          onCancelStatusUpdate={() => setIsStatusUpdateDialogOpen(false)}
         />;
       case 'settings':
         return <AdminStatusView isMobile={false} />;
@@ -371,6 +443,12 @@ const WhatsAppLayoutContent: React.FC = () => {
       </div>
 
       <ImageDialog />
+      <StatusUpdateDialog
+        isOpen={isStatusUpdateDialogOpen}
+        onClose={() => setIsStatusUpdateDialogOpen(false)}
+        statusInfo={statusUpdateInfo}
+        onConfirm={confirmStatusUpdate}
+      />
     </div>
   );
 };
