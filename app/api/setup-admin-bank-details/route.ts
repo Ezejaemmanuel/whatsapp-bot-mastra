@@ -15,7 +15,6 @@ interface AdminBankDetailsConfig {
     accountNumber: string;
     accountName: string;
     bankName: string;
-    isActive: boolean;
     isMain: boolean;
     description?: string;
     metadata?: {
@@ -30,7 +29,6 @@ const DEFAULT_ADMIN_BANK_DETAILS: AdminBankDetailsConfig = {
     accountNumber: "9138853790",
     accountName: "Ezeja Emmanuel Chibuike",
     bankName: "Opay",
-    isActive: true,
     isMain: true,
     description: "Primary account for receiving customer payments",
     metadata: {
@@ -52,7 +50,6 @@ export async function GET(request: NextRequest) {
             accountNumber: DEFAULT_ADMIN_BANK_DETAILS.accountNumber,
             accountName: DEFAULT_ADMIN_BANK_DETAILS.accountName,
             bankName: DEFAULT_ADMIN_BANK_DETAILS.bankName,
-            isActive: DEFAULT_ADMIN_BANK_DETAILS.isActive,
             isMain: DEFAULT_ADMIN_BANK_DETAILS.isMain,
             description: DEFAULT_ADMIN_BANK_DETAILS.description,
             metadata: DEFAULT_ADMIN_BANK_DETAILS.metadata,
@@ -80,7 +77,6 @@ export async function GET(request: NextRequest) {
                     accountName: DEFAULT_ADMIN_BANK_DETAILS.accountName,
                     bankName: DEFAULT_ADMIN_BANK_DETAILS.bankName,
                     isMain: DEFAULT_ADMIN_BANK_DETAILS.isMain,
-                    isActive: DEFAULT_ADMIN_BANK_DETAILS.isActive,
                     description: DEFAULT_ADMIN_BANK_DETAILS.description,
                     action: 'upserted'
                 },
@@ -138,7 +134,6 @@ export async function POST(request: NextRequest) {
             accountNumber,
             accountName,
             bankName,
-            isActive: body.isActive ?? true,
             isMain: body.isMain ?? true,
             description: body.description || `Admin account for ${bankName}`,
             metadata: {
@@ -171,7 +166,6 @@ export async function POST(request: NextRequest) {
                     accountName,
                     bankName,
                     isMain: body.isMain ?? true,
-                    isActive: body.isActive ?? true,
                     description: body.description || `Admin account for ${bankName}`,
                     action: 'upserted'
                 },
