@@ -1,20 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MoreVertical, Plus, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle, XCircle, AlertCircle, ArrowRight, Wallet } from 'lucide-react';
+import { Search, MoreVertical, Plus, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle, XCircle, AlertCircle, ArrowRight, Wallet, MessageCircle, Send } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { Textarea } from './ui/textarea';
+import { Label } from './ui/label';
 import { useUIState, useWhatsAppStore } from '@/lib/store';
 import { useShallow } from 'zustand/react/shallow';
 import { Id, Doc } from '@/convex/_generated/dataModel';
 import { useInView } from 'react-intersection-observer';
 import { EmptyState } from './ui/empty-state';
+import { TransactionStatus } from '@/convex/schemaUnions';
 
-type TransactionStatus = "pending" | "completed" | "failed" | "verified" | "paid" | "cancelled";
-
-const transactionStatuses: TransactionStatus[] = ["pending", "verified", "paid", "completed", "failed", "cancelled"];
+const transactionStatuses: TransactionStatus[] = [
+  "pending",
+  "image_received_and_being_reviewed",
+  "confirmed_and_money_sent_to_user",
+  "cancelled",
+  "failed"
+];
 
 type TransactionWithDetails = Doc<"transactions"> & {
   user: Doc<"users"> | null;
@@ -29,6 +37,10 @@ interface TransactionListProps {
   onTransactionSelect: (transactionId: Id<"transactions">) => void;
   onUpdateStatus: (transactionId: Id<"transactions">, status: TransactionStatus) => void;
   isMobile?: boolean;
+  isStatusUpdateDialogOpen: boolean;
+  statusUpdateInfo: { transactionId: Id<"transactions">; status: TransactionStatus } | null;
+  onConfirmStatusUpdate: (message?: string) => void;
+  onCancelStatusUpdate: () => void;
 }
 
 export const TransactionList: React.FC<TransactionListProps> = ({
@@ -38,7 +50,11 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   selectedTransactionId,
   onTransactionSelect,
   onUpdateStatus,
-  isMobile = false
+  isMobile = false,
+  isStatusUpdateDialogOpen,
+  statusUpdateInfo,
+  onConfirmStatusUpdate,
+  onCancelStatusUpdate,
 }) => {
   const { searchQuery, setSearchQuery } = useWhatsAppStore(
     useShallow((state) => ({
@@ -68,46 +84,42 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
     if (activeFilter === 'All') return matchesSearch;
     if (activeFilter === 'Pending') return matchesSearch && transaction.status === 'pending';
-    if (activeFilter === 'Completed') return matchesSearch && transaction.status === 'completed';
+    if (activeFilter === 'Completed') return matchesSearch && transaction.status === 'confirmed_and_money_sent_to_user';
     if (activeFilter === 'Failed') return matchesSearch && transaction.status === 'failed';
     return false; // Should not happen with the current filters
   });
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed':
+      case 'confirmed_and_money_sent_to_user':
         return <CheckCircle className="w-4 h-4 text-whatsapp-success" />;
       case 'pending':
-        return <Clock className="w-4 h-4 text-whatsapp-warning" />;
-      case 'verified':
-        return <CheckCircle className="w-4 h-4 text-whatsapp-primary" />;
-      case 'paid':
-        return <ArrowUpRight className="w-4 h-4 text-whatsapp-accent" />;
+        return <Clock className="w-4 h-4 text-yellow-500" />;
+      case 'image_received_and_being_reviewed':
+        return <MessageCircle className="w-4 h-4 text-blue-500" />;
       case 'failed':
         return <XCircle className="w-4 h-4 text-red-500" />;
       case 'cancelled':
-        return <XCircle className="w-4 h-4 text-whatsapp-text-muted" />;
+        return <XCircle className="w-4 h-4 text-gray-500" />;
       default:
-        return <AlertCircle className="w-4 h-4 text-whatsapp-text-muted" />;
+        return <AlertCircle className="w-4 h-4 text-gray-400" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
+      case 'confirmed_and_money_sent_to_user':
         return 'bg-whatsapp-success/20 text-whatsapp-success border border-whatsapp-success/30';
       case 'pending':
-        return 'bg-whatsapp-warning/20 text-whatsapp-warning border border-whatsapp-warning/30';
-      case 'verified':
-        return 'bg-whatsapp-primary/20 text-whatsapp-primary border border-whatsapp-primary/30';
-      case 'paid':
-        return 'bg-whatsapp-accent/20 text-whatsapp-accent border border-whatsapp-accent/30';
+        return 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30';
+      case 'image_received_and_being_reviewed':
+        return 'bg-blue-500/20 text-blue-500 border border-blue-500/30';
       case 'failed':
         return 'bg-red-500/20 text-red-400 border border-red-500/30';
       case 'cancelled':
-        return 'bg-whatsapp-text-muted/20 text-whatsapp-text-muted border border-whatsapp-text-muted/30';
+        return 'bg-gray-500/20 text-gray-500 border border-gray-500/30';
       default:
-        return 'bg-whatsapp-text-muted/20 text-whatsapp-text-muted border border-whatsapp-text-muted/30';
+        return 'bg-gray-400/20 text-gray-400 border border-gray-400/30';
     }
   };
 
@@ -165,6 +177,12 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         formatTimeAgo={formatTimeAgo}
         handleStatusUpdate={handleStatusUpdate}
         loadMoreRef={ref}
+      />
+      <StatusUpdateDialog
+        isOpen={isStatusUpdateDialogOpen}
+        onClose={onCancelStatusUpdate}
+        statusInfo={statusUpdateInfo}
+        onConfirm={onConfirmStatusUpdate}
       />
     </div>
   );
@@ -420,3 +438,70 @@ const TransactionCard: React.FC<TransactionCardProps> = ({
     </div>
   </div>
 );
+
+interface StatusUpdateDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  statusInfo: { transactionId: Id<"transactions">; status: TransactionStatus } | null;
+  onConfirm: (message?: string) => void;
+}
+
+const StatusUpdateDialog: React.FC<StatusUpdateDialogProps> = ({ isOpen, onClose, statusInfo, onConfirm }) => {
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    if (statusInfo?.status === 'confirmed_and_money_sent_to_user') {
+      setMessage('Your transaction has been processed and funds have been sent. Thank you for your business!');
+    } else {
+      setMessage('');
+    }
+  }, [statusInfo]);
+
+  if (!isOpen || !statusInfo) return null;
+
+  const { status } = statusInfo;
+  const isCancellation = status === 'cancelled';
+  const isConfirmation = status === 'confirmed_and_money_sent_to_user';
+
+  const needsDialog = isCancellation || isConfirmation;
+
+  if (!needsDialog) {
+    onConfirm();
+    return null;
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="glass-panel">
+        <DialogHeader>
+          <DialogTitle>Update Transaction Status to &quot;{status}&quot;</DialogTitle>
+          <DialogDescription>
+            {isCancellation
+              ? "Optionally, provide a reason for cancelling this transaction. This will be sent to the user."
+              : "You can send a custom message to the user or use the default one below."}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <Label htmlFor="message" className="sr-only">
+            {isCancellation ? "Cancellation Reason" : "Message"}
+          </Label>
+          <Textarea
+            id="message"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder={isCancellation ? "e.g., Duplicate transaction..." : "Your message..."}
+          />
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+          </DialogClose>
+          <Button onClick={() => onConfirm(message)}>
+            <Send className="w-4 h-4 mr-2" />
+            Send Notification
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};

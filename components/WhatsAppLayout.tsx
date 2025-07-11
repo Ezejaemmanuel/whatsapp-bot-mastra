@@ -11,12 +11,15 @@ import { MobileNavBar } from './layout/MobileNavBar';
 import { RatesView } from './rates/RatesView';
 import { BankDetailsView } from './bank-details/BankDetailsView';
 import { useWhatsAppStore, useUIState } from '@/lib/store';
-import { usePaginatedQuery, useMutation, useQuery } from 'convex/react';
+import { usePaginatedQuery, useMutation as useConvexMutation, useQuery } from 'convex/react';
+import { useMutation } from '@tanstack/react-query';
 import { api } from '@/convex/_generated/api';
 import { Doc, Id } from '@/convex/_generated/dataModel';
 import { EmptyState } from './ui/empty-state';
 import { ChatListLoader, TransactionListLoader, FullScreenLoader } from './ui/loader';
 import { MessageSquare, Wallet, Settings, Landmark, AreaChart } from 'lucide-react';
+import { TransactionStatus } from '@/convex/schemaUnions';
+import { toast } from 'sonner';
 
 const WhatsAppLayoutContent: React.FC = () => {
   const router = useRouter();
@@ -26,6 +29,14 @@ const WhatsAppLayoutContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'chats');
   const [selectedConversationId, setSelectedConversationId] = useState(searchParams.get('chatId') as Id<"conversations"> | undefined);
   const [selectedTransactionId, setSelectedTransactionId] = useState(searchParams.get('transactionId') as Id<"transactions"> | undefined);
+
+  // State for the status update dialog
+  const [isStatusUpdateDialogOpen, setIsStatusUpdateDialogOpen] = useState(false);
+  const [statusUpdateInfo, setStatusUpdateInfo] = useState<{
+    transactionId: Id<"transactions">;
+    status: TransactionStatus;
+  } | null>(null);
+
 
   const { isMobile } = useUIState();
   const setIsMobile = useWhatsAppStore((state) => state.setIsMobile);
@@ -39,7 +50,7 @@ const WhatsAppLayoutContent: React.FC = () => {
     {},
     { initialNumItems: 20 }
   );
-  const markAsRead = useMutation(api.conversations.markConversationAsRead);
+  const markAsRead = useConvexMutation(api.conversations.markConversationAsRead);
 
   const {
     results: transactions,
@@ -51,8 +62,7 @@ const WhatsAppLayoutContent: React.FC = () => {
     { initialNumItems: 20 }
   );
 
-  const updateTransactionStatus = useMutation(api.transactions.updateTransactionStatus);
-  const markTransactionAsRead = useMutation(api.transactions.markTransactionAsRead);
+  const markTransactionAsRead = useConvexMutation(api.transactions.markTransactionAsRead);
 
   const selectedTransaction = useQuery(
     api.transactions.getTransaction,
@@ -117,15 +127,54 @@ const WhatsAppLayoutContent: React.FC = () => {
     markTransactionAsRead({ transactionId });
   };
 
-  const handleUpdateTransactionStatus = async (
+  const handleUpdateTransactionStatus = (
     transactionId: Id<"transactions">,
-    status: Doc<"transactions">["status"]
+    status: TransactionStatus
   ) => {
-    try {
-      await updateTransactionStatus({ transactionId, status });
-    } catch (error) {
-      console.error("Failed to update transaction status", error);
+    setStatusUpdateInfo({ transactionId, status });
+    setIsStatusUpdateDialogOpen(true);
+  };
+
+  const { mutateAsync: updateStatusMutation, isPending: isUpdatingStatus } = useMutation({
+    mutationFn: async (variables: { transactionId: Id<"transactions">, status: TransactionStatus, message?: string }) => {
+      const response = await fetch('/api/transactions/update-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(variables),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update status');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast.success("Transaction status updated and notification sent.");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An unknown error occurred.");
+    },
+    onSettled: () => {
+      setIsStatusUpdateDialogOpen(false);
+      setStatusUpdateInfo(null);
     }
+  });
+
+
+  const confirmStatusUpdate = async (message?: string) => {
+    if (!statusUpdateInfo) return;
+    await toast.promise(updateStatusMutation({
+      transactionId: statusUpdateInfo.transactionId,
+      status: statusUpdateInfo.status,
+      message,
+    }), {
+      loading: "Updating transaction status...",
+      success: "Transaction status updated successfully.",
+      error: "Failed to update transaction status."
+    }).unwrap()
   };
 
   const handleTabChange = (tab: 'chats' | 'transactions' | 'settings' | 'rates' | 'bank') => {
@@ -168,7 +217,12 @@ const WhatsAppLayoutContent: React.FC = () => {
           selectedTransactionId={selectedTransactionId}
           onTransactionSelect={handleTransactionSelect}
           onUpdateStatus={handleUpdateTransactionStatus}
-          isMobile={true} />;
+          isMobile={true}
+          isStatusUpdateDialogOpen={isStatusUpdateDialogOpen}
+          statusUpdateInfo={statusUpdateInfo}
+          onConfirmStatusUpdate={confirmStatusUpdate}
+          onCancelStatusUpdate={() => setIsStatusUpdateDialogOpen(false)}
+        />;
       case 'rates':
         return <RatesView isMobile={true} />;
       case 'bank':
@@ -213,7 +267,7 @@ const WhatsAppLayoutContent: React.FC = () => {
     switch (activeTab) {
       case 'chats':
         if (conversationsStatus === 'LoadingFirstPage') {
-            return <ChatListLoader />;
+          return <ChatListLoader />;
         }
         return <ChatList
           conversations={sortedConversations}
@@ -224,7 +278,7 @@ const WhatsAppLayoutContent: React.FC = () => {
           isMobile={false} />;
       case 'transactions':
         if (transactionsStatus === 'LoadingFirstPage') {
-            return <TransactionListLoader />;
+          return <TransactionListLoader />;
         }
         return <TransactionList
           transactions={sortedTransactions}
@@ -233,7 +287,12 @@ const WhatsAppLayoutContent: React.FC = () => {
           selectedTransactionId={selectedTransactionId}
           onTransactionSelect={handleTransactionSelect}
           onUpdateStatus={handleUpdateTransactionStatus}
-          isMobile={false} />;
+          isMobile={false}
+          isStatusUpdateDialogOpen={isStatusUpdateDialogOpen}
+          statusUpdateInfo={statusUpdateInfo}
+          onConfirmStatusUpdate={confirmStatusUpdate}
+          onCancelStatusUpdate={() => setIsStatusUpdateDialogOpen(false)}
+        />;
       default:
         return (
           <div className="flex items-center justify-center h-full bg-whatsapp-panel-bg">

@@ -4,7 +4,7 @@ import { fetchQuery, fetchMutation } from "convex/nextjs";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 
-import {  logToolCall, logInfo, logSuccess, logToolResult, logError, logToolError, isValidConvexId } from './utils';
+import { logToolCall, logInfo, logSuccess, logToolResult, logError, logToolError, isValidConvexId } from './utils';
 
 
 /**
@@ -319,7 +319,7 @@ export const updateTransactionStatusTool = createTool({
     description: 'Update transaction status (pending, paid, verified, completed, failed, cancelled). This tool automatically validates the transaction ID before updating. If validation fails, it returns helpful guidance instead of throwing an error.',
     inputSchema: z.object({
         transactionId: z.string().describe('Transaction ID - must be a valid Convex document ID that belongs to the current user'),
-        status: z.enum(["pending", "paid", "verified", "completed", "failed", "cancelled"]).describe('New status: pending, paid, verified, completed, failed, cancelled'),
+        status: z.enum(["pending", "image_received_and_being_reviewed", "confirmed_and_money_sent_to_user", "cancelled", "failed"]).describe('New status: pending, image_received_and_being_reviewed, confirmed_and_money_sent_to_user, cancelled, failed'),
         paymentReference: z.string().optional().describe('Payment reference number'),
         receiptImageUrl: z.string().optional().describe('URL to receipt image'),
         extractedDetails: z.record(z.unknown()).optional().describe('OCR extracted details from receipt as key-value pairs'),

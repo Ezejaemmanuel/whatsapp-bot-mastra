@@ -245,21 +245,50 @@ export const cancelTransaction = mutation({
             throw new Error("Transaction not found");
         }
 
-        if (transaction.status === "completed") {
-            throw new Error("Cannot cancel completed transaction");
+        if (transaction.status === "confirmed_and_money_sent_to_user") {
+            throw new Error("Cannot cancel a completed transaction");
         }
 
         return await ctx.db.patch(args.transactionId, {
-            status: "cancelled" as TransactionStatus,
-            updatedAt: Date.now(),
+            status: "cancelled",
             metadata: {
                 ...transaction.metadata,
-                cancellationReason: args.reason,
-                cancelledAt: Date.now(),
+                cancellationReason: args.reason || "No reason provided",
             },
+            updatedAt: Date.now(),
         });
     },
 });
+
+/**
+ * Fail transaction
+ */
+export const failTransaction = mutation({
+    args: {
+        transactionId: v.id("transactions"),
+        reason: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const transaction = await ctx.db.get(args.transactionId);
+        if (!transaction) {
+            throw new Error("Transaction not found");
+        }
+
+        if (transaction.status === "confirmed_and_money_sent_to_user") {
+            throw new Error("Cannot fail a completed transaction");
+        }
+
+        return await ctx.db.patch(args.transactionId, {
+            status: "failed",
+            metadata: {
+                ...transaction.metadata,
+                failureReason: args.reason || "No reason provided",
+            },
+            updatedAt: Date.now(),
+        });
+    },
+});
+
 
 /**
  * Mark a transaction as read
@@ -285,7 +314,6 @@ export const markTransactionAsRead = mutation({
         });
     },
 });
-
 
 /**
  * Get transaction statistics
@@ -314,7 +342,7 @@ export const getTransactionStats = query({
         const stats = {
             total: transactions.length,
             pending: transactions.filter(t => t.status === "pending").length,
-            completed: transactions.filter(t => t.status === "completed").length,
+            completed: transactions.filter(t => t.status === "confirmed_and_money_sent_to_user").length,
             failed: transactions.filter(t => t.status === "failed").length,
             cancelled: transactions.filter(t => t.status === "cancelled").length,
             totalVolume: transactions.reduce((sum, t) => sum + t.amountFrom, 0),

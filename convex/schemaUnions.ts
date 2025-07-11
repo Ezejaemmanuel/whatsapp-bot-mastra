@@ -66,12 +66,15 @@ export type UploadStatus = "pending" | "uploaded" | "failed";
 
 /** Transaction status */
 export const TransactionStatusUnion = v.union(
-    v.literal("pending"),
-    v.literal("paid"),
-    v.literal("verified"),
-    v.literal("completed"),
-    v.literal("failed"),
-    v.literal("cancelled"),
-    v.literal("image_sent_waiting_for_confirmation")
+    v.literal("pending"), // Transaction initiated, no image confirmation yet
+    v.literal("image_received_and_being_reviewed"), // Image received and is being reviewed by the admin
+    v.literal("confirmed_and_money_sent_to_user"), // Transaction confirmed and money sent
+    v.literal("cancelled"), // Transaction cancelled
+    v.literal("failed") // Transaction failed
 );
-export type TransactionStatus = "pending" | "paid" | "verified" | "completed" | "failed" | "cancelled" | "image_sent_waiting_for_confirmation"; 
+export type TransactionStatus =
+    | "pending"
+    | "image_received_and_being_reviewed"
+    | "confirmed_and_money_sent_to_user"
+    | "cancelled"
+    | "failed"; 

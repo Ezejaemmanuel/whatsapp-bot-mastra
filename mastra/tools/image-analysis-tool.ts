@@ -84,11 +84,20 @@ function getMimeTypeFromUrl(url: string): string {
 
 // Schema for OCR extraction - simplified to only return what's actually used
 export const ocrSchema = z.object({
+    documentType: z.enum(['receipt', 'invoice', 'screenshot', 'document', 'other'])
+        .describe('The type of document identified in the image.'),
     ocrResults: z.object({
         rawText: z.string().describe("Complete raw text extracted from the image")
     }),
-
-    // Basic image quality assessment
+    extractedFields: z.object({
+        amount: z.number().optional().describe('The primary transaction amount found on the receipt.'),
+        transactionDate: z.string().optional().describe('The transaction date (and time if available) in ISO 8601 format (YYYY-MM-DDTHH:mm:ssZ).'),
+        recipientName: z.string().optional().describe('The name of the recipient or beneficiary.'),
+        senderName: z.string().optional().describe('The name of the sender.'),
+        bankName: z.string().optional().describe('The name of the bank.'),
+        accountNumber: z.string().optional().describe('The bank account number (partially masked if possible).'),
+        transactionReference: z.string().optional().describe('Any transaction ID or reference number.'),
+    }).describe('Key-value pairs of extracted transaction details from the document.'),
     imageQuality: z.object({
         quality: z.enum(['excellent', 'good', 'fair', 'poor']).describe("Quality of the image for text extraction"),
         confidence: z.enum(['high', 'medium', 'low']).describe("Confidence level in text extraction"),
@@ -165,23 +174,31 @@ export async function analyzeImageDirectly(
     }
 
     // Create the analysis prompt
-    const analysisPrompt = `You are an expert OCR system focused on precise text extraction. Your task is to:
+    const analysisPrompt = `You are an expert OCR and document analysis system. Your task is to:
 
-1. EXTRACT ALL TEXT EXACTLY AS SHOWN:
-   - Capture every visible text element
-   - Preserve exact formatting and line breaks
-   - Maintain all numbers, symbols, and special characters
-   - Keep dates and times in original format
-   - Extract any numbers and amounts precisely
+1.  **CLASSIFY THE DOCUMENT**: Determine if the image is a 'receipt', 'invoice', 'screenshot' of a transaction, a generic 'document', or 'other'.
 
-2. QUALITY ASSESSMENT:
-   - Note any unclear or unreadable text
-   - Report confidence in extraction accuracy
-   - Flag any image quality issues
+2.  **EXTRACT ALL TEXT**:
+    *   Capture every visible text element precisely.
+    *   Preserve formatting, line breaks, and all special characters.
+
+3.  **EXTRACT KEY FIELDS (if it's a receipt or transaction document)**:
+    *   **amount**: The main transaction amount.
+    *   **transactionDate**: The date and time of the transaction. Convert to ISO 8601 format.
+    *   **recipientName**: The name of the person or company receiving the money.
+    *   **senderName**: The name of the person sending the money.
+    *   **bankName**: The bank name associated with the transaction.
+    *   **accountNumber**: The account number (if visible).
+    *   **transactionReference**: Any reference or transaction ID.
+    *   If a field is not present, leave it empty.
+
+4.  **ASSESS IMAGE QUALITY**:
+    *   Note any unclear, blurry, or unreadable text.
+    *   Report your confidence level in the extraction.
 
 ${context ? `\nContext: ${context}` : ''}
 
-Extract all text now, maintaining exact formatting:`;
+Analyze the document and provide the structured output.`;
 
     try {
         logInfo('Initiating Gemini Vision analysis', {
@@ -359,9 +376,11 @@ Extract all text now, maintaining exact formatting:`;
 
         // Return a structured error response instead of throwing
         return {
+            documentType: 'other' as const,
             ocrResults: {
                 rawText: "Error analyzing image"
             },
+            extractedFields: {},
             imageQuality: {
                 quality: 'poor' as const,
                 confidence: 'low' as const,

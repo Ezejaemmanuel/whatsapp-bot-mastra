@@ -201,19 +201,39 @@ export function generateImageAgentContent(
     caption?: string | null
 ): string {
     const results = imageAnalysisResults as any;
-    if (imageUrl && results && results.ocrResults?.rawText) {
-        return `The user sent an image. I have extracted the following text from the image:
+    if (imageUrl && results?.documentType) {
+        let content = `The user sent an image. I have analyzed it and here are the results:
 
-OCR EXTRACTED TEXT:
-${results.ocrResults.rawText}
+**DOCUMENT TYPE**: ${results.documentType}
 
-IMAGE QUALITY: ${results.imageQuality?.quality} (confidence: ${results.imageQuality?.confidence})
-${results.imageQuality?.issues?.length ? `Issues: ${results.imageQuality.issues.join(', ')}` : ''}
+**EXTRACTED DETAILS**:
+${results.extractedFields?.amount ? `- Amount: ${results.extractedFields.amount}` : ''}
+${results.extractedFields?.transactionDate ? `- Date: ${results.extractedFields.transactionDate}` : ''}
+${results.extractedFields?.recipientName ? `- Recipient: ${results.extractedFields.recipientName}` : ''}
+${results.extractedFields?.senderName ? `- Sender: ${results.extractedFields.senderName}` : ''}
+${results.extractedFields?.bankName ? `- Bank: ${results.extractedFields.bankName}` : ''}
+${results.extractedFields?.accountNumber ? `- Account No: ${results.extractedFields.accountNumber}` : ''}
+${results.extractedFields?.transactionReference ? `- Reference: ${results.extractedFields.transactionReference}` : ''}
 
-Please help the user based on this image and extracted text.${caption ? `\n\nUser's caption: ${caption}` : ''}`;
+**IMAGE QUALITY**:
+- Quality: ${results.imageQuality?.quality}
+- Confidence: ${results.imageQuality?.confidence}
+${results.imageQuality?.issues?.length ? `- Issues: ${results.imageQuality.issues.join(', ')}` : ''}
+
+**RAW OCR TEXT**:
+---
+${results.ocrResults?.rawText || 'No raw text extracted.'}
+---
+
+Your task is to now validate this information against the current transaction details. Check for discrepancies in amount, recipient, and timing. If the document type is not a 'receipt' or if details do not match, flag the transaction and ask the user for clarification or to contact support.
+`;
+        if (caption) {
+            content += `\n\nUser's caption: ${caption}`;
+        }
+        return content;
     } else if (imageUrl) {
-        return `The user sent an image but I couldn't extract any text from it. Please help them by asking for details about what they need assistance with.${caption ? `\n\nUser's caption: ${caption}` : ''}`;
+        return `The user sent an image but I couldn't extract any meaningful information from it. Please ask them to provide a clearer image of the transaction receipt.${caption ? `\n\nUser's caption: ${caption}` : ''}`;
     } else {
-        return `The user sent an image but it couldn't be processed. ${caption ? `Caption: ${caption}` : ''} Please help them resolve this issue.`;
+        return `The user sent an image but it couldn't be processed. ${caption ? `Caption: ${caption}` : ''} Please ask them to resend it or contact support if the issue persists.`;
     }
 } 
