@@ -12,7 +12,6 @@ const sampleExchangeRates = [
         minRate: 1450.00,      // Minimum rate for business (floor)
         maxRate: 1500.00,      // Maximum rate for customers (ceiling)
         currentMarketRate: 1475.00, // Current market reference rate
-        isActive: true,
         metadata: {
             description: "US Dollar to Nigerian Naira",
             lastUpdatedBy: "system",
@@ -24,7 +23,6 @@ const sampleExchangeRates = [
         minRate: 1800.00,
         maxRate: 1870.00,
         currentMarketRate: 1835.00,
-        isActive: true,
         metadata: {
             description: "British Pound to Nigerian Naira",
             lastUpdatedBy: "system",
@@ -36,7 +34,6 @@ const sampleExchangeRates = [
         minRate: 1550.00,
         maxRate: 1620.00,
         currentMarketRate: 1585.00,
-        isActive: true,
         metadata: {
             description: "Euro to Nigerian Naira",
             lastUpdatedBy: "system",
@@ -48,7 +45,6 @@ const sampleExchangeRates = [
         minRate: 1050.00,
         maxRate: 1120.00,
         currentMarketRate: 1085.00,
-        isActive: true,
         metadata: {
             description: "Canadian Dollar to Nigerian Naira",
             lastUpdatedBy: "system",
@@ -69,7 +65,6 @@ async function setupExchangeRates() {
                 minRate: rate.minRate,
                 maxRate: rate.maxRate,
                 currentMarketRate: rate.currentMarketRate,
-                isActive: rate.isActive,
                 metadata: rate.metadata,
             });
 
