@@ -20,7 +20,6 @@ const BankDetailsForm: React.FC<{ detail?: BankDetails; onSave: () => void }> = 
     const [accountName, setAccountName] = useState(detail?.accountName || '');
     const [accountNumber, setAccountNumber] = useState(detail?.accountNumber || '');
     const [description, setDescription] = useState(detail?.description || '');
-    const [isActive, setIsActive] = useState(detail?.isActive ?? true);
     const [isMain, setIsMain] = useState(detail?.isMain ?? false);
 
     const upsertDetails = useMutation(api.adminBankDetails.upsertAdminBankDetails);
@@ -38,7 +37,6 @@ const BankDetailsForm: React.FC<{ detail?: BankDetails; onSave: () => void }> = 
                 accountName,
                 accountNumber,
                 description,
-                isActive,
                 isMain,
             });
             toast.success("Bank details saved.");
@@ -67,10 +65,7 @@ const BankDetailsForm: React.FC<{ detail?: BankDetails; onSave: () => void }> = 
                 <Label htmlFor="description">Description</Label>
                 <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional description" />
             </div>
-            <div className="flex items-center space-x-2">
-                <Switch id="isActive" checked={isActive} onCheckedChange={setIsActive} />
-                <Label htmlFor="isActive">Active</Label>
-            </div>
+          
             <div className="flex items-center space-x-2">
                 <Switch id="isMain" checked={isMain} onCheckedChange={setIsMain} />
                 <Label htmlFor="isMain">Set as Main Account</Label>
@@ -189,7 +184,6 @@ export const BankDetailsView: React.FC<{ isMobile?: boolean }> = () => {
                                 <p><strong>A/C Name:</strong> {detail.accountName}</p>
                                 <p><strong>A/C Number:</strong> {detail.accountNumber}</p>
                                 {detail.description && <p><strong>Desc:</strong> {detail.description}</p>}
-                                <p><strong>Status:</strong> <span className={detail.isActive ? 'text-green-400' : 'text-red-400'}>{detail.isActive ? 'Active' : 'Inactive'}</span></p>
                             </CardContent>
                             <CardFooter className="flex justify-end gap-2 flex-wrap">
                                 {!detail.isMain && <Button variant="outline" size="sm" onClick={() => handleSetMain(detail._id)}><Star className="w-4 h-4 mr-2" /> Set Main</Button>}

@@ -11,7 +11,6 @@ export const getMainAdminBankDetails = query({
         const mainAccount = await ctx.db
             .query("adminBankDetails")
             .withIndex("by_is_main", (q) => q.eq("isMain", true))
-            .filter((q) => q.eq(q.field("isActive"), true))
             .first();
 
         if (mainAccount) {
@@ -21,7 +20,6 @@ export const getMainAdminBankDetails = query({
         // If no main account, get any active account
         const activeAccount = await ctx.db
             .query("adminBankDetails")
-            .withIndex("by_is_active", (q) => q.eq("isActive", true))
             .first();
 
         return activeAccount;
@@ -62,7 +60,6 @@ export const upsertAdminBankDetails = mutation({
         accountNumber: v.string(),
         accountName: v.string(),
         bankName: v.string(),
-        isActive: v.optional(v.boolean()),
         isMain: v.optional(v.boolean()),
         description: v.optional(v.string()),
         metadata: v.optional(v.any()),
@@ -88,7 +85,6 @@ export const upsertAdminBankDetails = mutation({
 
         return await ctx.db.insert("adminBankDetails", {
             ...args,
-            isActive: args.isActive ?? true,
             isMain: args.isMain ?? false,
             createdAt: now,
             updatedAt: now,
