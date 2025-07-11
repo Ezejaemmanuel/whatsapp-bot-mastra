@@ -8,7 +8,10 @@ import { api } from "../convex/_generated/api";
 
 const sampleExchangeRates = [
     {
-        currencyPair: "USD_NGN",
+        fromCurrencyName: "US Dollar",
+        fromCurrencyCode: "USD",
+        toCurrencyName: "Nigerian Naira",
+        toCurrencyCode: "NGN",
         minRate: 1450.00,      // Minimum rate for business (floor)
         maxRate: 1500.00,      // Maximum rate for customers (ceiling)
         currentMarketRate: 1475.00, // Current market reference rate
@@ -19,7 +22,10 @@ const sampleExchangeRates = [
         }
     },
     {
-        currencyPair: "GBP_NGN",
+        fromCurrencyName: "British Pound",
+        fromCurrencyCode: "GBP",
+        toCurrencyName: "Nigerian Naira",
+        toCurrencyCode: "NGN",
         minRate: 1800.00,
         maxRate: 1870.00,
         currentMarketRate: 1835.00,
@@ -30,7 +36,10 @@ const sampleExchangeRates = [
         }
     },
     {
-        currencyPair: "EUR_NGN",
+        fromCurrencyName: "Euro",
+        fromCurrencyCode: "EUR",
+        toCurrencyName: "Nigerian Naira",
+        toCurrencyCode: "NGN",
         minRate: 1550.00,
         maxRate: 1620.00,
         currentMarketRate: 1585.00,
@@ -41,7 +50,10 @@ const sampleExchangeRates = [
         }
     },
     {
-        currencyPair: "CAD_NGN",
+        fromCurrencyName: "Canadian Dollar",
+        fromCurrencyCode: "CAD",
+        toCurrencyName: "Nigerian Naira",
+        toCurrencyCode: "NGN",
         minRate: 1050.00,
         maxRate: 1120.00,
         currentMarketRate: 1085.00,
@@ -58,17 +70,21 @@ async function setupExchangeRates() {
 
     try {
         for (const rate of sampleExchangeRates) {
-            console.log(`📊 Creating rate for ${rate.currencyPair}...`);
+            const currencyPair = `${rate.fromCurrencyCode}_${rate.toCurrencyCode}`;
+            console.log(`📊 Creating rate for ${currencyPair}...`);
 
             const result = await fetchMutation(api.exchangeRates.upsertExchangeRate, {
-                currencyPair: rate.currencyPair,
+                fromCurrencyName: rate.fromCurrencyName,
+                fromCurrencyCode: rate.fromCurrencyCode,
+                toCurrencyName: rate.toCurrencyName,
+                toCurrencyCode: rate.toCurrencyCode,
                 minRate: rate.minRate,
                 maxRate: rate.maxRate,
                 currentMarketRate: rate.currentMarketRate,
                 metadata: rate.metadata,
             });
 
-            console.log(`✅ ${rate.currencyPair}: Min ₦${rate.minRate} - Max ₦${rate.maxRate} (Market: ₦${rate.currentMarketRate})`);
+            console.log(`✅ ${currencyPair}: Min ₦${rate.minRate} - Max ₦${rate.maxRate} (Market: ₦${rate.currentMarketRate})`);
         }
 
         console.log("\n🎉 Exchange rates setup completed successfully!");

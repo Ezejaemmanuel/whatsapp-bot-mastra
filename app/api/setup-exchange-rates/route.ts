@@ -12,14 +12,15 @@ import { api } from "../../../convex/_generated/api";
  */
 
 interface ExchangeRateConfig {
-    currencyPair: string;
+    fromCurrencyName: string;
+    fromCurrencyCode: string;
+    toCurrencyName: string;
+    toCurrencyCode: string;
     minRate: number;
     maxRate: number;
     currentMarketRate: number;
     metadata?: {
         description: string;
-        baseCurrency: string;
-        targetCurrency: string;
         lastMarketCheck?: string;
         rateSource?: string;
     };
@@ -28,79 +29,85 @@ interface ExchangeRateConfig {
 // Default exchange rate configurations
 const DEFAULT_EXCHANGE_RATES: ExchangeRateConfig[] = [
     {
-        currencyPair: "USD_NGN",
+        fromCurrencyName: "US Dollar",
+        fromCurrencyCode: "USD",
+        toCurrencyName: "Nigerian Naira",
+        toCurrencyCode: "NGN",
         minRate: 1650.00,
         maxRate: 1700.00,
         currentMarketRate: 1675.00,
         metadata: {
             description: "US Dollar to Nigerian Naira",
-            baseCurrency: "USD",
-            targetCurrency: "NGN",
             lastMarketCheck: new Date().toISOString(),
             rateSource: "Manual Setup"
         }
     },
     {
-        currencyPair: "GBP_NGN",
+        fromCurrencyName: "British Pound",
+        fromCurrencyCode: "GBP",
+        toCurrencyName: "Nigerian Naira",
+        toCurrencyCode: "NGN",
         minRate: 2050.00,
         maxRate: 2120.00,
         currentMarketRate: 2085.00,
         metadata: {
             description: "British Pound to Nigerian Naira",
-            baseCurrency: "GBP",
-            targetCurrency: "NGN",
             lastMarketCheck: new Date().toISOString(),
             rateSource: "Manual Setup"
         }
     },
     {
-        currencyPair: "EUR_NGN",
+        fromCurrencyName: "Euro",
+        fromCurrencyCode: "EUR",
+        toCurrencyName: "Nigerian Naira",
+        toCurrencyCode: "NGN",
         minRate: 1750.00,
         maxRate: 1820.00,
         currentMarketRate: 1785.00,
         metadata: {
             description: "Euro to Nigerian Naira",
-            baseCurrency: "EUR",
-            targetCurrency: "NGN",
             lastMarketCheck: new Date().toISOString(),
             rateSource: "Manual Setup"
         }
     },
     {
-        currencyPair: "CAD_NGN",
+        fromCurrencyName: "Canadian Dollar",
+        fromCurrencyCode: "CAD",
+        toCurrencyName: "Nigerian Naira",
+        toCurrencyCode: "NGN",
         minRate: 1200.00,
         maxRate: 1250.00,
         currentMarketRate: 1225.00,
         metadata: {
             description: "Canadian Dollar to Nigerian Naira",
-            baseCurrency: "CAD",
-            targetCurrency: "NGN",
             lastMarketCheck: new Date().toISOString(),
             rateSource: "Manual Setup"
         }
     },
     {
-        currencyPair: "AUD_NGN",
+        fromCurrencyName: "Australian Dollar",
+        fromCurrencyCode: "AUD",
+        toCurrencyName: "Nigerian Naira",
+        toCurrencyCode: "NGN",
         minRate: 1100.00,
         maxRate: 1150.00,
         currentMarketRate: 1125.00,
         metadata: {
             description: "Australian Dollar to Nigerian Naira",
-            baseCurrency: "AUD",
-            targetCurrency: "NGN",
             lastMarketCheck: new Date().toISOString(),
             rateSource: "Manual Setup"
         }
     },
     {
-        currencyPair: "CHF_NGN",
+        fromCurrencyName: "Swiss Franc",
+        fromCurrencyCode: "CHF",
+        toCurrencyName: "Nigerian Naira",
+        toCurrencyCode: "NGN",
         minRate: 1850.00,
         maxRate: 1920.00,
         currentMarketRate: 1885.00,
         metadata: {
             description: "Swiss Franc to Nigerian Naira",
-            baseCurrency: "CHF",
-            targetCurrency: "NGN",
             lastMarketCheck: new Date().toISOString(),
             rateSource: "Manual Setup"
         }
@@ -124,8 +131,9 @@ export async function GET(request: NextRequest) {
 
         // Process each exchange rate configuration - always upsert/update
         for (const rateConfig of DEFAULT_EXCHANGE_RATES) {
+            const currencyPair = `${rateConfig.fromCurrencyCode}_${rateConfig.toCurrencyCode}`;
             try {
-                console.log(`💱 Setting up ${rateConfig.currencyPair}`, {
+                console.log(`💱 Setting up ${currencyPair}`, {
                     minRate: rateConfig.minRate,
                     maxRate: rateConfig.maxRate,
                     currentMarketRate: rateConfig.currentMarketRate,
@@ -133,7 +141,10 @@ export async function GET(request: NextRequest) {
                 });
 
                 const result = await fetchMutation(api.exchangeRates.upsertExchangeRate, {
-                    currencyPair: rateConfig.currencyPair,
+                    fromCurrencyName: rateConfig.fromCurrencyName,
+                    fromCurrencyCode: rateConfig.fromCurrencyCode,
+                    toCurrencyName: rateConfig.toCurrencyName,
+                    toCurrencyCode: rateConfig.toCurrencyCode,
                     minRate: rateConfig.minRate,
                     maxRate: rateConfig.maxRate,
                     currentMarketRate: rateConfig.currentMarketRate,
@@ -141,7 +152,7 @@ export async function GET(request: NextRequest) {
                 });
 
                 setupResults.push({
-                    currencyPair: rateConfig.currencyPair,
+                    currencyPair: currencyPair,
                     success: true,
                     action: 'updated',
                     rates: {
@@ -151,29 +162,30 @@ export async function GET(request: NextRequest) {
                     }
                 });
 
-                console.log(`✅ ${rateConfig.currencyPair} setup completed`, {
-                    currencyPair: rateConfig.currencyPair,
+                console.log(`✅ ${currencyPair} setup completed`, {
+                    currencyPair: currencyPair,
                     resultId: result,
                     success: true
                 });
 
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                const currencyPair = `${rateConfig.fromCurrencyCode}_${rateConfig.toCurrencyCode}`;
 
-                console.error(`❌ Failed to setup ${rateConfig.currencyPair}`, {
-                    currencyPair: rateConfig.currencyPair,
+                console.error(`❌ Failed to setup ${currencyPair}`, {
+                    currencyPair: currencyPair,
                     error: errorMessage,
                     rateConfig
                 });
 
                 errors.push({
-                    currencyPair: rateConfig.currencyPair,
+                    currencyPair: currencyPair,
                     error: errorMessage,
                     success: false
                 });
 
                 setupResults.push({
-                    currencyPair: rateConfig.currencyPair,
+                    currencyPair: currencyPair,
                     success: false,
                     error: errorMessage
                 });
@@ -191,7 +203,7 @@ export async function GET(request: NextRequest) {
             successCount,
             failureCount,
             successRate: `${successRate.toFixed(1)}%`,
-            setupResults: setupResults.map(r => ({
+            setupResults: setupResults.map((r: any) => ({
                 pair: r.currencyPair,
                 success: r.success,
                 action: r.action || 'failed'
@@ -201,10 +213,10 @@ export async function GET(request: NextRequest) {
         // Verify setup by fetching all rates
         let verification = null;
         try {
-            const allRates = await fetchQuery(api.exchangeRates.getAllActiveCurrencyPairs);
+            const allRates = await fetchQuery(api.exchangeRates.getAllExchangeRates);
             verification = {
                 totalActiveRates: allRates?.length || 0,
-                activePairs: allRates?.map(r => r.currencyPair) || []
+                activePairs: allRates?.map((r: any) => r.currencyPair) || []
             };
         } catch (verificationError) {
             console.warn('⚠️ Could not verify setup', {

@@ -17,7 +17,11 @@ import { FullScreenLoader } from '../ui/loader';
 type ExchangeRate = Doc<"exchangeRates">;
 
 const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate, onSave }) => {
-    const [currencyPair, setCurrencyPair] = useState(rate?.currencyPair || '');
+    const [fromCurrencyName, setFromCurrencyName] = useState(rate?.fromCurrencyName || '');
+    const [fromCurrencyCode, setFromCurrencyCode] = useState(rate?.fromCurrencyCode || '');
+    const [toCurrencyName, setToCurrencyName] = useState(rate?.toCurrencyName || '');
+    const [toCurrencyCode, setToCurrencyCode] = useState(rate?.toCurrencyCode || '');
+
     const [minRate, setMinRate] = useState(rate?.minRate || 0);
     const [maxRate, setMaxRate] = useState(rate?.maxRate || 0);
     const [currentMarketRate, setCurrentMarketRate] = useState(rate?.currentMarketRate || 0);
@@ -25,18 +29,21 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!currencyPair || maxRate <= 0 || currentMarketRate <= 0) {
+        if (!fromCurrencyName || !fromCurrencyCode || !toCurrencyName || !toCurrencyCode || maxRate <= 0 || currentMarketRate <= 0) {
             toast.error("Please fill all required fields.");
             return;
         }
         try {
             await upsertRate({
-                currencyPair,
+                fromCurrencyName,
+                fromCurrencyCode,
+                toCurrencyName,
+                toCurrencyCode,
                 minRate,
                 maxRate,
                 currentMarketRate,
             });
-            toast.success(`Rate for ${currencyPair} saved.`);
+            toast.success(`Rate for ${fromCurrencyCode}-${toCurrencyCode} saved.`);
             onSave();
         } catch (error) {
             console.error("Failed to save rate:", error);
@@ -46,9 +53,25 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid gap-2">
-                <Label htmlFor="currencyPair">Currency Pair (e.g., USD-NGN)</Label>
-                <Input id="currencyPair" value={currencyPair} onChange={(e) => setCurrencyPair(e.target.value.toUpperCase())} placeholder="USD-NGN" disabled={!!rate} />
+            <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                    <Label htmlFor="fromCurrencyName">From Currency Name</Label>
+                    <Input id="fromCurrencyName" value={fromCurrencyName} onChange={(e) => setFromCurrencyName(e.target.value)} placeholder="e.g. United States Dollar" />
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="fromCurrencyCode">From Currency Code</Label>
+                    <Input id="fromCurrencyCode" value={fromCurrencyCode} onChange={(e) => setFromCurrencyCode(e.target.value.toUpperCase())} placeholder="e.g. USD" disabled={!!rate} />
+                </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                    <Label htmlFor="toCurrencyName">To Currency Name</Label>
+                    <Input id="toCurrencyName" value={toCurrencyName} onChange={(e) => setToCurrencyName(e.target.value)} placeholder="e.g. Nigerian Naira" />
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="toCurrencyCode">To Currency Code</Label>
+                    <Input id="toCurrencyCode" value={toCurrencyCode} onChange={(e) => setToCurrencyCode(e.target.value.toUpperCase())} placeholder="e.g. NGN" disabled={!!rate} />
+                </div>
             </div>
             <div className="grid gap-2">
                 <Label htmlFor="currentMarketRate">Current Market Rate</Label>
@@ -104,7 +127,7 @@ const DeleteConfirmationDialog: React.FC<{ rate: ExchangeRate, onDeleted: () => 
 
 
 export const RatesView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => {
-    const rates = useQuery(api.exchangeRates.getAllActiveCurrencyPairs);
+    const rates = useQuery(api.exchangeRates.getAllExchangeRates);
     const [isAddEditDialogOpen, setAddEditDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedRate, setSelectedRate] = useState<ExchangeRate | undefined>(undefined);

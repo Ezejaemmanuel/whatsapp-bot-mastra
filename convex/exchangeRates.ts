@@ -22,9 +22,9 @@ export const getCurrentRates = query({
 });
 
 /**
- * Get all available currency pairs
+ * Get all available exchange rates
  */
-export const getAllActiveCurrencyPairs = query({
+export const getAllExchangeRates = query({
     args: {},
     handler: async (ctx) => {
         return await ctx.db
@@ -38,16 +38,21 @@ export const getAllActiveCurrencyPairs = query({
  */
 export const upsertExchangeRate = mutation({
     args: {
-        currencyPair: v.string(),
+        fromCurrencyName: v.string(),
+        fromCurrencyCode: v.string(),
+        toCurrencyName: v.string(),
+        toCurrencyCode: v.string(),
         minRate: v.number(),
         maxRate: v.number(),
         currentMarketRate: v.number(),
         metadata: v.optional(v.any()),
     },
     handler: async (ctx, args) => {
+        const currencyPair = `${args.fromCurrencyCode.toUpperCase()}-${args.toCurrencyCode.toUpperCase()}`;
+
         const existingRate = await ctx.db
             .query("exchangeRates")
-            .withIndex("by_currency_pair", (q) => q.eq("currencyPair", args.currencyPair))
+            .withIndex("by_currency_pair", (q) => q.eq("currencyPair", currencyPair))
             .first();
 
         const now = Date.now();
@@ -55,6 +60,11 @@ export const upsertExchangeRate = mutation({
         if (existingRate) {
             // Update existing rate
             return await ctx.db.patch(existingRate._id, {
+                fromCurrencyName: args.fromCurrencyName,
+                fromCurrencyCode: args.fromCurrencyCode.toUpperCase(),
+                toCurrencyName: args.toCurrencyName,
+                toCurrencyCode: args.toCurrencyCode.toUpperCase(),
+                currencyPair,
                 minRate: args.minRate,
                 maxRate: args.maxRate,
                 currentMarketRate: args.currentMarketRate,
@@ -64,7 +74,11 @@ export const upsertExchangeRate = mutation({
         } else {
             // Create new rate
             return await ctx.db.insert("exchangeRates", {
-                currencyPair: args.currencyPair,
+                fromCurrencyName: args.fromCurrencyName,
+                fromCurrencyCode: args.fromCurrencyCode.toUpperCase(),
+                toCurrencyName: args.toCurrencyName,
+                toCurrencyCode: args.toCurrencyCode.toUpperCase(),
+                currencyPair,
                 minRate: args.minRate,
                 maxRate: args.maxRate,
                 currentMarketRate: args.currentMarketRate,

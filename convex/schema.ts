@@ -108,7 +108,11 @@ export default defineSchema({
      * Exchange rates table - stores currency exchange rates with min/max boundaries
      */
     exchangeRates: defineTable({
-        currencyPair: v.string(), // 'USD_NGN', 'GBP_NGN', 'EUR_NGN', etc.
+        fromCurrencyName: v.string(), // e.g. United States Dollar
+        fromCurrencyCode: v.string(), // e.g. USD
+        toCurrencyName: v.string(), // e.g. Nigerian Naira
+        toCurrencyCode: v.string(), // e.g. NGN
+        currencyPair: v.string(), // 'USD-NGN', 'GBP-NGN', etc. auto-generated
         minRate: v.number(), // Minimum acceptable rate for the business
         maxRate: v.number(), // Maximum rate offered to customers
         currentMarketRate: v.number(), // Current market rate for reference
