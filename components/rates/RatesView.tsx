@@ -78,26 +78,36 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
             </div>
             <div className="grid gap-2">
                 <Label htmlFor="currentMarketRate">Current Market Rate</Label>
-                <Input id="currentMarketRate" type="number" value={currentMarketRate} onChange={(e) => setCurrentMarketRate(parseFloat(e.target.value))} />
-                <p className="text-xs text-whatsapp-text-muted">This is for your reference only and is not used by the bot for negotiation.</p>
+                <Input id="currentMarketRate" type="number" value={currentMarketRate} onChange={(e) => setCurrentMarketRate(parseFloat(e.target.value) || 0)} />
+                <p className="text-xs text-whatsapp-text-muted">
+                    This is for reference and not used for negotiation.
+                    {currentMarketRate > 0 && <>
+                        <br />
+                        (e.g., at this rate, 1 {fromCode} is worth {currentMarketRate} {toCode})
+                    </>}
+                </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                     <Label htmlFor="minRate">Your Minimum Rate</Label>
-                    <Input id="minRate" type="number" value={minRate} onChange={(e) => setMinRate(parseFloat(e.target.value))} />
+                    <Input id="minRate" type="number" value={minRate} onChange={(e) => setMinRate(parseFloat(e.target.value) || 0)} />
                     <p className="text-xs text-whatsapp-text-muted">
                         The bot will not offer less than this.
-                        <br />
-                        (e.g., for 1 {fromCode}, you&apos;ll pay at least this amount in {toCode})
+                        {minRate > 0 && <>
+                            <br />
+                            (e.g., for 1 {fromCode}, you&apos;ll pay at least {minRate} {toCode})
+                        </>}
                     </p>
                 </div>
                 <div className="grid gap-2">
                     <Label htmlFor="maxRate">Your Maximum Rate</Label>
-                    <Input id="maxRate" type="number" value={maxRate} onChange={(e) => setMaxRate(parseFloat(e.target.value))} />
+                    <Input id="maxRate" type="number" value={maxRate} onChange={(e) => setMaxRate(parseFloat(e.target.value) || 0)} />
                     <p className="text-xs text-whatsapp-text-muted">
                         The bot will not offer more than this.
-                        <br />
-                        (e.g., for 1 {fromCode}, you&apos;ll pay at most this amount in {toCode})
+                        {maxRate > 0 && <>
+                            <br />
+                            (e.g., for 1 {fromCode}, you&apos;ll pay at most {maxRate} {toCode})
+                        </>}
                     </p>
                 </div>
             </div>
