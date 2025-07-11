@@ -14,6 +14,9 @@ import { useWhatsAppStore, useUIState } from '@/lib/store';
 import { usePaginatedQuery, useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Doc, Id } from '@/convex/_generated/dataModel';
+import { EmptyState } from './ui/empty-state';
+import { ChatListLoader, TransactionListLoader, FullScreenLoader } from './ui/loader';
+import { MessageSquare, Wallet, Settings, Landmark, AreaChart } from 'lucide-react';
 
 const WhatsAppLayoutContent: React.FC = () => {
   const router = useRouter();
@@ -29,8 +32,8 @@ const WhatsAppLayoutContent: React.FC = () => {
 
   const {
     results: conversations,
-    status,
-    loadMore,
+    status: conversationsStatus,
+    loadMore: loadMoreConversations,
   } = usePaginatedQuery(
     api.conversations.getAllConversationsWithUsers,
     {},
@@ -174,8 +177,8 @@ const WhatsAppLayoutContent: React.FC = () => {
       default:
         return <ChatList
           conversations={sortedConversations}
-          status={status}
-          loadMore={loadMore}
+          status={conversationsStatus}
+          loadMore={loadMoreConversations}
           selectedChatId={selectedConversationId}
           onChatSelect={handleChatSelect}
           isMobile={true}
@@ -209,14 +212,20 @@ const WhatsAppLayoutContent: React.FC = () => {
   const renderSidebar = () => {
     switch (activeTab) {
       case 'chats':
+        if (conversationsStatus === 'LoadingFirstPage') {
+            return <ChatListLoader />;
+        }
         return <ChatList
           conversations={sortedConversations}
-          status={status}
-          loadMore={loadMore}
+          status={conversationsStatus}
+          loadMore={loadMoreConversations}
           selectedChatId={selectedConversationId}
           onChatSelect={handleChatSelect}
           isMobile={false} />;
       case 'transactions':
+        if (transactionsStatus === 'LoadingFirstPage') {
+            return <TransactionListLoader />;
+        }
         return <TransactionList
           transactions={sortedTransactions}
           status={transactionsStatus}
@@ -247,16 +256,46 @@ const WhatsAppLayoutContent: React.FC = () => {
     if (activeTab === 'bank') {
       return <BankDetailsView isMobile={false} />;
     }
+
+    const emptyStateInfo = {
+      transactions: {
+        icon: <Wallet />,
+        title: "Select a Transaction",
+        message: "Choose a transaction from the list on the left to see its details."
+      },
+      rates: {
+        icon: <AreaChart />,
+        title: "Exchange Rates",
+        message: "This feature is under construction. Soon you'll be able to view rates here."
+      },
+      bank: {
+        icon: <Landmark />,
+        title: "Bank Details",
+        message: "This feature is under construction. Soon you'll be able to manage bank details here."
+      },
+      settings: {
+        icon: <Settings />,
+        title: "Settings",
+        message: "This feature is under construction. Soon you'll be able to manage your settings here."
+      },
+      chats: {
+        icon: <MessageSquare />,
+        title: "WhatsApp Chat",
+        message: "Select a chat to start messaging."
+      }
+    }[activeTab] || {
+      icon: <MessageSquare />,
+      title: "Welcome",
+      message: "Select a feature from the sidebar to get started."
+    };
+
     return (
       <div className="flex items-center justify-center h-full bg-whatsapp-chat-bg">
-        <div className="text-center">
-          <h2 className="text-2xl font-light text-whatsapp-text-primary mb-2">
-            {activeTab === 'transactions' ? 'Select a Transaction' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-          </h2>
-          <p className="text-whatsapp-text-secondary">
-            {activeTab === 'transactions' ? 'Choose a transaction to view its details' : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} feature coming soon...`}
-          </p>
-        </div>
+        <EmptyState
+          icon={emptyStateInfo.icon}
+          title={emptyStateInfo.title}
+          message={emptyStateInfo.message}
+        />
       </div>
     );
   };
@@ -282,7 +321,7 @@ const WhatsAppLayoutContent: React.FC = () => {
 };
 
 export const WhatsAppLayout: React.FC = () => (
-  <Suspense fallback={<div>Loading...</div>}>
+  <Suspense fallback={<FullScreenLoader message="Loading workspace..." />}>
     <WhatsAppLayoutContent />
   </Suspense>
 );

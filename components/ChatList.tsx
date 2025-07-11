@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MoreVertical, MessageCircle, Phone, Receipt, Settings, Camera, Plus } from 'lucide-react';
+import { Search, MoreVertical, MessageCircle, Plus } from 'lucide-react';
 import { useInView } from 'react-intersection-observer';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useUIState, useWhatsAppStore } from '@/lib/store';
 import { Doc, Id } from '@/convex/_generated/dataModel';
+import { EmptyState } from './ui/empty-state';
+import { Skeleton } from './ui/skeleton';
 
 type ConversationWithUser = Doc<"conversations"> & { user: Doc<"users"> | null };
 
@@ -21,6 +23,16 @@ interface ChatListProps {
   activeTab?: string;
   onTabChange?: (tab: 'chats' | 'transactions' | 'settings' | 'rates' | 'bank') => void;
 }
+
+const LoadingMoreSpinner: React.FC = () => (
+  <div className="flex items-center gap-4 p-3">
+    <Skeleton className="h-12 w-12 rounded-full bg-gray-200/10" />
+    <div className="space-y-2 flex-1">
+      <Skeleton className="h-4 w-3/4 bg-gray-200/10" />
+      <Skeleton className="h-4 w-1/2 bg-gray-200/10" />
+    </div>
+  </div>
+);
 
 export const ChatList: React.FC<ChatListProps> = ({
   conversations,
@@ -156,13 +168,22 @@ export const ChatList: React.FC<ChatListProps> = ({
             </div>
           ))}
           <div ref={ref} className="h-1" />
-          {(status === 'LoadingFirstPage' || status === 'LoadingMore') && (
-            <div className="flex justify-center items-center p-6">
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 border-2 border-whatsapp-primary border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-whatsapp-text-muted font-medium">Loading more conversations...</p>
-              </div>
-            </div>
+          {status === 'LoadingMore' && <LoadingMoreSpinner />}
+          {(status === 'Exhausted' || status === 'CanLoadMore') && conversations.length === 0 && (
+            <EmptyState
+              icon={<MessageCircle className="w-12 h-12" />}
+              title="No conversations yet"
+              message="Start a new conversation and it will appear here."
+              className="pt-16"
+            />
+          )}
+          {status !== 'LoadingFirstPage' && conversations.length > 0 && filteredChats.length === 0 && (
+            <EmptyState
+              icon={<Search className="w-12 h-12" />}
+              title="No chats found"
+              message={`Your search for "${searchQuery}" did not return any results.`}
+              className="pt-16"
+            />
           )}
         </div>
       </ScrollArea>
