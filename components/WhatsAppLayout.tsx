@@ -326,18 +326,15 @@ const WhatsAppLayoutContent: React.FC = () => {
 
     switch (activeTab) {
       case 'transactions':
-        return <TransactionList
-          transactions={sortedTransactions}
-          status={transactionsStatus}
-          loadMore={loadMoreTransactions}
-          selectedTransactionId={selectedTransactionId}
-          onTransactionSelect={handleTransactionSelect}
-          onUpdateStatus={handleUpdateTransactionStatus}
-          isStatusUpdateDialogOpen={isStatusUpdateDialogOpen}
-          statusUpdateInfo={statusUpdateInfo}
-          onConfirmStatusUpdate={confirmStatusUpdate}
-          onCancelStatusUpdate={() => setIsStatusUpdateDialogOpen(false)}
-        />;
+        return (
+          <div className="h-full flex items-center justify-center bg-whatsapp-light-bg dark:bg-whatsapp-dark-bg">
+            <EmptyState
+              icon={<Wallet />}
+              title="Select a transaction"
+              message="Select a transaction to see the details."
+            />
+          </div>
+        );
       case 'rates':
         return <RatesView />;
       case 'bank':
