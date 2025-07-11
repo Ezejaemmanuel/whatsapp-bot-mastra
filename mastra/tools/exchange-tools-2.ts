@@ -364,7 +364,7 @@ export const getLatestUserTransactionTool = createTool({
 
                 if (phoneNumber) {
                     // await sendDebugMessage(phoneNumber, 'USER ID EXTRACTION FAILED', {
-                        // error: errorMsg,
+                    // error: errorMsg,
                     //     runtimeContextAvailable: !!runtimeContext,
                     //     userId: userId || 'missing',
                     //     conversationId: conversationId || 'missing',
@@ -526,7 +526,7 @@ export const getLatestUserTransactionTool = createTool({
  */
 export const getAdminBankDetailsTool = createTool({
     id: 'get_admin_bank_details',
-    description: 'Get admin bank account details where customers should send payments. Returns the default active admin bank account.',
+    description: 'Get all admin bank account details where customers should send payments. Returns all active admin bank accounts.',
     inputSchema: z.object({}), // No parameters needed
     execute: async ({ context, runtimeContext }) => {
         const startTime = Date.now();
@@ -558,21 +558,21 @@ export const getAdminBankDetailsTool = createTool({
             // Send debug message about database query
             if (phoneNumber) {
                 // await sendDebugMessage(phoneNumber, 'DATABASE QUERY STARTED', {
-                //     operation: 'api.adminBankDetails.getDefaultAdminBankDetails',
-                //     purpose: 'Getting default admin bank account for customer payments'
+                //     operation: 'api.adminBankDetails.getAllAdminBankDetails',
+                //     purpose: 'Getting all admin bank accounts for customer payments'
                 // });
             }
 
-            const adminBankDetails = await fetchQuery(api.adminBankDetails.getDefaultAdminBankDetails, {});
+            const allAdminBankDetails = await fetchQuery(api.adminBankDetails.getAllAdminBankDetails, {});
 
-            if (!adminBankDetails) {
+            if (!allAdminBankDetails || allAdminBankDetails.length === 0) {
                 const errorMsg = 'No active admin bank details found. Please contact support.';
 
                 if (phoneNumber) {
-                        // await sendDebugMessage(phoneNumber, 'NO ADMIN BANK DETAILS FOUND', {
-                        //     error: errorMsg,
-                        //     cause: 'No default admin bank account configured in database'
-                        // });
+                    // await sendDebugMessage(phoneNumber, 'NO ADMIN BANK DETAILS FOUND', {
+                    //     error: errorMsg,
+                    //     cause: 'No default admin bank account configured in database'
+                    // });
                 }
 
                 throw new Error(errorMsg);
@@ -582,20 +582,15 @@ export const getAdminBankDetailsTool = createTool({
 
             const result = {
                 success: true,
-                data: adminBankDetails,
-                accountNumber: adminBankDetails.accountNumber,
-                accountName: adminBankDetails.accountName,
-                bankName: adminBankDetails.bankName,
-                message: `Admin bank details retrieved successfully`
+                data: allAdminBankDetails,
+                message: `All active admin bank details retrieved successfully. The user should be asked to send payment to any of them.`
             };
 
             // Send debug message with results (masked for security)
             if (phoneNumber) {
                 // await sendDebugMessage(phoneNumber, 'ADMIN BANK DETAILS RETRIEVED', {
                 //     success: true,
-                //     bankName: adminBankDetails.bankName,
-                //     accountName: adminBankDetails.accountName,
-                //     accountNumberMasked: adminBankDetails.accountNumber.slice(0, 4) + '****',
+                //     count: allAdminBankDetails.length,
                 //     executionTimeMs: executionTime
                 // });
 
@@ -604,10 +599,8 @@ export const getAdminBankDetailsTool = createTool({
             }
 
             logSuccess('Admin bank details retrieved successfully', {
-                bankName: adminBankDetails.bankName,
-                accountName: adminBankDetails.accountName,
+                count: allAdminBankDetails.length,
                 // Don't log full account number for security
-                accountNumberMasked: adminBankDetails.accountNumber.slice(0, 4) + '****',
                 executionTimeMs: executionTime,
                 operation: toolId
             });
@@ -662,7 +655,7 @@ export const getUserTool = createTool({
         if (phoneNumber) {
             // await sendDebugMessage(phoneNumber, 'GET USER TOOL STARTED', {
             //     toolId,
-           
+
             //     // conversationId
             // });
         }
@@ -731,7 +724,7 @@ export const getUserTool = createTool({
                 //         accountNumberMasked: user.accountNumber.slice(0, 4) + '****',
                 //         accountName: user.accountName
                 //     } : null,
-                    // executionTimeMs: executionTime
+                // executionTimeMs: executionTime
                 // });
 
                 // Send complete user data for debugging

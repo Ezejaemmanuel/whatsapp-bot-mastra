@@ -8,6 +8,8 @@ import { TransactionList } from './TransactionList';
 import { TransactionDetailView } from './details/TransactionDetailView';
 import { ImageDialog } from './ImageDialog';
 import { MobileNavBar } from './layout/MobileNavBar';
+import { RatesView } from './rates/RatesView';
+import { BankDetailsView } from './bank-details/BankDetailsView';
 import { useWhatsAppStore, useUIState } from '@/lib/store';
 import { usePaginatedQuery, useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -123,7 +125,7 @@ const WhatsAppLayoutContent: React.FC = () => {
     }
   };
 
-  const handleTabChange = (tab: 'chats' | 'transactions' | 'settings' | 'calls' | 'updates') => {
+  const handleTabChange = (tab: 'chats' | 'transactions' | 'settings' | 'rates' | 'bank') => {
     setActiveTab(tab);
     setSelectedConversationId(undefined);
     setSelectedTransactionId(undefined);
@@ -134,50 +136,61 @@ const WhatsAppLayoutContent: React.FC = () => {
     setSelectedTransactionId(undefined);
   };
 
+  const renderMobileView = () => {
+    if (selectedConversationId) {
+      return <ChatView chatId={selectedConversationId} onBack={handleBack} isMobile={true} />;
+    }
+    if (selectedTransactionId && selectedTransaction) {
+      return (
+        <div className="h-full flex flex-col bg-whatsapp-chat-bg">
+          <div className="flex items-center gap-3 bg-whatsapp-panel-bg border-b border-whatsapp-border px-4 py-3 flex-shrink-0">
+            <button onClick={handleBack} className="text-whatsapp-text-secondary">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <h2 className="text-lg font-medium text-whatsapp-text-primary">Transaction Details</h2>
+          </div>
+          <TransactionDetailView
+            transaction={selectedTransaction as any}
+            isMobile={true}
+          />
+        </div>
+      );
+    }
+    switch (activeTab) {
+      case 'transactions':
+        return <TransactionList
+          transactions={sortedTransactions}
+          status={transactionsStatus}
+          loadMore={loadMoreTransactions}
+          selectedTransactionId={selectedTransactionId}
+          onTransactionSelect={handleTransactionSelect}
+          onUpdateStatus={handleUpdateTransactionStatus}
+          isMobile={true} />;
+      case 'rates':
+        return <RatesView isMobile={true} />;
+      case 'bank':
+        return <BankDetailsView isMobile={true} />;
+      case 'chats':
+      default:
+        return <ChatList
+          conversations={sortedConversations}
+          status={status}
+          loadMore={loadMore}
+          selectedChatId={selectedConversationId}
+          onChatSelect={handleChatSelect}
+          isMobile={true}
+          activeTab={activeTab}
+          onTabChange={handleTabChange} />;
+    }
+  };
+
   if (isMobile) {
     return (
       <div className="h-[100dvh] bg-whatsapp-bg">
         <div className="h-full pb-16 overflow-y-auto">
-          {selectedConversationId ? (
-            <ChatView chatId={selectedConversationId} onBack={handleBack} isMobile={true} />
-          ) : selectedTransactionId && selectedTransaction ? (
-            // Mobile Transaction Detail View
-            <div className="h-full flex flex-col bg-whatsapp-chat-bg">
-              <div className="flex items-center gap-3 bg-whatsapp-panel-bg border-b border-whatsapp-border px-4 py-3 flex-shrink-0">
-                <button onClick={handleBack} className="text-whatsapp-text-secondary">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-                </button>
-                <h2 className="text-lg font-medium text-whatsapp-text-primary">Transaction Details</h2>
-              </div>
-              <TransactionDetailView
-                transaction={selectedTransaction as any}
-                isMobile={true}
-              />
-            </div>
-          ) : activeTab === 'transactions' ? (
-            <TransactionList
-              transactions={sortedTransactions}
-              status={transactionsStatus}
-              loadMore={loadMoreTransactions}
-              selectedTransactionId={selectedTransactionId}
-              onTransactionSelect={handleTransactionSelect}
-              onUpdateStatus={handleUpdateTransactionStatus}
-              isMobile={true} />
-          ) : (
-            <ChatList
-              conversations={sortedConversations}
-              status={status}
-              loadMore={loadMore}
-              selectedChatId={selectedConversationId}
-              onChatSelect={handleChatSelect}
-              isMobile={true}
-              activeTab={activeTab}
-              onTabChange={handleTabChange} />
-          )}
+          {renderMobileView()}
         </div>
 
-
-        {/* Mobile Nav Bar */}
         {!(selectedConversationId || selectedTransactionId) && (
           <MobileNavBar
             activeTab={activeTab}
@@ -186,64 +199,82 @@ const WhatsAppLayoutContent: React.FC = () => {
           />
         )}
 
-        {/* Global Image Dialog */}
         <ImageDialog />
       </div>
     );
   }
+
+  const renderSidebar = () => {
+    switch (activeTab) {
+      case 'chats':
+        return <ChatList
+          conversations={sortedConversations}
+          status={status}
+          loadMore={loadMore}
+          selectedChatId={selectedConversationId}
+          onChatSelect={handleChatSelect}
+          isMobile={false} />;
+      case 'transactions':
+        return <TransactionList
+          transactions={sortedTransactions}
+          status={transactionsStatus}
+          loadMore={loadMoreTransactions}
+          selectedTransactionId={selectedTransactionId}
+          onTransactionSelect={handleTransactionSelect}
+          onUpdateStatus={handleUpdateTransactionStatus}
+          isMobile={false} />;
+      case 'rates':
+        return <RatesView isMobile={false} />;
+      case 'bank':
+        return <BankDetailsView isMobile={false} />;
+      default:
+        return (
+          <div className="flex items-center justify-center h-full bg-whatsapp-panel-bg">
+            <p className="text-whatsapp-text-muted">Coming soon...</p>
+          </div>
+        );
+    }
+  };
+
+  const renderMainContent = () => {
+    if (activeTab === 'chats') {
+      return <ChatView chatId={selectedConversationId} isMobile={false} />;
+    }
+    if (activeTab === 'transactions' && selectedTransactionId && selectedTransaction) {
+      return <TransactionDetailView transaction={selectedTransaction as any} isMobile={false} />;
+    }
+    if (activeTab === 'rates') {
+      return <RatesView isMobile={false} />;
+    }
+    if (activeTab === 'bank') {
+      return <BankDetailsView isMobile={false} />;
+    }
+    return (
+      <div className="flex items-center justify-center h-full bg-whatsapp-chat-bg">
+        <div className="text-center">
+          <h2 className="text-2xl font-light text-whatsapp-text-primary mb-2">
+            {activeTab === 'transactions' ? 'Select a Transaction' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+          </h2>
+          <p className="text-whatsapp-text-secondary">
+            {activeTab === 'transactions' ? 'Choose a transaction to view its details' : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} feature coming soon...`}
+          </p>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="h-screen flex bg-whatsapp-bg overflow-hidden">
       <SideNavigation activeTab={activeTab} onTabChange={handleTabChange} />
 
       <div className="w-96 flex-shrink-0">
-        {activeTab === 'chats' ? (
-          <ChatList
-            conversations={sortedConversations}
-            status={status}
-            loadMore={loadMore}
-            selectedChatId={selectedConversationId}
-            onChatSelect={handleChatSelect}
-            isMobile={false} />
-        ) : activeTab === 'transactions' ? (
-          <TransactionList
-            transactions={sortedTransactions}
-            status={transactionsStatus}
-            loadMore={loadMoreTransactions}
-            selectedTransactionId={selectedTransactionId}
-            onTransactionSelect={handleTransactionSelect}
-            onUpdateStatus={handleUpdateTransactionStatus}
-            isMobile={false} />
-        ) : (
-          <div className="flex items-center justify-center h-full bg-whatsapp-panel-bg">
-            <p className="text-whatsapp-text-muted">Coming soon...</p>
-          </div>
-        )}
+        {renderSidebar()}
       </div>
 
       <div className="flex-1">
-        {activeTab === 'chats' ? (
-          <ChatView chatId={selectedConversationId} isMobile={false} />
-        ) : activeTab === 'transactions' && selectedTransactionId && selectedTransaction ? (
-          <TransactionDetailView
-            transaction={selectedTransaction as any}
-            isMobile={false}
-          />
-        ) : (
-          <div className="flex items-center justify-center h-full bg-whatsapp-chat-bg">
-            <div className="text-center">
-              <h2 className="text-2xl font-light text-whatsapp-text-primary mb-2">
-                {activeTab === 'transactions' ? 'Select a Transaction' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-              </h2>
-              <p className="text-whatsapp-text-secondary">
-                {activeTab === 'transactions' ? 'Choose a transaction to view its details' : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} feature coming soon...`}
-              </p>
-            </div>
-          </div>
-        )}
+        {renderMainContent()}
       </div>
 
-      {/* Global Image Dialog */}
       <ImageDialog />
     </div>
   );

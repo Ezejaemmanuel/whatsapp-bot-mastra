@@ -1,19 +1,20 @@
 import React from 'react';
-import { MessageCircle, Phone, Users, Settings, Receipt } from 'lucide-react';
+import { MessageCircle, DollarSign, Users, Settings, Receipt, Landmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import profileAvatar from '@/assets/avatar-male-1.jpg';
 
 interface SideNavigationProps {
   activeTab: string;
-  onTabChange: (tab: 'chats' | 'transactions' | 'settings' | 'calls' | 'updates') => void;
+  onTabChange: (tab: 'chats' | 'transactions' | 'settings' | 'rates' | 'bank') => void;
 }
 
 export const SideNavigation: React.FC<SideNavigationProps> = ({ activeTab, onTabChange }) => {
   const navItems = [
     { id: 'chats', icon: MessageCircle, label: 'Chats' },
-    { id: 'calls', icon: Phone, label: 'Calls' },
+    { id: 'rates', icon: DollarSign, label: 'Rates' },
     { id: 'transactions', icon: Receipt, label: 'Transactions' },
+    { id: 'bank', icon: Landmark, label: 'Bank' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];
 
@@ -39,7 +40,7 @@ export const SideNavigation: React.FC<SideNavigationProps> = ({ activeTab, onTab
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => onTabChange(item.id as 'chats' | 'transactions' | 'settings' | 'calls' | 'updates')}
+                onClick={() => onTabChange(item.id as 'chats' | 'transactions' | 'settings' | 'rates' | 'bank')}
                 className={`w-12 h-12 mx-auto relative transition-all duration-300 hover:scale-105 ${isActive
                   ? 'text-white bg-gradient-to-br from-whatsapp-primary to-whatsapp-accent shadow-lg glow-purple'
                   : 'text-whatsapp-text-muted hover:text-whatsapp-primary hover:bg-whatsapp-hover/50 hover:backdrop-blur-sm'

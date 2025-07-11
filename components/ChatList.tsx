@@ -19,7 +19,7 @@ interface ChatListProps {
   onChatSelect: (chatId: Id<"conversations">) => void;
   isMobile?: boolean;
   activeTab?: string;
-  onTabChange?: (tab: 'chats' | 'transactions' | 'settings' | 'calls' | 'updates') => void;
+  onTabChange?: (tab: 'chats' | 'transactions' | 'settings' | 'rates' | 'bank') => void;
 }
 
 export const ChatList: React.FC<ChatListProps> = ({

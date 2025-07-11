@@ -1,22 +1,18 @@
 import React from 'react';
-import { MessageCircle, Phone, Users, Settings, Receipt } from 'lucide-react';
+import { MessageCircle, DollarSign, Users, Settings, Receipt, Landmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
 interface MobileNavBarProps {
     activeTab: string;
-    onTabChange: (tab: 'chats' | 'transactions' | 'settings' | 'calls' | 'updates') => void;
+    onTabChange: (tab: 'chats' | 'transactions' | 'settings' | 'rates' | 'bank') => void;
     unreadCount?: number;
 }
 
 export const MobileNavBar: React.FC<MobileNavBarProps> = ({ activeTab, onTabChange, unreadCount = 0 }) => {
     const navItems = [
-        {
-            id: 'updates',
-            icon: <div className="w-6 h-6 bg-gradient-to-br from-whatsapp-primary to-whatsapp-accent rounded-full shadow-lg glow-purple"></div>,
-            label: 'Updates'
-        },
-        { id: 'calls', icon: <Phone className="w-6 h-6" />, label: 'Calls' },
+        { id: 'bank', icon: <Landmark className="w-6 h-6" />, label: 'Bank' },
+        { id: 'rates', icon: <DollarSign className="w-6 h-6" />, label: 'Rates' },
         { id: 'transactions', icon: <Receipt className="w-6 h-6" />, label: 'Transactions' },
         { id: 'chats', icon: <MessageCircle className="w-6 h-6" />, label: 'Chats', badge: unreadCount },
         { id: 'settings', icon: <Settings className="w-6 h-6" />, label: 'Settings' },
@@ -34,8 +30,8 @@ export const MobileNavBar: React.FC<MobileNavBarProps> = ({ activeTab, onTabChan
                         variant="ghost"
                         onClick={() => onTabChange(item.id as any)}
                         className={`flex flex-col items-center gap-1.5 h-full px-3 py-2 relative transition-all duration-300 hover:scale-110 ${activeTab === item.id
-                                ? 'text-whatsapp-primary bg-whatsapp-primary/10 backdrop-blur-sm rounded-lg shadow-lg glow-purple'
-                                : 'text-whatsapp-text-muted hover:text-whatsapp-primary hover:bg-whatsapp-hover/50'
+                            ? 'text-whatsapp-primary bg-whatsapp-primary/10 backdrop-blur-sm rounded-lg shadow-lg glow-purple'
+                            : 'text-whatsapp-text-muted hover:text-whatsapp-primary hover:bg-whatsapp-hover/50'
                             }`}
                     >
                         <div className={`transition-all duration-300 ${activeTab === item.id ? 'drop-shadow-lg' : ''}`}>

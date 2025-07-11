@@ -2,23 +2,23 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
 /**
- * Get the default active admin bank details
+ * Get the main admin bank details
  */
-export const getDefaultAdminBankDetails = query({
+export const getMainAdminBankDetails = query({
     args: {},
     handler: async (ctx) => {
-        // Try to get the default account first
-        const defaultAccount = await ctx.db
+        // Try to get the main account first
+        const mainAccount = await ctx.db
             .query("adminBankDetails")
-            .withIndex("by_is_default", (q) => q.eq("isDefault", true))
+            .withIndex("by_is_main", (q) => q.eq("isMain", true))
             .filter((q) => q.eq(q.field("isActive"), true))
             .first();
 
-        if (defaultAccount) {
-            return defaultAccount;
+        if (mainAccount) {
+            return mainAccount;
         }
 
-        // If no default account, get any active account
+        // If no main account, get any active account
         const activeAccount = await ctx.db
             .query("adminBankDetails")
             .withIndex("by_is_active", (q) => q.eq("isActive", true))
@@ -58,111 +58,60 @@ export const getAdminBankDetailsById = query({
  */
 export const upsertAdminBankDetails = mutation({
     args: {
+        _id: v.optional(v.id("adminBankDetails")),
         accountNumber: v.string(),
         accountName: v.string(),
         bankName: v.string(),
         isActive: v.optional(v.boolean()),
-        isDefault: v.optional(v.boolean()),
+        isMain: v.optional(v.boolean()),
         description: v.optional(v.string()),
         metadata: v.optional(v.any()),
     },
-    handler: async (ctx, args) => {
+    handler: async (ctx, { _id, ...args }) => {
         const now = Date.now();
-        const isActive = args.isActive ?? true;
-        const isDefault = args.isDefault ?? false;
 
-        // Check if an account with the same details already exists
-        const existingAccount = await ctx.db
-            .query("adminBankDetails")
-            .filter((q) =>
-                q.and(
-                    q.eq(q.field("accountNumber"), args.accountNumber),
-                    q.eq(q.field("bankName"), args.bankName)
-                )
-            )
-            .first();
-
-        if (existingAccount) {
-            // Update existing account
-            await ctx.db.patch(existingAccount._id, {
-                accountName: args.accountName,
-                isActive,
-                isDefault,
-                description: args.description,
-                updatedAt: now,
-                metadata: args.metadata,
-            });
-            return existingAccount._id;
-        }
-
-        // If this is set as default, remove default status from other accounts
-        if (isDefault) {
-            const currentDefaults = await ctx.db
+        if (args.isMain) {
+            const currentMain = await ctx.db
                 .query("adminBankDetails")
-                .withIndex("by_is_default", (q) => q.eq("isDefault", true))
-                .collect();
-
-            for (const account of currentDefaults) {
-                await ctx.db.patch(account._id, { isDefault: false });
+                .withIndex("by_is_main", (q) => q.eq("isMain", true))
+                .filter(q => q.neq(q.field("_id"), _id))
+                .first();
+            if (currentMain) {
+                await ctx.db.patch(currentMain._id, { isMain: false });
             }
         }
 
-        // Create new account
-        const bankDetailsId = await ctx.db.insert("adminBankDetails", {
-            accountNumber: args.accountNumber,
-            accountName: args.accountName,
-            bankName: args.bankName,
-            isActive,
-            isDefault,
-            description: args.description,
+        if (_id) {
+            await ctx.db.patch(_id, { ...args, updatedAt: now });
+            return _id;
+        }
+
+        return await ctx.db.insert("adminBankDetails", {
+            ...args,
+            isActive: args.isActive ?? true,
+            isMain: args.isMain ?? false,
             createdAt: now,
             updatedAt: now,
-            metadata: args.metadata,
         });
-
-        return bankDetailsId;
     },
 });
 
-/**
- * Update admin bank details status
- */
-export const updateAdminBankDetailsStatus = mutation({
-    args: {
-        bankDetailsId: v.id("adminBankDetails"),
-        isActive: v.optional(v.boolean()),
-        isDefault: v.optional(v.boolean()),
-    },
+
+export const setMainAdminBankDetails = mutation({
+    args: { bankDetailsId: v.id("adminBankDetails") },
     handler: async (ctx, args) => {
-        const now = Date.now();
-        const updates: any = { updatedAt: now };
+        const currentMain = await ctx.db
+            .query("adminBankDetails")
+            .withIndex("by_is_main", q => q.eq("isMain", true))
+            .first();
 
-        if (args.isActive !== undefined) {
-            updates.isActive = args.isActive;
+        if (currentMain) {
+            await ctx.db.patch(currentMain._id, { isMain: false });
         }
 
-        if (args.isDefault !== undefined) {
-            updates.isDefault = args.isDefault;
-
-            // If setting as default, remove default status from other accounts
-            if (args.isDefault) {
-                const currentDefaults = await ctx.db
-                    .query("adminBankDetails")
-                    .withIndex("by_is_default", (q) => q.eq("isDefault", true))
-                    .collect();
-
-                for (const account of currentDefaults) {
-                    if (account._id !== args.bankDetailsId) {
-                        await ctx.db.patch(account._id, { isDefault: false });
-                    }
-                }
-            }
-        }
-
-        await ctx.db.patch(args.bankDetailsId, updates);
-        return await ctx.db.get(args.bankDetailsId);
-    },
-});
+        await ctx.db.patch(args.bankDetailsId, { isMain: true });
+    }
+})
 
 /**
  * Delete admin bank details

@@ -156,14 +156,14 @@ export default defineSchema({
         accountName: v.string(), // Admin account holder name
         bankName: v.string(), // Admin bank name
         isActive: v.boolean(), // Whether this account is currently active for receiving payments
-        isDefault: v.boolean(), // Whether this is the default account
+        isMain: v.boolean(), // Whether this is the default account
         description: v.optional(v.string()), // Optional description for the account
         createdAt: v.number(), // Account creation timestamp
         updatedAt: v.number(), // Last update timestamp
         metadata: v.optional(v.any()), // Additional account metadata
     })
         .index("by_is_active", ["isActive"])
-        .index("by_is_default", ["isDefault"])
+        .index("by_is_main", ["isMain"])
         .index("by_bank_name", ["bankName"])
         .index("by_created_at", ["createdAt"]),
 }); 
