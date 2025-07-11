@@ -11,6 +11,9 @@ import avatarMale1 from '@/assets/avatar-male-1.jpg';
 import Image from 'next/image';
 import { useWhatsAppStore } from '@/lib/store';
 import { useInView } from 'react-intersection-observer';
+import { ChatViewLoader } from './ui/loader';
+import { EmptyState } from './ui/empty-state';
+import { MessageSquare } from 'lucide-react';
 
 
 interface ChatViewProps {
@@ -127,6 +130,10 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
     );
   }
 
+  if (messagesStatus === 'LoadingFirstPage') {
+    return <ChatViewLoader />;
+  }
+
   const handleSendMessage = async () => {
     if ((message.trim() || attachment) && chatId) {
       try {
@@ -237,17 +244,15 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
       {/* Messages - Scrollable Area */}
       <div className="flex-1 overflow-y-auto whatsapp-scrollbar relative z-10" ref={scrollRef} onScroll={handleScroll}>
         <div className="p-4 space-y-3">
-          {messagesStatus === 'LoadingFirstPage' && (
-            <div className="flex justify-center items-center h-full">
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 border-2 border-whatsapp-primary border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-whatsapp-text-muted font-medium">Loading messages...</p>
-              </div>
-            </div>
-          )}
 
-          {messagesStatus !== 'LoadingFirstPage' && (
-            <div ref={loadMoreRef} className="h-1" />
+          <div ref={loadMoreRef} className="h-1" />
+
+          {messages.length === 0 && (
+            <EmptyState
+              icon={<MessageSquare className="w-16 h-16" />}
+              title={`This is the beginning of your direct message history with ${conversation?.userName}`}
+              message="Messages and calls are end-to-end encrypted. No one outside of this chat, not even WhatsApp, can read or listen to them."
+            />
           )}
 
           {messages.map((msg: Doc<"messages">, index: number) => {

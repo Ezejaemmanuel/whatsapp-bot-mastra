@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MoreVertical, Plus, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle, XCircle, AlertCircle, ArrowRight } from 'lucide-react';
+import { Search, MoreVertical, Plus, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle, XCircle, AlertCircle, ArrowRight, Wallet } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -10,6 +10,7 @@ import { useUIState, useWhatsAppStore } from '@/lib/store';
 import { useShallow } from 'zustand/react/shallow';
 import { Id, Doc } from '@/convex/_generated/dataModel';
 import { useInView } from 'react-intersection-observer';
+import { EmptyState } from './ui/empty-state';
 
 type TransactionStatus = "pending" | "completed" | "failed" | "verified" | "paid" | "cancelled";
 
@@ -153,7 +154,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         filters={filters}
       />
       <TransactionItems
-        transactions={filteredTransactions}
+        initialTransactions={transactions || []}
+        transactions={filteredTransactions || []}
+        searchQuery={searchQuery}
         selectedTransactionId={selectedTransactionId}
         onTransactionSelect={onTransactionSelect}
         getStatusIcon={getStatusIcon}
@@ -222,7 +225,9 @@ const TransactionSearchAndFilter: React.FC<SearchAndFilterProps> = ({ searchQuer
 );
 
 interface TransactionItemsProps {
-  transactions: TransactionWithDetails[] | undefined;
+  initialTransactions: TransactionWithDetails[];
+  transactions: TransactionWithDetails[];
+  searchQuery: string;
   selectedTransactionId?: Id<"transactions">;
   onTransactionSelect: (transactionId: Id<"transactions">) => void;
   getStatusIcon: (status: string) => React.ReactNode;
@@ -234,7 +239,9 @@ interface TransactionItemsProps {
 }
 
 const TransactionItems: React.FC<TransactionItemsProps> = ({
+  initialTransactions,
   transactions,
+  searchQuery,
   selectedTransactionId,
   onTransactionSelect,
   getStatusIcon,
@@ -243,26 +250,52 @@ const TransactionItems: React.FC<TransactionItemsProps> = ({
   formatTimeAgo,
   handleStatusUpdate,
   loadMoreRef
-}) => (
-  <ScrollArea className="flex-1 whatsapp-scrollbar">
-    <div className="space-y-2 p-3">
-      {transactions?.map((transaction) => (
-        <TransactionCard
-          key={transaction._id}
-          transaction={transaction}
-          isSelected={selectedTransactionId === transaction._id}
-          onSelect={onTransactionSelect}
-          getStatusIcon={getStatusIcon}
-          getStatusColor={getStatusColor}
-          formatCurrency={formatCurrency}
-          formatTimeAgo={formatTimeAgo}
-          onStatusUpdate={handleStatusUpdate}
+}) => {
+  if (initialTransactions.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-4">
+        <EmptyState
+          icon={<Wallet />}
+          title="No Transactions Yet"
+          message="When you have transactions, they will appear here."
         />
-      ))}
-      <div ref={loadMoreRef} className="h-1" />
-    </div>
-  </ScrollArea>
-);
+      </div>
+    )
+  }
+
+  if (transactions.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-4">
+        <EmptyState
+          icon={<Search />}
+          title="No Transactions Found"
+          message={`Your search for "${searchQuery}" did not return any results.`}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <ScrollArea className="flex-1 whatsapp-scrollbar">
+      <div className="space-y-2 p-3">
+        {transactions.map((transaction) => (
+          <TransactionCard
+            key={transaction._id}
+            transaction={transaction}
+            isSelected={selectedTransactionId === transaction._id}
+            onSelect={onTransactionSelect}
+            getStatusIcon={getStatusIcon}
+            getStatusColor={getStatusColor}
+            formatCurrency={formatCurrency}
+            formatTimeAgo={formatTimeAgo}
+            onStatusUpdate={handleStatusUpdate}
+          />
+        ))}
+        <div ref={loadMoreRef} className="h-1" />
+      </div>
+    </ScrollArea>
+  )
+};
 
 interface TransactionCardProps {
   transaction: TransactionWithDetails;
