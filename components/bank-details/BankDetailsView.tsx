@@ -12,6 +12,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { Landmark, Edit, Trash, PlusCircle, Star, CheckCircle } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
+import { EmptyState } from '../ui/empty-state';
+import { FullScreenLoader } from '../ui/loader';
 
 type BankDetails = Doc<"adminBankDetails">;
 
@@ -65,7 +67,7 @@ const BankDetailsForm: React.FC<{ detail?: BankDetails; onSave: () => void }> = 
                 <Label htmlFor="description">Description</Label>
                 <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional description" />
             </div>
-          
+
             <div className="flex items-center space-x-2">
                 <Switch id="isMain" checked={isMain} onCheckedChange={setIsMain} />
                 <Label htmlFor="isMain">Set as Main Account</Label>
@@ -167,8 +169,14 @@ export const BankDetailsView: React.FC<{ isMobile?: boolean }> = () => {
             </header>
 
             <div className="flex-1 overflow-y-auto p-4">
-                {bankDetails === undefined && <p>Loading bank details...</p>}
-                {bankDetails && bankDetails.length === 0 && <p>No bank details found.</p>}
+                {bankDetails === undefined && <FullScreenLoader message="Loading bank details..." />}
+                {bankDetails && bankDetails.length === 0 && (
+                    <EmptyState
+                        icon={<Landmark />}
+                        title="No Bank Details"
+                        message="Add your first bank account to get started."
+                    />
+                )}
                 <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                     {bankDetails?.map(detail => (
                         <Card key={detail._id} className={`bg-whatsapp-panel-bg border-whatsapp-border ${detail.isMain ? 'border-whatsapp-primary' : ''}`}>

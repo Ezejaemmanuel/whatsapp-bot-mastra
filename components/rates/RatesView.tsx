@@ -9,8 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { DollarSign, Edit, Trash, PlusCircle } from 'lucide-react';
+import { DollarSign, Edit, Trash, PlusCircle, AreaChart } from 'lucide-react';
 import { toast } from 'sonner';
+import { EmptyState } from '../ui/empty-state';
+import { FullScreenLoader } from '../ui/loader';
 
 type ExchangeRate = Doc<"exchangeRates">;
 
@@ -150,8 +152,14 @@ export const RatesView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => {
             </header>
 
             <div className="flex-1 overflow-y-auto p-4">
-                {rates === undefined && <p>Loading rates...</p>}
-                {rates && rates.length === 0 && <p>No active rates found.</p>}
+                {rates === undefined && <FullScreenLoader message="Loading rates..." />}
+                {rates && rates.length === 0 && (
+                    <EmptyState
+                        icon={<AreaChart />}
+                        title="No Exchange Rates"
+                        message="Get started by adding your first exchange rate."
+                    />
+                )}
                 <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                     {rates?.map(rate => (
                         <Card key={rate._id} className="bg-whatsapp-panel-bg border-whatsapp-border">
