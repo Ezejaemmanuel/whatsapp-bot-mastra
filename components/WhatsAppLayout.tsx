@@ -44,24 +44,18 @@ const StatusUpdateDialog: React.FC<StatusUpdateDialogProps> = ({ isOpen, onClose
     }
   }, [statusInfo]);
 
-  if (!isOpen || !statusInfo) return null;
-
-  const { status } = statusInfo;
-  const isCancellation = status === 'cancelled';
-  const isConfirmation = status === 'confirmed_and_money_sent_to_user';
-
-  // This logic is to avoid showing the dialog for statuses that don't require a message.
-  // We can just confirm the status update directly.
-  const needsDialog = isCancellation || isConfirmation;
+  const needsDialog = statusInfo?.status === 'cancelled' || statusInfo?.status === 'confirmed_and_money_sent_to_user';
 
   useEffect(() => {
-    if (isOpen && !needsDialog) {
+    if (!isOpen || !needsDialog) return;
+
+    if (!needsDialog) {
       onConfirm();
     }
-  }, [isOpen, needsDialog, onConfirm]);
+  }, [isOpen, statusInfo, needsDialog, onConfirm]);
 
 
-  if (!needsDialog) {
+  if (!isOpen || !statusInfo || !needsDialog) {
     return null;
   }
 
@@ -69,22 +63,22 @@ const StatusUpdateDialog: React.FC<StatusUpdateDialogProps> = ({ isOpen, onClose
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="glass-panel">
         <DialogHeader>
-          <DialogTitle>Update Transaction Status to &quot;{status.replace(/_/g, ' ')}&quot;</DialogTitle>
+          <DialogTitle>Update Transaction Status to &quot;{statusInfo.status.replace(/_/g, ' ')}&quot;</DialogTitle>
           <DialogDescription>
-            {isCancellation
+            {statusInfo.status === 'cancelled'
               ? "Optionally, provide a reason for cancelling this transaction. This will be sent to the user."
               : "You can send a custom message to the user or use the default one below."}
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
           <Label htmlFor="message" className="sr-only">
-            {isCancellation ? "Cancellation Reason" : "Message"}
+            {statusInfo.status === 'cancelled' ? "Cancellation Reason" : "Message"}
           </Label>
           <Textarea
             id="message"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder={isCancellation ? "e.g., Duplicate transaction..." : "Your message..."}
+            placeholder={statusInfo.status === 'cancelled' ? "e.g., Duplicate transaction..." : "Your message..."}
           />
         </div>
         <DialogFooter>

@@ -34,7 +34,7 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
         if (currentMarketRate > 0) {
             setToAmount(fromAmount * currentMarketRate);
         }
-    }, [currentMarketRate]);
+    }, [currentMarketRate, fromAmount]);
 
     const handleFromAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = parseFloat(e.target.value) || 0;
