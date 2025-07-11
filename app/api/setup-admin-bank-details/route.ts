@@ -16,7 +16,7 @@ interface AdminBankDetailsConfig {
     accountName: string;
     bankName: string;
     isActive: boolean;
-    isDefault: boolean;
+    isMain: boolean;
     description?: string;
     metadata?: {
         setupDate: string;
@@ -31,7 +31,7 @@ const DEFAULT_ADMIN_BANK_DETAILS: AdminBankDetailsConfig = {
     accountName: "Ezeja Emmanuel Chibuike",
     bankName: "Opay",
     isActive: true,
-    isDefault: true,
+    isMain: true,
     description: "Primary account for receiving customer payments",
     metadata: {
         setupDate: new Date().toISOString(),
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
             accountName: DEFAULT_ADMIN_BANK_DETAILS.accountName,
             bankName: DEFAULT_ADMIN_BANK_DETAILS.bankName,
             isActive: DEFAULT_ADMIN_BANK_DETAILS.isActive,
-            isDefault: DEFAULT_ADMIN_BANK_DETAILS.isDefault,
+            isMain: DEFAULT_ADMIN_BANK_DETAILS.isMain,
             description: DEFAULT_ADMIN_BANK_DETAILS.description,
             metadata: DEFAULT_ADMIN_BANK_DETAILS.metadata,
         });
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
         });
 
         // Verify the setup by fetching the current default account
-        const currentDefault = await fetchQuery(api.adminBankDetails.getDefaultAdminBankDetails, {});
+        const currentDefault = await fetchQuery(api.adminBankDetails.getMainAdminBankDetails, {});
 
         return NextResponse.json({
             success: true,
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
                     accountNumber: DEFAULT_ADMIN_BANK_DETAILS.accountNumber,
                     accountName: DEFAULT_ADMIN_BANK_DETAILS.accountName,
                     bankName: DEFAULT_ADMIN_BANK_DETAILS.bankName,
-                    isDefault: DEFAULT_ADMIN_BANK_DETAILS.isDefault,
+                    isMain: DEFAULT_ADMIN_BANK_DETAILS.isMain,
                     isActive: DEFAULT_ADMIN_BANK_DETAILS.isActive,
                     description: DEFAULT_ADMIN_BANK_DETAILS.description,
                     action: 'upserted'
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
             accountName,
             bankName,
             isActive: body.isActive ?? true,
-            isDefault: body.isDefault ?? true,
+            isMain: body.isMain ?? true,
             description: body.description || `Admin account for ${bankName}`,
             metadata: {
                 setupDate: new Date().toISOString(),
@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
         });
 
         // Verify the setup
-        const currentDefault = await fetchQuery(api.adminBankDetails.getDefaultAdminBankDetails, {});
+        const currentDefault = await fetchQuery(api.adminBankDetails.getMainAdminBankDetails, {});
 
         return NextResponse.json({
             success: true,
@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
                     accountNumber,
                     accountName,
                     bankName,
-                    isDefault: body.isDefault ?? true,
+                    isMain: body.isMain ?? true,
                     isActive: body.isActive ?? true,
                     description: body.description || `Admin account for ${bankName}`,
                     action: 'upserted'

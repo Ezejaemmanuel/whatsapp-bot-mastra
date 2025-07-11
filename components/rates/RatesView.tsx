@@ -68,17 +68,17 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
 }
 
 const DeleteConfirmationDialog: React.FC<{ rate: ExchangeRate, onDeleted: () => void }> = ({ rate, onDeleted }) => {
-    const deactivateRate = useMutation(api.exchangeRates.deactivateRate);
+    const deleteRate = useMutation(api.exchangeRates.deleteRate);
     const { toast } = useToast();
 
     const handleDelete = async () => {
         try {
-            await deactivateRate({ currencyPair: rate.currencyPair });
-            toast({ title: "Success", description: `Rate for ${rate.currencyPair} deactivated.` });
+            await deleteRate({ rateId: rate._id });
+            toast({ title: "Success", description: `Rate for ${rate.currencyPair} deleted.` });
             onDeleted();
         } catch (error) {
-            console.error("Failed to deactivate rate:", error);
-            toast({ title: "Error", description: "Failed to deactivate rate.", variant: "destructive" });
+            console.error("Failed to delete rate:", error);
+            toast({ title: "Error", description: "Failed to delete rate.", variant: "destructive" });
         }
     }
 
@@ -88,13 +88,13 @@ const DeleteConfirmationDialog: React.FC<{ rate: ExchangeRate, onDeleted: () => 
                 <DialogTitle>Are you sure?</DialogTitle>
             </DialogHeader>
             <p>
-                Are you sure you want to deactivate the rate for <strong>{rate.currencyPair}</strong>? This action cannot be undone.
+                Are you sure you want to delete the rate for <strong>{rate.currencyPair}</strong>? This action cannot be undone.
             </p>
             <DialogFooter>
                 <DialogClose asChild>
                     <Button variant="outline">Cancel</Button>
                 </DialogClose>
-                <Button variant="destructive" onClick={handleDelete}>Deactivate</Button>
+                <Button variant="destructive" onClick={handleDelete}>Delete</Button>
             </DialogFooter>
         </DialogContent>
     )

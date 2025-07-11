@@ -204,6 +204,8 @@ const WhatsAppLayoutContent: React.FC = () => {
     );
   }
 
+  const showSidebar = activeTab === 'chats' || activeTab === 'transactions';
+
   const renderSidebar = () => {
     switch (activeTab) {
       case 'chats':
@@ -223,10 +225,6 @@ const WhatsAppLayoutContent: React.FC = () => {
           onTransactionSelect={handleTransactionSelect}
           onUpdateStatus={handleUpdateTransactionStatus}
           isMobile={false} />;
-      case 'rates':
-        return <RatesView isMobile={false} />;
-      case 'bank':
-        return <BankDetailsView isMobile={false} />;
       default:
         return (
           <div className="flex items-center justify-center h-full bg-whatsapp-panel-bg">
@@ -267,9 +265,12 @@ const WhatsAppLayoutContent: React.FC = () => {
     <div className="h-screen flex bg-whatsapp-bg overflow-hidden">
       <SideNavigation activeTab={activeTab} onTabChange={handleTabChange} />
 
-      <div className="w-96 flex-shrink-0">
-        {renderSidebar()}
-      </div>
+      {showSidebar &&
+        <div className="w-96 flex-shrink-0">
+          {renderSidebar()}
+        </div>
+      }
+
 
       <div className="flex-1">
         {renderMainContent()}

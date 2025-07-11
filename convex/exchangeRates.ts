@@ -129,6 +129,26 @@ export const deactivateRate = mutation({
 });
 
 /**
+ * Delete exchange rate
+ */
+export const deleteRate = mutation({
+    args: { rateId: v.id("exchangeRates") },
+    handler: async (ctx, args) => {
+        // You might want to add authentication/authorization checks here
+        // to ensure only authorized users can delete rates.
+
+        const rate = await ctx.db.get(args.rateId);
+        if (!rate) {
+            throw new Error("Exchange rate not found");
+        }
+
+        await ctx.db.delete(args.rateId);
+
+        return { success: true };
+    },
+});
+
+/**
  * Check if a negotiated rate is within acceptable bounds
  */
 export const validateNegotiatedRate = query({
