@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { DollarSign, Edit, Trash, PlusCircle, AreaChart } from 'lucide-react';
+import { DollarSign, Edit, Trash, PlusCircle, AreaChart, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { EmptyState } from '../ui/empty-state';
 import { FullScreenLoader } from '../ui/loader';
@@ -25,12 +25,42 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
     const [minRate, setMinRate] = useState(rate?.minRate || 0);
     const [maxRate, setMaxRate] = useState(rate?.maxRate || 0);
     const [currentMarketRate, setCurrentMarketRate] = useState(rate?.currentMarketRate || 0);
+    const [fromAmount, setFromAmount] = useState(1);
+    const [toAmount, setToAmount] = useState(rate?.currentMarketRate || 0);
+
     const upsertRate = useMutation(api.exchangeRates.upsertExchangeRate);
+
+    React.useEffect(() => {
+        if (currentMarketRate > 0) {
+            setToAmount(fromAmount * currentMarketRate);
+        }
+    }, [currentMarketRate]);
+
+    const handleFromAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = parseFloat(e.target.value) || 0;
+        setFromAmount(value);
+        if (currentMarketRate > 0) {
+            setToAmount(value * currentMarketRate);
+        }
+    };
+
+    const handleToAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = parseFloat(e.target.value) || 0;
+        setToAmount(value);
+        if (currentMarketRate > 0) {
+            setFromAmount(value / currentMarketRate);
+        }
+    };
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!fromCurrencyName || !fromCurrencyCode || !toCurrencyName || !toCurrencyCode || maxRate <= 0 || currentMarketRate <= 0) {
             toast.error("Please fill all required fields.");
+            return;
+        }
+        if (minRate > maxRate) {
+            toast.error("Minimum rate cannot be higher than the maximum rate.");
             return;
         }
         try {
@@ -76,17 +106,31 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                     <Input id="toCurrencyCode" value={toCurrencyCode} onChange={(e) => setToCurrencyCode(e.target.value.toUpperCase())} placeholder="e.g. NGN" disabled={!!rate} />
                 </div>
             </div>
-            <div className="grid gap-2">
-                <Label htmlFor="currentMarketRate">Current Market Rate</Label>
-                <Input id="currentMarketRate" type="number" value={currentMarketRate} onChange={(e) => setCurrentMarketRate(parseFloat(e.target.value) || 0)} />
-                <p className="text-xs text-whatsapp-text-muted">
-                    This is for reference and not used for negotiation.
-                    {currentMarketRate > 0 && <>
-                        <br />
-                        (e.g., at this rate, 1 {fromCode} is worth {currentMarketRate} {toCode})
-                    </>}
-                </p>
-            </div>
+
+            <Card className="bg-whatsapp-conversation-bg p-4">
+                <div className="grid gap-2">
+                    <Label htmlFor="currentMarketRate">Current Market Rate</Label>
+                    <Input id="currentMarketRate" type="number" value={currentMarketRate} onChange={(e) => setCurrentMarketRate(parseFloat(e.target.value) || 0)} />
+                    <p className="text-xs text-whatsapp-text-muted">
+                        This is for reference and powers the live preview below.
+                        {currentMarketRate > 0 && <>
+                            <br />
+                            (e.g., at this rate, 1 {fromCode} is worth {currentMarketRate} {toCode})
+                        </>}
+                    </p>
+                </div>
+                <div className="grid grid-cols-2 items-center gap-4 mt-4">
+                    <div className='grid gap-2'>
+                        <Label>{fromCode || "From"}</Label>
+                        <Input type="number" value={fromAmount} onChange={handleFromAmountChange} />
+                    </div>
+                    <div className='grid gap-2'>
+                        <Label>{toCode || "To"}</Label>
+                        <Input type="number" value={toAmount} onChange={handleToAmountChange} />
+                    </div>
+                </div>
+            </Card>
+
             <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                     <Label htmlFor="minRate">Your Minimum Rate</Label>
@@ -111,6 +155,14 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                     </p>
                 </div>
             </div>
+
+            {minRate > maxRate && (
+                <div className="flex items-center gap-2 text-red-500 text-sm">
+                    <AlertTriangle className="w-4 h-4" />
+                    <p>Minimum rate cannot be higher than the maximum rate.</p>
+                </div>
+            )}
+
             <DialogFooter>
                 <Button type="submit">Save Rate</Button>
             </DialogFooter>
