@@ -88,7 +88,7 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                     <p className="text-xs text-whatsapp-text-muted">
                         The bot will not offer less than this.
                         <br />
-                        (e.g., for 1 {fromCode}, you'll pay at least this amount in {toCode})
+                        (e.g., for 1 {fromCode}, you&apos;ll pay at least this amount in {toCode})
                     </p>
                 </div>
                 <div className="grid gap-2">
@@ -97,7 +97,7 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                     <p className="text-xs text-whatsapp-text-muted">
                         The bot will not offer more than this.
                         <br />
-                        (e.g., for 1 {fromCode}, you'll pay at most this amount in {toCode})
+                        (e.g., for 1 {fromCode}, you&apos;ll pay at most this amount in {toCode})
                     </p>
                 </div>
             </div>
