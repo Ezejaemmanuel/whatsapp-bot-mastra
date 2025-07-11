@@ -23,6 +23,8 @@ export const getAdminStatus = query({
             activeTime?: string | null;
         };
 
+        const timezone = "Africa/Nairobi"; // Hardcoded timezone
+
         if (adminStatus.isManuallyInactive) {
             status = {
                 isInactive: true,
@@ -30,9 +32,9 @@ export const getAdminStatus = query({
                 activeTime: null,
             };
         } else {
-            const { recurringInactiveStart, recurringInactiveEnd, timezone } = adminStatus;
+            const { recurringInactiveStart, recurringInactiveEnd } = adminStatus;
 
-            if (!recurringInactiveStart || !recurringInactiveEnd || !timezone) {
+            if (!recurringInactiveStart || !recurringInactiveEnd) {
                 status = {
                     isInactive: false,
                     reason: "incomplete_schedule",
@@ -93,7 +95,6 @@ export const setAdminStatus = mutation({
         isManuallyInactive: v.optional(v.boolean()),
         recurringInactiveStart: v.optional(v.string()),
         recurringInactiveEnd: v.optional(v.string()),
-        timezone: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const existingStatus = await ctx.db.query("adminStatus").unique();
@@ -105,7 +106,6 @@ export const setAdminStatus = mutation({
                 isManuallyInactive: args.isManuallyInactive ?? false,
                 recurringInactiveStart: args.recurringInactiveStart ?? "",
                 recurringInactiveEnd: args.recurringInactiveEnd ?? "",
-                timezone: args.timezone ?? "Africa/Nairobi",
             });
         }
         return await ctx.db.query("adminStatus").unique();
@@ -129,7 +129,6 @@ export const toggleManualStatus = mutation({
                 isManuallyInactive,
                 recurringInactiveStart: "",
                 recurringInactiveEnd: "",
-                timezone: "Africa/Nairobi",
             });
         }
     },

@@ -24,9 +24,11 @@ export const getAdminStatusTool = createTool({
             let resultMessage = "Admin is currently online.";
             if (adminStatus.isInactive) {
                 if (adminStatus.reason === 'manual_override') {
-                    resultMessage = "The admin is currently offline. You can proceed with the transaction, and it will be processed shortly.";
-                } else if (adminStatus.reason === 'recurring_schedule') {
+                    resultMessage = "The admin is currently offline. You can still proceed with your transaction, and it will be processed shortly.";
+                } else if (adminStatus.reason === 'recurring_schedule' && 'activeTime' in adminStatus && adminStatus.activeTime) {
                     resultMessage = `The admin is currently offline and will be back at ${adminStatus.activeTime} (Kenyan time). You can proceed with the transaction, and it will be processed then.`;
+                } else if (adminStatus.reason === 'recurring_schedule') {
+                    resultMessage = `The admin is currently offline due to a schedule. You can proceed with the transaction, and it will be processed when the admin is back online.`;
                 }
             }
 
@@ -34,7 +36,7 @@ export const getAdminStatusTool = createTool({
                 success: true,
                 isInactive: adminStatus.isInactive,
                 reason: adminStatus.reason,
-                activeTime: adminStatus.activeTime,
+                activeTime: ('activeTime' in adminStatus && adminStatus.activeTime) ? adminStatus.activeTime : null,
                 message: resultMessage,
             };
 

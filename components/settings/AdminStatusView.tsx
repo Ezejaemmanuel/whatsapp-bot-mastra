@@ -57,7 +57,6 @@ export const AdminStatusView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) 
     const [isManualInactive, setIsManualInactive] = useState(false);
     const [startTime, setStartTime] = useState('22:00');
     const [endTime, setEndTime] = useState('08:00');
-    const [timezone, setTimezone] = useState('Africa/Nairobi');
 
     useEffect(() => {
         if (adminStatusData?.settings) {
@@ -65,7 +64,6 @@ export const AdminStatusView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) 
             setIsManualInactive(settings.isManuallyInactive ?? false);
             setStartTime(settings.recurringInactiveStart || '22:00');
             setEndTime(settings.recurringInactiveEnd || '08:00');
-            setTimezone(settings.timezone || 'Africa/Nairobi');
         }
     }, [adminStatusData]);
 
@@ -75,7 +73,6 @@ export const AdminStatusView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) 
                 isManuallyInactive: isManualInactive,
                 recurringInactiveStart: startTime,
                 recurringInactiveEnd: endTime,
-                timezone: timezone,
             });
             toast.success('Admin status updated successfully!');
         } catch (error) {
@@ -139,18 +136,7 @@ export const AdminStatusView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) 
                         </div>
                     </div>
 
-                    <div className="space-y-1">
-                        <Label htmlFor="timezone">Timezone</Label>
-                        <Input
-                            id="timezone"
-                            value={timezone}
-                            onChange={(e) => setTimezone(e.target.value)}
-                            disabled={isManualInactive}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                            e.g., Africa/Nairobi, America/New_York
-                        </p>
-                    </div>
+                  
                 </CardContent>
                 <CardFooter>
                     <Button onClick={handleSave} className="ml-auto">
