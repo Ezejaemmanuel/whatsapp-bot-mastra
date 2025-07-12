@@ -155,9 +155,14 @@ export const ChatList: React.FC<ChatListProps> = ({
                   </span>
                 </div>
                 <div className="flex items-center justify-between mt-1">
-                  <p className="truncate text-sm text-whatsapp-text-muted max-w-[200px] group-hover:text-whatsapp-text-secondary transition-colors duration-300">
-                    {chat.lastMessageSummary || 'No messages yet'}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    {chat.inCharge === 'admin' && (
+                      <div className="w-2 h-2 bg-whatsapp-primary rounded-full glow-purple-small" title="Handled by Admin"></div>
+                    )}
+                    <p className="truncate text-sm text-whatsapp-text-muted max-w-[180px] group-hover:text-whatsapp-text-secondary transition-colors duration-300">
+                      {chat.lastMessageSummary || 'No messages yet'}
+                    </p>
+                  </div>
                   {chat.unreadCount > 0 && (
                     <Badge className="bg-gradient-to-r from-whatsapp-unread to-whatsapp-accent text-white rounded-full px-2 py-0.5 text-xs min-w-[20px] h-5 flex items-center justify-center shadow-lg pulse-purple">
                       {chat.unreadCount}

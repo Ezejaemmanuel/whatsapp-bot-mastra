@@ -1,12 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Phone, Video, MoreVertical, Smile, Paperclip, Mic, Send, X, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Phone, Video, MoreVertical, Smile, Paperclip, Mic, Send, X, ChevronDown, Users, Bot, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { usePaginatedQuery, useMutation, useQuery } from 'convex/react';
+import { usePaginatedQuery, useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id, Doc } from '@/convex/_generated/dataModel';
+import { InCharge } from '@/convex/schemaUnions';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import avatarMale1 from '@/assets/avatar-male-1.jpg';
 import Image from 'next/image';
 import { useWhatsAppStore } from '@/lib/store';
@@ -52,8 +61,10 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
     { initialNumItems: 20 }
   );
 
-  // Mutations
-  const storeMessage = useMutation(api.messages.storeOutgoingMessage);
+  // Mutations & Actions
+  const sendAdminMessage = useAction(api.messages.sendAdminMessage);
+  const updateInCharge = useAction(api.conversations.updateInChargeStatusAndNotify);
+
 
   // Effect to load more messages when the top is reached
   useEffect(() => {
@@ -134,19 +145,38 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
     return <ChatViewLoader />;
   }
 
+  const handleInChargeChange = async (newInCharge: InCharge) => {
+    if (chatId && conversation && conversation.inCharge !== newInCharge) {
+      await updateInCharge({
+        conversationId: chatId,
+        inCharge: newInCharge,
+      });
+    }
+  };
+
   const handleSendMessage = async () => {
     if ((message.trim() || attachment) && chatId) {
       try {
+        // If bot is in charge, admin takes over first
+        if (conversation?.inCharge === 'bot') {
+          await updateInCharge({
+            conversationId: chatId,
+            inCharge: 'admin',
+            isFirstAdminMessage: true,
+          });
+        }
+
         let mediaUrl, caption;
         if (attachment) {
           // In a real app, you'd upload the file to a storage service
           // and get a URL. For now, we'll use a placeholder.
-          mediaUrl = '/assets/avatar-female-1.jpg'; // Placeholder
+          // TODO: Implement actual file upload and get URL
+          mediaUrl = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=2864&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'; // Placeholder
           caption = message.trim();
         }
 
-        // Store the message in Convex
-        await storeMessage({
+        // Use the new action to send the message
+        await sendAdminMessage({
           conversationId: chatId,
           senderRole: "admin",
           senderName: "Admin",
@@ -226,18 +256,41 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
         </div>
 
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-8 h-8' : 'w-10 h-10'
-            }`}>
+          <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-8 h-8' : 'w-10 h-10'}`}>
             <Video className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
           </Button>
-          <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-8 h-8' : 'w-10 h-10'
-            }`}>
+          <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-8 h-8' : 'w-10 h-10'}`}>
             <Phone className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
           </Button>
-          <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-8 h-8' : 'w-10 h-10'
-            }`}>
-            <MoreVertical className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-8 h-8' : 'w-10 h-10'}`}>
+                <MoreVertical className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="glass-panel">
+              <DropdownMenuLabel>Conversation Control</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => handleInChargeChange('admin')}
+                disabled={conversation?.inCharge === 'admin'}
+                className="flex justify-between items-center"
+              >
+                <span>Take Over (Admin)</span>
+                <Users className="w-4 h-4 ml-2" />
+                {conversation?.inCharge === 'admin' && <Check className="w-4 h-4 ml-auto" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleInChargeChange('bot')}
+                disabled={conversation?.inCharge === 'bot'}
+                className="flex justify-between items-center"
+              >
+                <span>Return to Bot</span>
+                <Bot className="w-4 h-4 ml-2" />
+                {conversation?.inCharge === 'bot' && <Check className="w-4 h-4 ml-auto" />}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -256,6 +309,16 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
           )}
 
           {messages.map((msg: Doc<"messages">, index: number) => {
+            if (msg.messageType === 'system') {
+              return (
+                <div key={msg._id} className="flex justify-center my-2">
+                  <div className="text-xs text-center text-whatsapp-text-muted bg-whatsapp-panel-bg/60 rounded-full px-3 py-1 shadow-sm glass-panel">
+                    {msg.content}
+                  </div>
+                </div>
+              );
+            }
+
             const prevMsg = messages[index - 1];
             const isOwn = msg.senderRole === 'admin' || msg.senderRole === 'bot';
             const isConsecutive = prevMsg && prevMsg.senderRole === msg.senderRole;
