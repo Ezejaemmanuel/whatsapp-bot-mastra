@@ -26,6 +26,7 @@ import { EmptyState } from './ui/empty-state';
 import { MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { useMutation as useConvexMutation } from "convex/react";
+import { ImagePreviewDialog } from './ImagePreviewDialog';
 
 
 interface ChatViewProps {
@@ -37,7 +38,7 @@ interface ChatViewProps {
 export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = false }) => {
   const [message, setMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
-  const [attachment, setAttachment] = useState<File | null>(null);
+  const [imageForPreview, setImageForPreview] = useState<File | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -195,45 +196,17 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
   };
 
   const handleSendMessage = async () => {
-    if ((message.trim() || attachment) && chatId) {
-      const promise = async () => {
-        if (conversation?.inCharge === 'bot') {
-          await updateInChargeMutation({
-            conversationId: chatId,
-            inCharge: 'admin',
-            isFirstAdminMessage: true,
-          });
-        }
-
-        if (attachment) {
-          // 1. Generate an upload URL from Convex
-          const postUrl = await generateUploadUrl();
-
-          // 2. Upload the file to the generated URL
-          const response = await fetch(postUrl, {
-            method: "POST",
-            headers: { "Content-Type": attachment.type },
-            body: attachment,
-          });
-
-          if (!response.ok) {
-            throw new Error("Failed to upload file.");
+    if ((message.trim() || imageForPreview) && chatId) {
+      // For text messages
+      if (message.trim() && !imageForPreview) {
+        const promise = async () => {
+          if (conversation?.inCharge === 'bot') {
+            await updateInChargeMutation({
+              conversationId: chatId,
+              inCharge: 'admin',
+              isFirstAdminMessage: true,
+            });
           }
-          const { storageId } = await response.json();
-
-          // 3. Send message via API, passing the storageId
-          await sendMessageMutation({
-            conversationId: chatId,
-            senderRole: "admin",
-            senderName: "Admin",
-            messageType: "image",
-            storageId: storageId,
-            mediaType: attachment.type, // Pass the attachment's MIME type
-            caption: message.trim(),
-          });
-
-        } else {
-          // Send a regular text message
           await sendMessageMutation({
             conversationId: chatId,
             senderRole: "admin",
@@ -241,19 +214,64 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
             messageType: "text",
             content: message.trim(),
           });
-        }
-      };
+        };
 
-      toast.promise(promise(), {
-        loading: 'Sending message...',
-        success: () => {
-          setMessage('');
-          setAttachment(null);
-          return 'Message sent!';
-        },
-        error: (err) => err.message || 'Failed to send message',
-      });
+        toast.promise(promise(), {
+          loading: 'Sending message...',
+          success: () => {
+            setMessage('');
+            return 'Message sent!';
+          },
+          error: (err) => err.message || 'Failed to send message',
+        });
+      }
+      // Image sending is handled by the dialog's callback
     }
+  };
+
+  const handleSendImage = async (caption: string) => {
+    if (!imageForPreview || !chatId) return;
+
+    const promise = async () => {
+      if (conversation?.inCharge === 'bot') {
+        await updateInChargeMutation({
+          conversationId: chatId,
+          inCharge: 'admin',
+          isFirstAdminMessage: true,
+        });
+      }
+
+      const postUrl = await generateUploadUrl();
+      const response = await fetch(postUrl, {
+        method: "POST",
+        headers: { "Content-Type": imageForPreview.type },
+        body: imageForPreview,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to upload file.");
+      }
+      const { storageId } = await response.json();
+
+      await sendMessageMutation({
+        conversationId: chatId,
+        senderRole: "admin",
+        senderName: "Admin",
+        messageType: "image",
+        storageId: storageId,
+        mediaType: imageForPreview.type,
+        caption: caption,
+      });
+    };
+
+    toast.promise(promise(), {
+      loading: 'Uploading and sending image...',
+      success: () => {
+        setImageForPreview(null);
+        return 'Image sent successfully!';
+      },
+      error: (err) => err.message || 'Failed to send image',
+    });
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -263,282 +281,280 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
     }
   };
 
-  const handleAttachmentClick = () => {
-    fileInputRef.current?.click();
-  };
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setAttachment(e.target.files[0]);
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      setImageForPreview(file);
+    } else if (file) {
+      toast.error("Please select a valid image file.");
     }
   };
 
-  const handleRemoveAttachment = () => {
-    setAttachment(null);
+  const handleCancelImagePreview = () => {
+    setImageForPreview(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-whatsapp-chat-bg whatsapp-chat-pattern h-full overflow-x-hidden relative">
-      {/* Background decorative gradient */}
-      <div className={`absolute inset-0 pointer-events-none transition-all duration-500 ${isAdminInCharge ? 'bg-gradient-to-br from-amber-400/10 via-transparent to-amber-300/5' : 'bg-gradient-to-br from-whatsapp-primary/5 via-transparent to-whatsapp-accent/5'}`}></div>
+    <>
+      <ImagePreviewDialog
+        isOpen={!!imageForPreview}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            handleCancelImagePreview();
+          }
+        }}
+        imageFile={imageForPreview}
+        onSend={handleSendImage}
+        onCancel={handleCancelImagePreview}
+      />
+      <div className="flex-1 flex flex-col bg-whatsapp-chat-bg whatsapp-chat-pattern h-full overflow-x-hidden relative">
+        {/* Background decorative gradient */}
+        <div className={`absolute inset-0 pointer-events-none transition-all duration-500 ${isAdminInCharge ? 'bg-gradient-to-br from-amber-400/10 via-transparent to-amber-300/5' : 'bg-gradient-to-br from-whatsapp-primary/5 via-transparent to-whatsapp-accent/5'}`}></div>
 
 
-      {/* Header */}
-      <div className={`flex items-center gap-3 glass-panel border-b border-whatsapp-border/50 flex-shrink-0 backdrop-blur-xl relative z-10 ${isMobile ? 'px-4 py-3' : 'px-5 py-4'
-        }`}>
-        {isMobile && (
-          <Button variant="ghost" size="icon" onClick={onBack} className="text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 -ml-2">
-            <ArrowLeft className="w-6 h-6" />
-          </Button>
-        )}
-
-        <div className="relative">
-          <Avatar className={`ring-2 ring-whatsapp-border/30 transition-all duration-300 hover:ring-whatsapp-primary/50 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'}`}>
-            <AvatarImage src={avatarMale1.src} alt={conversation?.userName || "User"} className="object-cover" />
-            <AvatarFallback className="bg-gradient-to-br from-whatsapp-primary to-whatsapp-accent text-white font-semibold">
-              {conversation?.userName?.charAt(0) || "U"}
-            </AvatarFallback>
-          </Avatar>
-          <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-whatsapp-online rounded-full border-2 border-whatsapp-panel-bg shadow-lg"></div>
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <h3 className={`font-semibold text-whatsapp-text-primary truncate ${isMobile ? 'text-base' : 'text-lg'
-            }`}>
-            {conversation?.userName || "Loading..."}
-          </h3>
-          <p className={`text-whatsapp-text-muted truncate ${isMobile ? 'text-xs' : 'text-sm'
-            }`}>
-            {conversation?.inCharge === 'bot'
-              ? '🤖 Conversation handled by Khaliwid Bot'
-              : '👤 An admin is handling this conversation'}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-8 h-8' : 'w-10 h-10'}`}>
-            <Video className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
-          </Button>
-          <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-8 h-8' : 'w-10 h-10'}`}>
-            <Phone className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-8 h-8' : 'w-10 h-10'}`}>
-                <MoreVertical className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="glass-panel">
-              <DropdownMenuLabel>Conversation Control</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => handleInChargeChange('admin')}
-                disabled={conversation?.inCharge === 'admin'}
-                className="flex justify-between items-center"
-              >
-                <span>Take Over (Admin)</span>
-                <Users className="w-4 h-4 ml-2" />
-                {conversation?.inCharge === 'admin' && <Check className="w-4 h-4 ml-auto" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleInChargeChange('bot')}
-                disabled={conversation?.inCharge === 'bot'}
-                className="flex justify-between items-center"
-              >
-                <span>Return to Bot</span>
-                <Bot className="w-4 h-4 ml-2" />
-                {conversation?.inCharge === 'bot' && <Check className="w-4 h-4 ml-auto" />}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-
-      {/* Admin in charge Indicator */}
-      {isAdminInCharge && (
-        <div className="relative z-10 flex items-center justify-center gap-2 bg-amber-400/10 text-amber-200 py-1.5 px-4 text-xs font-medium backdrop-blur-sm border-b border-amber-400/20 shadow-inner-top">
-          <Users className="h-4 w-4" />
-          <span>You are in control. The AI Bot is currently paused.</span>
-        </div>
-      )}
-
-      {/* Messages - Scrollable Area */}
-      <div className="flex-1 overflow-y-auto whatsapp-scrollbar relative z-10" ref={scrollRef} onScroll={handleScroll}>
-        <div className="p-4 space-y-3">
-
-          <div ref={loadMoreRef} className="h-1" />
-
-          {messages.length === 0 && (
-            <EmptyState
-              icon={<MessageSquare className="w-16 h-16" />}
-              title={`This is the beginning of your direct message history with ${conversation?.userName}`}
-              message="Messages and calls are end-to-end encrypted. No one outside of this chat, not even WhatsApp, can read or listen to them."
-            />
+        {/* Header */}
+        <div className={`flex items-center gap-3 glass-panel border-b border-whatsapp-border/50 flex-shrink-0 backdrop-blur-xl relative z-10 ${isMobile ? 'px-4 py-3' : 'px-5 py-4'
+          }`}>
+          {isMobile && (
+            <Button variant="ghost" size="icon" onClick={onBack} className="text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 -ml-2">
+              <ArrowLeft className="w-6 h-6" />
+            </Button>
           )}
 
-          {messages.map((msg: Doc<"messages">, index: number) => {
-            if (msg.messageType === 'system') {
-              return (
-                <div key={msg._id} className="flex justify-center my-2">
-                  <div className="text-xs text-center text-whatsapp-text-muted bg-whatsapp-panel-bg/60 rounded-full px-3 py-1 shadow-sm glass-panel">
-                    {msg.content}
-                  </div>
-                </div>
-              );
-            }
+          <div className="relative">
+            <Avatar className={`ring-2 ring-whatsapp-border/30 transition-all duration-300 hover:ring-whatsapp-primary/50 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'}`}>
+              <AvatarImage src={avatarMale1.src} alt={conversation?.userName || "User"} className="object-cover" />
+              <AvatarFallback className="bg-gradient-to-br from-whatsapp-primary to-whatsapp-accent text-white font-semibold">
+                {conversation?.userName?.charAt(0) || "U"}
+              </AvatarFallback>
+            </Avatar>
+            <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-whatsapp-online rounded-full border-2 border-whatsapp-panel-bg shadow-lg"></div>
+          </div>
 
-            const prevMsg = messages[index - 1];
-            const isOwn = msg.senderRole === 'admin' || msg.senderRole === 'bot';
-            const isConsecutive = prevMsg && prevMsg.senderRole === msg.senderRole;
-            const showTime = !isConsecutive || (prevMsg && new Date(msg.timestamp).getTime() - new Date(prevMsg.timestamp).getTime() > 300000); // 5 minutes
+          <div className="flex-1 min-w-0">
+            <h3 className={`font-semibold text-whatsapp-text-primary truncate ${isMobile ? 'text-base' : 'text-lg'
+              }`}>
+              {conversation?.userName || "Loading..."}
+            </h3>
+            <p className={`text-whatsapp-text-muted truncate ${isMobile ? 'text-xs' : 'text-sm'
+              }`}>
+              {conversation?.inCharge === 'bot'
+                ? '🤖 Conversation handled by Khaliwid Bot'
+                : '👤 An admin is handling this conversation'}
+            </p>
+          </div>
 
-            const getBubbleClasses = () => {
-              let classes = 'message-bubble transition-all duration-300 hover:scale-105 ';
-              if (msg.senderRole === 'admin') {
-                classes += 'outgoing admin';
-              } else if (msg.senderRole === 'bot') {
-                classes += 'outgoing bot';
-              } else {
-                classes += 'incoming';
-              }
-              return classes;
-            };
-
-            return (
-              <div key={msg._id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'} ${isConsecutive && !showTime ? 'mt-1' : 'mt-4'}`}>
-                <div className={getBubbleClasses()}>
-                  {!isOwn && !isConsecutive && (
-                    <p className="text-xs font-semibold text-whatsapp-primary mb-1">{msg.senderName}</p>
-                  )}
-                  <div className="flex flex-col">
-                    {msg.messageType === 'image' && msg.mediaUrl ? (
-                      <div
-                        className="relative w-64 h-64 mb-1 cursor-pointer group"
-                        onClick={() => openImageDialog(msg.mediaUrl as string, msg.caption || 'Image')}
-                      >
-                        <Image
-                          src={msg.mediaUrl}
-                          alt={msg.caption || 'Image'}
-                          layout="fill"
-                          objectFit="cover"
-                          className="rounded-md transition-all duration-300 group-hover:brightness-110"
-                        />
-                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md flex items-center justify-center">
-                          <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-                    ) : null}
-                    {msg.content && (
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
-                    )}
-                    {msg.messageType === 'image' && msg.caption && (
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-words mt-1">{msg.caption}</p>
-                    )}
-                    <div className="flex items-center justify-end mt-1 gap-1">
-                      <span className={`text-xs opacity-70 font-medium ${isOwn ? 'text-white' : 'text-whatsapp-text-muted'}`}>
-                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                      {isOwn && (
-                        <div className="message-status">
-                          <svg viewBox="0 0 16 15" className="w-4 h-4 fill-current opacity-80">
-                            <path d="m15.01 3.316-.478-.372a.365.365 0 0 0-.51.063L8.666 9.879a.32.32 0 0 1-.484.033l-.358-.325a.319.319 0 0 0-.484.032l-.378.483a.418.418 0 0 0 .036.541l1.32 1.266c.143.14.361.125.484-.033l6.272-8.048a.366.366 0 0 0-.063-.51zm-4.1 0-.478-.372a.365.365 0 0 0-.51.063L4.566 9.879a.32.32 0 0 1-.484.033L1.891 7.769a.319.319 0 0 0-.484.032l-.378.483a.418.418 0 0 0 .036.541l3.61 3.466c.143.14.361.125.484-.033L10.91 3.379a.366.366 0 0 0-.063-.51z" />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-8 h-8' : 'w-10 h-10'}`}>
+              <Video className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
+            </Button>
+            <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-8 h-8' : 'w-10 h-10'}`}>
+              <Phone className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-8 h-8' : 'w-10 h-10'}`}>
+                  <MoreVertical className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="glass-panel">
+                <DropdownMenuLabel>Conversation Control</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => handleInChargeChange('admin')}
+                  disabled={conversation?.inCharge === 'admin'}
+                  className="flex justify-between items-center"
+                >
+                  <span>Take Over (Admin)</span>
+                  <Users className="w-4 h-4 ml-2" />
+                  {conversation?.inCharge === 'admin' && <Check className="w-4 h-4 ml-auto" />}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleInChargeChange('bot')}
+                  disabled={conversation?.inCharge === 'bot'}
+                  className="flex justify-between items-center"
+                >
+                  <span>Return to Bot</span>
+                  <Bot className="w-4 h-4 ml-2" />
+                  {conversation?.inCharge === 'bot' && <Check className="w-4 h-4 ml-auto" />}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-        {showNewMessageIndicator && (
-          <Button
-            variant="secondary"
-            className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full h-10 w-10 p-2 shadow-lg glow-purple bg-whatsapp-primary/90 hover:bg-whatsapp-primary text-white border border-whatsapp-primary/50 backdrop-blur-sm"
-            onClick={scrollToBottom}
-          >
-            <ChevronDown className="h-6 w-6" />
-          </Button>
-        )}
-      </div>
 
-      {/* Message Input */}
-      <div className={`flex items-center gap-3 glass-panel border-t border-whatsapp-border/50 flex-shrink-0 backdrop-blur-xl relative z-10 ${isMobile ? 'px-3 py-2' : 'px-4 py-3'
-        }`}>
-        <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'
-          }`}>
-          <Smile className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
-        </Button>
-
-        <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'
-          }`}
-          onClick={handleAttachmentClick}
-        >
-          <Paperclip className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
-        </Button>
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          className="hidden"
-          accept="image/*"
-        />
-
-        {attachment && (
-          <div className="absolute bottom-12 left-0 right-0 p-3 glass-panel border-t border-whatsapp-border/50 backdrop-blur-xl">
-            <div className="flex items-center gap-3">
-              <div className="relative w-10 h-10 rounded-lg overflow-hidden ring-2 ring-whatsapp-primary/30">
-                <Image src={URL.createObjectURL(attachment)} alt="preview" layout="fill" objectFit="cover" />
-              </div>
-              <span className="text-sm text-whatsapp-text-primary truncate flex-1 font-medium">{attachment.name}</span>
-              <Button variant="ghost" size="icon" onClick={handleRemoveAttachment} className="text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-red-400 transition-all duration-300">
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
+        {/* Admin in charge Indicator */}
+        {isAdminInCharge && (
+          <div className="relative z-10 flex items-center justify-center gap-2 bg-amber-400/10 text-amber-200 py-1.5 px-4 text-xs font-medium backdrop-blur-sm border-b border-amber-400/20 shadow-inner-top">
+            <Users className="h-4 w-4" />
+            <span>You are in control. The AI Bot is currently paused.</span>
           </div>
         )}
 
-        <div className="flex-1 relative">
-          <Input
-            placeholder={attachment ? "Add a caption..." : "Type a message"}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            className="whatsapp-input bg-whatsapp-bg/80 border border-whatsapp-border/50 focus:ring-2 focus:ring-whatsapp-primary/30 focus:border-whatsapp-primary transition-all duration-300"
-          />
+        {/* Messages - Scrollable Area */}
+        <div className="flex-1 overflow-y-auto whatsapp-scrollbar relative z-10" ref={scrollRef} onScroll={handleScroll}>
+          <div className="p-4 space-y-3">
+
+            <div ref={loadMoreRef} className="h-1" />
+
+            {messages.length === 0 && (
+              <EmptyState
+                icon={<MessageSquare className="w-16 h-16" />}
+                title={`This is the beginning of your direct message history with ${conversation?.userName}`}
+                message="Messages and calls are end-to-end encrypted. No one outside of this chat, not even WhatsApp, can read or listen to them."
+              />
+            )}
+
+            {messages.map((msg: Doc<"messages">, index: number) => {
+              if (msg.messageType === 'system') {
+                return (
+                  <div key={msg._id} className="flex justify-center my-2">
+                    <div className="text-xs text-center text-whatsapp-text-muted bg-whatsapp-panel-bg/60 rounded-full px-3 py-1 shadow-sm glass-panel">
+                      {msg.content}
+                    </div>
+                  </div>
+                );
+              }
+
+              const prevMsg = messages[index - 1];
+              const isOwn = msg.senderRole === 'admin' || msg.senderRole === 'bot';
+              const isConsecutive = prevMsg && prevMsg.senderRole === msg.senderRole;
+              const showTime = !isConsecutive || (prevMsg && new Date(msg.timestamp).getTime() - new Date(prevMsg.timestamp).getTime() > 300000); // 5 minutes
+
+              const getBubbleClasses = () => {
+                let classes = 'message-bubble transition-all duration-300 hover:scale-105 ';
+                if (msg.senderRole === 'admin') {
+                  classes += 'outgoing admin';
+                } else if (msg.senderRole === 'bot') {
+                  classes += 'outgoing bot';
+                } else {
+                  classes += 'incoming';
+                }
+                return classes;
+              };
+
+              return (
+                <div key={msg._id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'} ${isConsecutive && !showTime ? 'mt-1' : 'mt-4'}`}>
+                  <div className={getBubbleClasses()}>
+                    {!isOwn && !isConsecutive && (
+                      <p className="text-xs font-semibold text-whatsapp-primary mb-1">{msg.senderName}</p>
+                    )}
+                    <div className="flex flex-col">
+                      {msg.messageType === 'image' && msg.mediaUrl ? (
+                        <div
+                          className="relative w-64 h-64 mb-1 cursor-pointer group"
+                          onClick={() => openImageDialog(msg.mediaUrl as string, msg.caption || 'Image')}
+                        >
+                          <Image
+                            src={msg.mediaUrl}
+                            alt={msg.caption || 'Image'}
+                            layout="fill"
+                            objectFit="cover"
+                            className="rounded-md transition-all duration-300 group-hover:brightness-110"
+                          />
+                          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md flex items-center justify-center">
+                            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+                      {msg.content && (
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
+                      )}
+                      {msg.messageType === 'image' && msg.caption && (
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words mt-1">{msg.caption}</p>
+                      )}
+                      <div className="flex items-center justify-end mt-1 gap-1">
+                        <span className={`text-xs opacity-70 font-medium ${isOwn ? 'text-white' : 'text-whatsapp-text-muted'}`}>
+                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {isOwn && (
+                          <div className="message-status">
+                            <svg viewBox="0 0 16 15" className="w-4 h-4 fill-current opacity-80">
+                              <path d="m15.01 3.316-.478-.372a.365.365 0 0 0-.51.063L8.666 9.879a.32.32 0 0 1-.484.033l-.358-.325a.319.319 0 0 0-.484.032l-.378.483a.418.418 0 0 0 .036.541l1.32 1.266c.143.14.361.125.484-.033l6.272-8.048a.366.366 0 0 0-.063-.51zm-4.1 0-.478-.372a.365.365 0 0 0-.51.063L4.566 9.879a.32.32 0 0 1-.484.033L1.891 7.769a.319.319 0 0 0-.484.032l-.378.483a.418.418 0 0 0 .036.541l3.61 3.466c.143.14.361.125.484-.033L10.91 3.379a.366.366 0 0 0-.063-.51z" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {showNewMessageIndicator && (
+            <Button
+              variant="secondary"
+              className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full h-10 w-10 p-2 shadow-lg glow-purple bg-whatsapp-primary/90 hover:bg-whatsapp-primary text-white border border-whatsapp-primary/50 backdrop-blur-sm"
+              onClick={scrollToBottom}
+            >
+              <ChevronDown className="h-6 w-6" />
+            </Button>
+          )}
         </div>
 
-        {message.trim() || attachment ? (
-          <Button
-            onClick={handleSendMessage}
-            size="icon"
-            className={`modern-button transition-all duration-300 hover:scale-110 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'
-              }`}
-          >
-            <Send className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
+        {/* Message Input */}
+        <div className={`flex items-center gap-3 glass-panel border-t border-whatsapp-border/50 flex-shrink-0 backdrop-blur-xl relative z-10 ${isMobile ? 'px-3 py-2' : 'px-4 py-3'
+          }`}>
+          <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'
+            }`}>
+            <Smile className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
           </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'
-              } ${isRecording ? 'text-red-400 bg-red-500/10' : ''}`}
-            onMouseDown={() => setIsRecording(true)}
-            onMouseUp={() => setIsRecording(false)}
-            onMouseLeave={() => setIsRecording(false)}
+
+          <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'
+            }`}
+            onClick={() => fileInputRef.current?.click()}
           >
-            <Mic className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'} transition-all duration-300 ${isRecording ? 'scale-110' : ''}`} />
+            <Paperclip className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
           </Button>
-        )}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+            accept="image/*"
+          />
+
+          <div className="flex-1 relative">
+            <Input
+              placeholder={"Type a message"}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="whatsapp-input bg-whatsapp-bg/80 border border-whatsapp-border/50 focus:ring-2 focus:ring-whatsapp-primary/30 focus:border-whatsapp-primary transition-all duration-300"
+            />
+          </div>
+
+          {message.trim() ? (
+            <Button
+              onClick={handleSendMessage}
+              size="icon"
+              className={`modern-button transition-all duration-300 hover:scale-110 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'
+                }`}
+            >
+              <Send className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'
+                } ${isRecording ? 'text-red-400 bg-red-500/10' : ''}`}
+              onMouseDown={() => setIsRecording(true)}
+              onMouseUp={() => setIsRecording(false)}
+              onMouseLeave={() => setIsRecording(false)}
+            >
+              <Mic className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'} transition-all duration-300 ${isRecording ? 'scale-110' : ''}`} />
+            </Button>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
