@@ -105,7 +105,7 @@ export default defineSchema({
         .index("by_storage_id", ["storageId"]),
 
     /**
-     * Exchange rates table - stores currency exchange rates with min/max boundaries
+     * Exchange rates table - stores currency exchange rates with separate buying and selling rates
      */
     exchangeRates: defineTable({
         fromCurrencyName: v.string(), // e.g. United States Dollar
@@ -113,9 +113,17 @@ export default defineSchema({
         toCurrencyName: v.string(), // e.g. Nigerian Naira
         toCurrencyCode: v.string(), // e.g. NGN
         currencyPair: v.string(), // 'USD-NGN', 'GBP-NGN', etc. auto-generated
-        minRate: v.number(), // Minimum acceptable rate for the business
-        maxRate: v.number(), // Maximum rate offered to customers
-        currentMarketRate: v.number(), // Current market rate for reference
+
+        // Buying rates (when we buy foreign currency from customer)
+        buyingMinRate: v.number(), // Minimum buying rate we offer
+        buyingMaxRate: v.number(), // Maximum buying rate we offer
+        buyingCurrentMarketRate: v.number(), // Current market buying rate for reference
+
+        // Selling rates (when we sell foreign currency to customer)
+        sellingMinRate: v.number(), // Minimum selling rate we offer
+        sellingMaxRate: v.number(), // Maximum selling rate we offer
+        sellingCurrentMarketRate: v.number(), // Current market selling rate for reference
+
         lastUpdated: v.number(), // Last update timestamp
         metadata: v.optional(v.any()), // Additional rate metadata
     })

@@ -42,9 +42,12 @@ export const upsertExchangeRate = mutation({
         fromCurrencyCode: v.string(),
         toCurrencyName: v.string(),
         toCurrencyCode: v.string(),
-        minRate: v.number(),
-        maxRate: v.number(),
-        currentMarketRate: v.number(),
+        buyingMinRate: v.number(),
+        buyingMaxRate: v.number(),
+        buyingCurrentMarketRate: v.number(),
+        sellingMinRate: v.number(),
+        sellingMaxRate: v.number(),
+        sellingCurrentMarketRate: v.number(),
         metadata: v.optional(v.any()),
     },
     handler: async (ctx, args) => {
@@ -65,9 +68,12 @@ export const upsertExchangeRate = mutation({
                 toCurrencyName: args.toCurrencyName,
                 toCurrencyCode: args.toCurrencyCode.toUpperCase(),
                 currencyPair,
-                minRate: args.minRate,
-                maxRate: args.maxRate,
-                currentMarketRate: args.currentMarketRate,
+                buyingMinRate: args.buyingMinRate,
+                buyingMaxRate: args.buyingMaxRate,
+                buyingCurrentMarketRate: args.buyingCurrentMarketRate,
+                sellingMinRate: args.sellingMinRate,
+                sellingMaxRate: args.sellingMaxRate,
+                sellingCurrentMarketRate: args.sellingCurrentMarketRate,
                 lastUpdated: now,
                 metadata: args.metadata ?? existingRate.metadata,
             });
@@ -79,9 +85,12 @@ export const upsertExchangeRate = mutation({
                 toCurrencyName: args.toCurrencyName,
                 toCurrencyCode: args.toCurrencyCode.toUpperCase(),
                 currencyPair,
-                minRate: args.minRate,
-                maxRate: args.maxRate,
-                currentMarketRate: args.currentMarketRate,
+                buyingMinRate: args.buyingMinRate,
+                buyingMaxRate: args.buyingMaxRate,
+                buyingCurrentMarketRate: args.buyingCurrentMarketRate,
+                sellingMinRate: args.sellingMinRate,
+                sellingMaxRate: args.sellingMaxRate,
+                sellingCurrentMarketRate: args.sellingCurrentMarketRate,
                 lastUpdated: now,
                 metadata: args.metadata,
             });
@@ -90,12 +99,13 @@ export const upsertExchangeRate = mutation({
 });
 
 /**
- * Update market rate for a currency pair
+ * Update market rates for a currency pair
  */
-export const updateMarketRate = mutation({
+export const updateMarketRates = mutation({
     args: {
         currencyPair: v.string(),
-        newMarketRate: v.number(),
+        buyingMarketRate: v.optional(v.number()),
+        sellingMarketRate: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
         const rate = await ctx.db
@@ -107,10 +117,19 @@ export const updateMarketRate = mutation({
             throw new Error(`Exchange rate not found for currency pair: ${args.currencyPair}`);
         }
 
-        return await ctx.db.patch(rate._id, {
-            currentMarketRate: args.newMarketRate,
+        const updateData: any = {
             lastUpdated: Date.now(),
-        });
+        };
+
+        if (args.buyingMarketRate !== undefined) {
+            updateData.buyingCurrentMarketRate = args.buyingMarketRate;
+        }
+
+        if (args.sellingMarketRate !== undefined) {
+            updateData.sellingCurrentMarketRate = args.sellingMarketRate;
+        }
+
+        return await ctx.db.patch(rate._id, updateData);
     },
 });
 
@@ -156,12 +175,13 @@ export const deleteRate = mutation({
 });
 
 /**
- * Check if a negotiated rate is within acceptable bounds
+ * Check if a negotiated rate is within acceptable bounds for buying or selling
  */
 export const validateNegotiatedRate = query({
     args: {
         currencyPair: v.string(),
         proposedRate: v.number(),
+        transactionType: v.union(v.literal("buying"), v.literal("selling")), // "buying" or "selling"
     },
     handler: async (ctx, args) => {
         const rate = await ctx.db
@@ -176,16 +196,32 @@ export const validateNegotiatedRate = query({
             };
         }
 
-        const isValid = args.proposedRate >= rate.minRate && args.proposedRate <= rate.maxRate;
+        let isValid = false;
+        let minRate = 0;
+        let maxRate = 0;
+        let currentMarketRate = 0;
+
+        if (args.transactionType === "buying") {
+            minRate = rate.buyingMinRate;
+            maxRate = rate.buyingMaxRate;
+            currentMarketRate = rate.buyingCurrentMarketRate;
+            isValid = args.proposedRate >= rate.buyingMinRate && args.proposedRate <= rate.buyingMaxRate;
+        } else {
+            minRate = rate.sellingMinRate;
+            maxRate = rate.sellingMaxRate;
+            currentMarketRate = rate.sellingCurrentMarketRate;
+            isValid = args.proposedRate >= rate.sellingMinRate && args.proposedRate <= rate.sellingMaxRate;
+        }
 
         return {
             valid: isValid,
             reason: isValid
                 ? "Rate is within acceptable bounds"
-                : `Rate must be between ${rate.minRate} and ${rate.maxRate}`,
-            minRate: rate.minRate,
-            maxRate: rate.maxRate,
-            currentMarketRate: rate.currentMarketRate,
+                : `Rate must be between ${minRate} and ${maxRate}`,
+            minRate,
+            maxRate,
+            currentMarketRate,
+            transactionType: args.transactionType,
         };
     },
 }); 
