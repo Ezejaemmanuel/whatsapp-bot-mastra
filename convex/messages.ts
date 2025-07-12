@@ -72,10 +72,7 @@ export const storeOutgoingMessage = mutation({
         metadata: v.optional(v.any()),
     },
     handler: async (ctx, args) => {
-        // Enforce that image messages have a mediaUrl
-        if (args.messageType === 'image' && !args.mediaUrl) {
-            throw new Error("Image messages must have a mediaUrl");
-        }
+       
         const timestamp = Date.now();
         const messageId = await ctx.db.insert("messages", {
             conversationId: args.conversationId,
