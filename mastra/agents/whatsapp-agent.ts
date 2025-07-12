@@ -74,6 +74,8 @@ const memory = new Memory({
 **WhatsApp ID**: {{whatsapp_id}}
 **Phone Number**: {{phone_number}}
 **Profile Name**: {{profile_name}}
+**User Name Known**: {{user_name_known}} // (yes/no)
+**User Name Retrieved**: {{user_name_retrieved}} // (yes/no)
 **User Account Status**: {{user_account_status}} // (new_user/returning_user/verified_user)
 **User Details Checked**: {{user_details_checked}} // (yes/no/pending)
 **Profile Verification Date**: {{profile_verification_date}}
@@ -111,7 +113,7 @@ const memory = new Memory({
 **Last Transaction Success**: {{last_transaction_success}} // (yes/no)
 
 # 🎯 CONVERSATION FLOW STATE
-**Current Flow Step**: {{current_flow_step}} // (welcome/user_verification/exchange_inquiry/rate_confirmation/bank_details_verification/final_confirmation/transaction_processing/completion)
+**Current Flow Step**: {{current_flow_step}} // (user_name_verification/welcome/user_verification/exchange_inquiry/rate_confirmation/bank_details_verification/final_confirmation/transaction_processing/completion)
 **Next Expected Action**: {{next_expected_action}}
 **Waiting For User Input**: {{waiting_for_user_input}} // (none/bank_confirmation/amount_confirmation/final_approval/payment_proof/image_sent_waiting_for_confirmation)
 **Flow Completion Percentage**: {{flow_completion_percentage}}%
