@@ -241,15 +241,11 @@ const WhatsAppLayoutContent: React.FC = () => {
 
   const confirmStatusUpdate = async (message?: string) => {
     if (!statusUpdateInfo) return;
-    await toast.promise(updateStatusMutation({
+    await updateStatusMutation({
       transactionId: statusUpdateInfo.transactionId,
       status: statusUpdateInfo.status,
       message,
-    }), {
-      loading: "Updating transaction status...",
-      success: "Transaction status updated successfully.",
-      error: "Failed to update transaction status."
-    }).unwrap()
+    })
   };
 
   const handleTabChange = (tab: 'chats' | 'transactions' | 'settings' | 'rates' | 'bank') => {

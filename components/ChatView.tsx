@@ -184,14 +184,10 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
 
   const handleInChargeChange = async (newInCharge: InCharge) => {
     if (chatId && conversation && conversation.inCharge !== newInCharge) {
-      await toast.promise(updateInChargeMutation({
+      await updateInChargeMutation({
         conversationId: chatId,
         inCharge: newInCharge,
-      }), {
-        loading: 'Updating status...',
-        success: 'Status updated!',
-        error: 'Failed to update status'
-      });
+      })
     }
   };
 
@@ -212,7 +208,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
           caption = message.trim();
         }
 
-        await toast.promise(sendMessageMutation({
+        await sendMessageMutation({
           conversationId: chatId,
           senderRole: "admin",
           senderName: "Admin",
@@ -220,14 +216,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
           content: attachment ? undefined : message.trim(),
           mediaUrl: mediaUrl,
           caption: caption,
-        }), {
-          loading: 'Sending message...',
-          success: 'Message sent!',
-          error: (error) => {
-            console.error('Failed to send message:', error);
-            return 'Failed to send message';
-          }
-        });
+        })
 
         setMessage('');
         setAttachment(null);
