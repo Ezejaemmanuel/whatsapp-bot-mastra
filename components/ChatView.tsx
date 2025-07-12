@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Phone, Video, MoreVertical, Smile, Paperclip, Mic, Send, X, ChevronDown, Users, Bot, Check } from 'lucide-react';
+import { ArrowLeft, Phone, Video, MoreVertical, Smile, Paperclip, Mic, Send, X, ChevronDown, Users, Bot, Check, AlertCircle, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -17,6 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import avatarMale1 from '@/assets/avatar-male-1.jpg';
 import Image from 'next/image';
 import { useWhatsAppStore } from '@/lib/store';
@@ -62,6 +63,37 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
     chatId ? { conversationId: chatId } : "skip",
     { initialNumItems: 20 }
   );
+
+  // Determine who's in charge and set visual theme
+  const isAdminInCharge = conversation?.inCharge === 'admin';
+  const isBotInCharge = conversation?.inCharge === 'bot';
+
+  // Dynamic theme classes based on who's in charge
+  const getThemeClasses = () => {
+    if (isAdminInCharge) {
+      return {
+        background: 'bg-gradient-to-br from-orange-50/80 via-amber-50/60 to-yellow-50/80',
+        pattern: 'whatsapp-chat-pattern-admin',
+        statusBar: 'bg-gradient-to-r from-orange-500 to-amber-500',
+        statusText: 'text-white',
+        accent: 'from-orange-500/20 to-amber-500/20',
+        border: 'border-orange-200/50',
+        glow: 'shadow-orange-200/50'
+      };
+    } else {
+      return {
+        background: 'bg-gradient-to-br from-blue-50/80 via-indigo-50/60 to-purple-50/80',
+        pattern: 'whatsapp-chat-pattern-bot',
+        statusBar: 'bg-gradient-to-r from-blue-500 to-indigo-500',
+        statusText: 'text-white',
+        accent: 'from-blue-500/20 to-indigo-500/20',
+        border: 'border-blue-200/50',
+        glow: 'shadow-blue-200/50'
+      };
+    }
+  };
+
+  const theme = getThemeClasses();
 
   // API Mutations
   const { mutateAsync: updateInChargeMutation } = useMutation({
@@ -252,13 +284,31 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-whatsapp-chat-bg whatsapp-chat-pattern h-full overflow-x-hidden relative">
-      {/* Background decorative gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-whatsapp-primary/5 via-transparent to-whatsapp-accent/5 pointer-events-none"></div>
+    <div className={`flex-1 flex flex-col ${theme.background} ${theme.pattern} h-full overflow-x-hidden relative transition-all duration-500`}>
+      {/* Enhanced Background decorative gradient */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${theme.accent} pointer-events-none transition-all duration-500`}></div>
 
-      {/* Header */}
-      <div className={`flex items-center gap-3 glass-panel border-b border-whatsapp-border/50 flex-shrink-0 backdrop-blur-xl relative z-10 ${isMobile ? 'px-4 py-3' : 'px-5 py-4'
-        }`}>
+      {/* Status Bar - Fixed at top */}
+      <div className={`${theme.statusBar} ${theme.statusText} px-4 py-2 text-center text-sm font-medium shadow-lg relative z-20 transition-all duration-500`}>
+        <div className="flex items-center justify-center gap-2">
+          {isAdminInCharge ? (
+            <>
+              <Crown className="w-4 h-4" />
+              <span>You are now in charge of this conversation</span>
+              <Crown className="w-4 h-4" />
+            </>
+          ) : (
+            <>
+              <Bot className="w-4 h-4" />
+              <span>Khaliwid Bot is handling this conversation</span>
+              <Bot className="w-4 h-4" />
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Enhanced Header */}
+      <div className={`flex items-center gap-3 glass-panel ${theme.border} border-b backdrop-blur-xl relative z-10 transition-all duration-500 ${theme.glow} shadow-lg ${isMobile ? 'px-4 py-3' : 'px-5 py-4'}`}>
         {isMobile && (
           <Button variant="ghost" size="icon" onClick={onBack} className="text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 -ml-2">
             <ArrowLeft className="w-6 h-6" />
@@ -266,26 +316,32 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
         )}
 
         <div className="relative">
-          <Avatar className={`ring-2 ring-whatsapp-border/30 transition-all duration-300 hover:ring-whatsapp-primary/50 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'}`}>
+          <Avatar className={`ring-2 transition-all duration-300 hover:scale-105 ${isAdminInCharge ? 'ring-orange-300/50 hover:ring-orange-400/70' : 'ring-blue-300/50 hover:ring-blue-400/70'} ${isMobile ? 'w-9 h-9' : 'w-10 h-10'}`}>
             <AvatarImage src={avatarMale1.src} alt={conversation?.userName || "User"} className="object-cover" />
-            <AvatarFallback className="bg-gradient-to-br from-whatsapp-primary to-whatsapp-accent text-white font-semibold">
+            <AvatarFallback className={`text-white font-semibold transition-all duration-300 ${isAdminInCharge ? 'bg-gradient-to-br from-orange-500 to-amber-500' : 'bg-gradient-to-br from-blue-500 to-indigo-500'}`}>
               {conversation?.userName?.charAt(0) || "U"}
             </AvatarFallback>
           </Avatar>
-          <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-whatsapp-online rounded-full border-2 border-whatsapp-panel-bg shadow-lg"></div>
+          <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white shadow-lg transition-all duration-300 ${isAdminInCharge ? 'bg-orange-400' : 'bg-blue-400'}`}></div>
         </div>
 
         <div className="flex-1 min-w-0">
-          <h3 className={`font-semibold text-whatsapp-text-primary truncate ${isMobile ? 'text-base' : 'text-lg'
-            }`}>
+          <h3 className={`font-semibold text-whatsapp-text-primary truncate ${isMobile ? 'text-base' : 'text-lg'}`}>
             {conversation?.userName || "Loading..."}
           </h3>
-          <p className={`text-whatsapp-text-muted truncate ${isMobile ? 'text-xs' : 'text-sm'
-            }`}>
-            {conversation?.inCharge === 'bot'
-              ? '🤖 Conversation handled by Khaliwid Bot'
-              : '👤 An admin is handling this conversation'}
-          </p>
+          <div className={`flex items-center gap-1 ${isMobile ? 'text-xs' : 'text-sm'}`}>
+            {isAdminInCharge ? (
+              <>
+                <Crown className="w-3 h-3 text-orange-500" />
+                <span className="text-orange-600 font-medium">Admin in charge</span>
+              </>
+            ) : (
+              <>
+                <Bot className="w-3 h-3 text-blue-500" />
+                <span className="text-blue-600 font-medium">Bot handling conversation</span>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-1">
@@ -302,35 +358,56 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="glass-panel">
-              <DropdownMenuLabel>Conversation Control</DropdownMenuLabel>
+              <DropdownMenuLabel className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                Conversation Control
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => handleInChargeChange('admin')}
                 disabled={conversation?.inCharge === 'admin'}
-                className="flex justify-between items-center"
+                className={`flex justify-between items-center transition-all duration-200 ${conversation?.inCharge === 'admin' ? 'bg-orange-50 text-orange-700' : 'hover:bg-orange-50'}`}
               >
                 <span>Take Over (Admin)</span>
-                <Users className="w-4 h-4 ml-2" />
-                {conversation?.inCharge === 'admin' && <Check className="w-4 h-4 ml-auto" />}
+                <div className="flex items-center gap-1">
+                  <Crown className="w-4 h-4" />
+                  {conversation?.inCharge === 'admin' && <Check className="w-4 h-4 text-orange-500" />}
+                </div>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => handleInChargeChange('bot')}
                 disabled={conversation?.inCharge === 'bot'}
-                className="flex justify-between items-center"
+                className={`flex justify-between items-center transition-all duration-200 ${conversation?.inCharge === 'bot' ? 'bg-blue-50 text-blue-700' : 'hover:bg-blue-50'}`}
               >
                 <span>Return to Bot</span>
-                <Bot className="w-4 h-4 ml-2" />
-                {conversation?.inCharge === 'bot' && <Check className="w-4 h-4 ml-auto" />}
+                <div className="flex items-center gap-1">
+                  <Bot className="w-4 h-4" />
+                  {conversation?.inCharge === 'bot' && <Check className="w-4 h-4 text-blue-500" />}
+                </div>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
+      {/* Alert Banner for Admin Control */}
+      {isAdminInCharge && (
+        <div className="px-4 py-2 relative z-10">
+          <Alert className="bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200 shadow-sm">
+            <AlertCircle className="h-4 w-4 text-orange-600" />
+            <AlertDescription className="text-orange-800 font-medium">
+              <span className="flex items-center gap-2">
+                <Crown className="w-4 h-4" />
+                You're in control! The bot won't respond automatically. Click "Return to Bot" when ready.
+              </span>
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
       {/* Messages - Scrollable Area */}
       <div className="flex-1 overflow-y-auto whatsapp-scrollbar relative z-10" ref={scrollRef} onScroll={handleScroll}>
         <div className="p-4 space-y-3">
-
           <div ref={loadMoreRef} className="h-1" />
 
           {messages.length === 0 && (
@@ -424,7 +501,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
         {showNewMessageIndicator && (
           <Button
             variant="secondary"
-            className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full h-10 w-10 p-2 shadow-lg glow-purple bg-whatsapp-primary/90 hover:bg-whatsapp-primary text-white border border-whatsapp-primary/50 backdrop-blur-sm"
+            className={`absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full h-10 w-10 p-2 shadow-lg text-white border backdrop-blur-sm transition-all duration-300 ${isAdminInCharge ? 'bg-orange-500/90 hover:bg-orange-500 border-orange-400/50 glow-orange' : 'bg-blue-500/90 hover:bg-blue-500 border-blue-400/50 glow-blue'}`}
             onClick={scrollToBottom}
           >
             <ChevronDown className="h-6 w-6" />
@@ -432,16 +509,13 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
         )}
       </div>
 
-      {/* Message Input */}
-      <div className={`flex items-center gap-3 glass-panel border-t border-whatsapp-border/50 flex-shrink-0 backdrop-blur-xl relative z-10 ${isMobile ? 'px-3 py-2' : 'px-4 py-3'
-        }`}>
-        <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'
-          }`}>
+      {/* Enhanced Message Input */}
+      <div className={`flex items-center gap-3 glass-panel ${theme.border} border-t backdrop-blur-xl relative z-10 transition-all duration-500 ${theme.glow} shadow-lg ${isMobile ? 'px-3 py-2' : 'px-4 py-3'}`}>
+        <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'}`}>
           <Smile className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
         </Button>
 
-        <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'
-          }`}
+        <Button variant="ghost" size="icon" className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'}`}
           onClick={handleAttachmentClick}
         >
           <Paperclip className={`${isMobile ? 'w-5 h-5' : 'w-5 h-5'}`} />
@@ -455,9 +529,9 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
         />
 
         {attachment && (
-          <div className="absolute bottom-12 left-0 right-0 p-3 glass-panel border-t border-whatsapp-border/50 backdrop-blur-xl">
+          <div className={`absolute bottom-12 left-0 right-0 p-3 glass-panel ${theme.border} border-t backdrop-blur-xl transition-all duration-300`}>
             <div className="flex items-center gap-3">
-              <div className="relative w-10 h-10 rounded-lg overflow-hidden ring-2 ring-whatsapp-primary/30">
+              <div className={`relative w-10 h-10 rounded-lg overflow-hidden ring-2 transition-all duration-300 ${isAdminInCharge ? 'ring-orange-300' : 'ring-blue-300'}`}>
                 <Image src={URL.createObjectURL(attachment)} alt="preview" layout="fill" objectFit="cover" />
               </div>
               <span className="text-sm text-whatsapp-text-primary truncate flex-1 font-medium">{attachment.name}</span>
@@ -474,7 +548,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            className="whatsapp-input bg-whatsapp-bg/80 border border-whatsapp-border/50 focus:ring-2 focus:ring-whatsapp-primary/30 focus:border-whatsapp-primary transition-all duration-300"
+            className={`whatsapp-input bg-whatsapp-bg/80 focus:ring-2 transition-all duration-300 ${isAdminInCharge ? 'border-orange-200/50 focus:ring-orange-300/30 focus:border-orange-400' : 'border-blue-200/50 focus:ring-blue-300/30 focus:border-blue-400'}`}
           />
         </div>
 
@@ -482,8 +556,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
           <Button
             onClick={handleSendMessage}
             size="icon"
-            className={`modern-button transition-all duration-300 hover:scale-110 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'
-              }`}
+            className={`transition-all duration-300 hover:scale-110 text-white shadow-lg ${isAdminInCharge ? 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600' : 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600'} ${isMobile ? 'w-9 h-9' : 'w-10 h-10'}`}
           >
             <Send className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
           </Button>
@@ -491,8 +564,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
           <Button
             variant="ghost"
             size="icon"
-            className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'
-              } ${isRecording ? 'text-red-400 bg-red-500/10' : ''}`}
+            className={`text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 ${isMobile ? 'w-9 h-9' : 'w-10 h-10'} ${isRecording ? 'text-red-400 bg-red-500/10' : ''}`}
             onMouseDown={() => setIsRecording(true)}
             onMouseUp={() => setIsRecording(false)}
             onMouseLeave={() => setIsRecording(false)}

@@ -408,3 +408,123 @@ All colors MUST be HSL.
 .read-the-docs {
   color: hsl(var(--whatsapp-text-muted));
 }
+
+/* Enhanced Visual Indicators for Admin/Bot Control */
+
+/* Admin Theme Background Pattern */
+.whatsapp-chat-pattern-admin {
+  background-image:
+    radial-gradient(circle at 25% 25%, rgba(255, 165, 0, 0.04) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(255, 193, 7, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 25% 75%, rgba(255, 140, 0, 0.025) 0%, transparent 50%),
+    radial-gradient(circle at 75% 25%, rgba(255, 183, 77, 0.03) 0%, transparent 50%);
+  background-size: 120px 120px, 100px 100px, 80px 80px, 140px 140px;
+  background-position: 0 0, 60px 60px, 0 40px, 70px 0;
+}
+
+/* Bot Theme Background Pattern */
+.whatsapp-chat-pattern-bot {
+  background-image:
+    radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.04) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(99, 102, 241, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 25% 75%, rgba(79, 70, 229, 0.025) 0%, transparent 50%),
+    radial-gradient(circle at 75% 25%, rgba(129, 140, 248, 0.03) 0%, transparent 50%);
+  background-size: 120px 120px, 100px 100px, 80px 80px, 140px 140px;
+  background-position: 0 0, 60px 60px, 0 40px, 70px 0;
+}
+
+/* Glow Effects for Different States */
+.glow-orange {
+  box-shadow: 0 0 20px rgba(255, 165, 0, 0.3), 0 0 40px rgba(255, 165, 0, 0.1);
+}
+
+.glow-blue {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(59, 130, 246, 0.1);
+}
+
+/* Enhanced Status Bar Animations */
+@keyframes pulse-orange {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 165, 0, 0.7);
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 165, 0, 0);
+  }
+}
+
+@keyframes pulse-blue {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+}
+
+.pulse-orange {
+  animation: pulse-orange 2s infinite;
+}
+
+.pulse-blue {
+  animation: pulse-blue 2s infinite;
+}
+
+/* Enhanced Message Bubble Styles for Admin/Bot Distinction */
+.message-bubble.outgoing.admin {
+  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+  box-shadow: 0 3px 12px rgba(255, 107, 53, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.message-bubble.outgoing.bot {
+  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+  box-shadow: 0 3px 12px rgba(59, 130, 246, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Status Bar Gradient Animations */
+@keyframes gradient-shift-orange {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes gradient-shift-blue {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Responsive Enhancements */
+@media (max-width: 768px) {
+
+  .whatsapp-chat-pattern-admin,
+  .whatsapp-chat-pattern-bot {
+    background-size: 80px 80px, 60px 60px, 40px 40px, 100px 100px;
+  }
+
+  .glow-orange,
+  .glow-blue {
+    box-shadow: 0 0 10px rgba(255, 165, 0, 0.2), 0 0 20px rgba(255, 165, 0, 0.05);
+  }
+}
