@@ -86,6 +86,39 @@ export async function sendTemplateMessage(
 }
 
 /**
+ * Send an image message
+ * Now handles errors gracefully without throwing to ensure HTTP 200 response
+ */
+export async function sendImage(
+    whatsappClient: WhatsAppCloudApiClient,
+    to: string,
+    imageUrl: string,
+    caption?: string
+): Promise<void> {
+    try {
+        await whatsappClient.messages.sendImage({
+            to,
+            imageUrl,
+            caption
+        });
+
+        logSuccess('Image message sent successfully', {
+            to,
+            imageUrl,
+            hasCaption: !!caption,
+            operation: 'sendImage'
+        });
+    } catch (error) {
+        logError('Failed to send image message', error as Error, {
+            to,
+            imageUrl,
+            operation: 'sendImage'
+        });
+        // Don't throw - let the main route return HTTP 200
+    }
+}
+
+/**
  * Mark message as read with proper error handling
  */
 export async function markMessageAsRead(

@@ -12,7 +12,8 @@ import { processStatusUpdate } from './status-handlers';
 import {
     sendTextReply,
     sendTemplateMessage,
-    markMessageAsRead
+    markMessageAsRead,
+    sendImage,
 } from './response-sender';
 
 
@@ -106,6 +107,28 @@ export async function sendTextMessage(
             textLength: text.length,
             replyToMessageId,
             operation: 'sendTextMessage'
+        });
+        // Don't throw - let the main route return HTTP 200
+    }
+}
+
+/**
+ * Send an image message to a user
+ */
+export async function sendImageMessage(
+    to: string,
+    imageUrl: string,
+    caption?: string
+): Promise<void> {
+    try {
+        const { whatsappClient } = getServiceInstance();
+        await sendImage(whatsappClient, to, imageUrl, caption);
+    } catch (error) {
+        logError('Error in sendImageMessage', error as Error, {
+            to,
+            imageUrl,
+            caption,
+            operation: 'sendImageMessage'
         });
         // Don't throw - let the main route return HTTP 200
     }

@@ -616,6 +616,34 @@ class MessagesEndpoint {
     }
 
     /**
+     * Send an image message by URL or ID
+     */
+    async sendImage(params: {
+        to: string;
+        mediaId?: string;
+        imageUrl?: string;
+        caption?: string;
+    }) {
+        if (!params.mediaId && !params.imageUrl) {
+            throw new Error("Either mediaId or imageUrl must be provided.");
+        }
+
+        if (params.mediaId) {
+            return this.sendImageById({
+                to: params.to,
+                mediaId: params.mediaId,
+                caption: params.caption,
+            });
+        }
+
+        return this.sendImageByUrl({
+            to: params.to,
+            imageUrl: params.imageUrl!,
+            caption: params.caption,
+        });
+    }
+
+    /**
      * Send a reply to a text message
      */
     async sendReply(params: {

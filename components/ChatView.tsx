@@ -25,6 +25,7 @@ import { ChatViewLoader } from './ui/loader';
 import { EmptyState } from './ui/empty-state';
 import { MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
+import { useMutation as useConvexMutation } from "convex/react";
 
 
 interface ChatViewProps {
@@ -43,11 +44,10 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [showNewMessageIndicator, setShowNewMessageIndicator] = useState(false);
   const prevMessagesLength = useRef(0);
-
   const { ref: loadMoreRef, inView: loadMoreInView } = useInView();
-
-
   const { openImageDialog } = useWhatsAppStore();
+  const generateUploadUrl = useConvexMutation(api.mediaFiles.generateUploadUrl);
+
 
   // Get conversation and messages from Convex
   const conversation = useQuery(api.conversations.getConversationById,
@@ -88,7 +88,8 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
       senderName: string,
       messageType: "text" | "image",
       content?: string,
-      mediaUrl?: string,
+      storageId?: Id<"_storage">,
+      mediaType?: string, // Added mediaType
       caption?: string
     }) => {
       const response = await fetch('/api/messages/send', {
@@ -195,7 +196,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
 
   const handleSendMessage = async () => {
     if ((message.trim() || attachment) && chatId) {
-      try {
+      const promise = async () => {
         if (conversation?.inCharge === 'bot') {
           await updateInChargeMutation({
             conversationId: chatId,
@@ -204,28 +205,54 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
           });
         }
 
-        let mediaUrl, caption;
         if (attachment) {
-          mediaUrl = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=2864&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'; // Placeholder
-          caption = message.trim();
+          // 1. Generate an upload URL from Convex
+          const postUrl = await generateUploadUrl();
+
+          // 2. Upload the file to the generated URL
+          const response = await fetch(postUrl, {
+            method: "POST",
+            headers: { "Content-Type": attachment.type },
+            body: attachment,
+          });
+
+          if (!response.ok) {
+            throw new Error("Failed to upload file.");
+          }
+          const { storageId } = await response.json();
+
+          // 3. Send message via API, passing the storageId
+          await sendMessageMutation({
+            conversationId: chatId,
+            senderRole: "admin",
+            senderName: "Admin",
+            messageType: "image",
+            storageId: storageId,
+            mediaType: attachment.type, // Pass the attachment's MIME type
+            caption: message.trim(),
+          });
+
+        } else {
+          // Send a regular text message
+          await sendMessageMutation({
+            conversationId: chatId,
+            senderRole: "admin",
+            senderName: "Admin",
+            messageType: "text",
+            content: message.trim(),
+          });
         }
+      };
 
-        await sendMessageMutation({
-          conversationId: chatId,
-          senderRole: "admin",
-          senderName: "Admin",
-          messageType: attachment ? "image" : "text",
-          content: attachment ? undefined : message.trim(),
-          mediaUrl: mediaUrl,
-          caption: caption,
-        })
-
-        setMessage('');
-        setAttachment(null);
-      } catch (error) {
-        // Errors are handled by the toast promise, but you can still log here if needed
-        console.error('An error occurred during message sending:', error);
-      }
+      toast.promise(promise(), {
+        loading: 'Sending message...',
+        success: () => {
+          setMessage('');
+          setAttachment(null);
+          return 'Message sent!';
+        },
+        error: (err) => err.message || 'Failed to send message',
+      });
     }
   };
 

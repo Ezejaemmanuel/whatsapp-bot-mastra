@@ -5,6 +5,16 @@ import type { Id, Doc } from "./_generated/dataModel";
 import { UploadStatusUnion, UploadStatus } from "./schemaUnions";
 
 /**
+ * Generates a short-lived upload URL for client-side uploads
+ */
+export const generateUploadUrl = mutation({
+    args: {},
+    handler: async (ctx) => {
+        return await ctx.storage.generateUploadUrl();
+    },
+});
+
+/**
  * Store file directly from buffer (for server-side uploads) - Complete Action
  * This function handles both file storage and metadata saving in one operation
  */
