@@ -153,7 +153,7 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                             The bot will not buy for less than this.
                             {buyingMinRate > 0 && <>
                                 <br />
-                                (e.g., for 1 {fromCode}, you'll pay at least {buyingMinRate} {toCode})
+                                (e.g., for 1 {fromCode}, you&apos;ll pay at least {buyingMinRate} {toCode})
                             </>}
                         </p>
                     </div>
@@ -164,7 +164,7 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                             The bot will not buy for more than this.
                             {buyingMaxRate > 0 && <>
                                 <br />
-                                (e.g., for 1 {fromCode}, you'll pay at most {buyingMaxRate} {toCode})
+                                (e.g., for 1 {fromCode}, you&apos;ll pay at most {buyingMaxRate} {toCode})
                             </>}
                         </p>
                     </div>
@@ -196,7 +196,7 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                             The bot will not sell for less than this.
                             {sellingMinRate > 0 && <>
                                 <br />
-                                (e.g., for 1 {fromCode}, you'll charge at least {sellingMinRate} {toCode})
+                                (e.g., for 1 {fromCode}, you&apos;ll charge at least {sellingMinRate} {toCode})
                             </>}
                         </p>
                     </div>
@@ -207,7 +207,7 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                             The bot will not sell for more than this.
                             {sellingMaxRate > 0 && <>
                                 <br />
-                                (e.g., for 1 {fromCode}, you'll charge at most {sellingMaxRate} {toCode})
+                                (e.g., for 1 {fromCode}, you&apos;ll charge at most {sellingMaxRate} {toCode})
                             </>}
                         </p>
                     </div>
