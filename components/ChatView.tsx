@@ -398,7 +398,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
             <AlertDescription className="text-orange-800 font-medium">
               <span className="flex items-center gap-2">
                 <Crown className="w-4 h-4" />
-                You're in control! The bot won't respond automatically. Click "Return to Bot" when ready.
+                You&apos;re in control! The bot won&apos;t respond automatically. Click &quot;Return to Bot&quot; when ready.
               </span>
             </AlertDescription>
           </Alert>
