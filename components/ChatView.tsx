@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { usePaginatedQuery, useMutation, useQuery, useAction } from 'convex/react';
+import { usePaginatedQuery, useQuery } from 'convex/react';
+import { useMutation } from '@tanstack/react-query';
 import { api } from '@/convex/_generated/api';
 import { Id, Doc } from '@/convex/_generated/dataModel';
 import { InCharge } from '@/convex/schemaUnions';
@@ -62,9 +63,44 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
     { initialNumItems: 20 }
   );
 
-  // Mutations & Actions
-  const sendAdminMessage = useAction(api.messages.sendAdminMessage);
-  const updateInCharge = useAction(api.conversations.updateInChargeStatusAndNotify);
+  // API Mutations
+  const { mutateAsync: updateInChargeMutation } = useMutation({
+    mutationFn: async (variables: { conversationId: Id<"conversations">, inCharge: InCharge, isFirstAdminMessage?: boolean }) => {
+      const response = await fetch('/api/conversations/update-in-charge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(variables),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update status');
+      }
+      return response.json();
+    }
+  });
+
+  const { mutateAsync: sendMessageMutation } = useMutation({
+    mutationFn: async (variables: {
+      conversationId: Id<"conversations">,
+      senderRole: "admin" | "bot",
+      senderName: string,
+      messageType: "text" | "image",
+      content?: string,
+      mediaUrl?: string,
+      caption?: string
+    }) => {
+      const response = await fetch('/api/messages/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(variables),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send message');
+      }
+      return response.json();
+    }
+  });
 
 
   // Effect to load more messages when the top is reached
@@ -148,9 +184,13 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
 
   const handleInChargeChange = async (newInCharge: InCharge) => {
     if (chatId && conversation && conversation.inCharge !== newInCharge) {
-      await updateInCharge({
+      await toast.promise(updateInChargeMutation({
         conversationId: chatId,
         inCharge: newInCharge,
+      }), {
+        loading: 'Updating status...',
+        success: 'Status updated!',
+        error: 'Failed to update status'
       });
     }
   };
@@ -158,9 +198,8 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
   const handleSendMessage = async () => {
     if ((message.trim() || attachment) && chatId) {
       try {
-        // If bot is in charge, admin takes over first
         if (conversation?.inCharge === 'bot') {
-          await updateInCharge({
+          await updateInChargeMutation({
             conversationId: chatId,
             inCharge: 'admin',
             isFirstAdminMessage: true,
@@ -169,15 +208,11 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
 
         let mediaUrl, caption;
         if (attachment) {
-          // In a real app, you'd upload the file to a storage service
-          // and get a URL. For now, we'll use a placeholder.
-          // TODO: Implement actual file upload and get URL
           mediaUrl = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=2864&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'; // Placeholder
           caption = message.trim();
         }
 
-        // Use the new action to send the message
-       await toast.promise(sendAdminMessage({
+        await toast.promise(sendMessageMutation({
           conversationId: chatId,
           senderRole: "admin",
           senderName: "Admin",
@@ -192,12 +227,13 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
             console.error('Failed to send message:', error);
             return 'Failed to send message';
           }
-        }).unwrap();
+        });
 
         setMessage('');
         setAttachment(null);
       } catch (error) {
-        console.error('Failed to send message:', error);
+        // Errors are handled by the toast promise, but you can still log here if needed
+        console.error('An error occurred during message sending:', error);
       }
     }
   };
