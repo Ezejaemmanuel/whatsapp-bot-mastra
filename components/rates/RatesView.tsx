@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Doc } from '@/convex/_generated/dataModel';
@@ -38,6 +38,26 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
     const [selectedRateType, setSelectedRateType] = useState<'buying' | 'selling'>('buying');
 
     const upsertRate = useMutation(api.exchangeRates.upsertExchangeRate);
+
+    // Handle mobile keyboard viewport issues
+    useEffect(() => {
+        const handleViewportChange = () => {
+            // Force viewport recalculation on mobile
+            const viewport = document.querySelector('meta[name=viewport]');
+            if (viewport) {
+                viewport.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no');
+            }
+        };
+
+        // Add event listeners for mobile keyboard
+        window.addEventListener('resize', handleViewportChange);
+        window.addEventListener('orientationchange', handleViewportChange);
+
+        return () => {
+            window.removeEventListener('resize', handleViewportChange);
+            window.removeEventListener('orientationchange', handleViewportChange);
+        };
+    }, []);
 
     React.useEffect(() => {
         const currentRate = selectedRateType === 'buying' ? buyingCurrentMarketRate : sellingCurrentMarketRate;
@@ -107,25 +127,59 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
     const toCode = toCurrencyCode || 'TARGET';
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 pb-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                     <Label htmlFor="fromCurrencyName">From Currency Name</Label>
-                    <Input id="fromCurrencyName" value={fromCurrencyName} onChange={(e) => setFromCurrencyName(e.target.value)} placeholder="e.g. United States Dollar" />
+                    <Input
+                        id="fromCurrencyName"
+                        value={fromCurrencyName}
+                        onChange={(e) => setFromCurrencyName(e.target.value)}
+                        placeholder="e.g. United States Dollar"
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck="false"
+                    />
                 </div>
                 <div className="grid gap-2">
                     <Label htmlFor="fromCurrencyCode">From Currency Code</Label>
-                    <Input id="fromCurrencyCode" value={fromCurrencyCode} onChange={(e) => setFromCurrencyCode(e.target.value.toUpperCase())} placeholder="e.g. USD" disabled={!!rate} />
+                    <Input
+                        id="fromCurrencyCode"
+                        value={fromCurrencyCode}
+                        onChange={(e) => setFromCurrencyCode(e.target.value.toUpperCase())}
+                        placeholder="e.g. USD"
+                        disabled={!!rate}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck="false"
+                    />
                 </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                     <Label htmlFor="toCurrencyName">To Currency Name</Label>
-                    <Input id="toCurrencyName" value={toCurrencyName} onChange={(e) => setToCurrencyName(e.target.value)} placeholder="e.g. Nigerian Naira" />
+                    <Input
+                        id="toCurrencyName"
+                        value={toCurrencyName}
+                        onChange={(e) => setToCurrencyName(e.target.value)}
+                        placeholder="e.g. Nigerian Naira"
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck="false"
+                    />
                 </div>
                 <div className="grid gap-2">
                     <Label htmlFor="toCurrencyCode">To Currency Code</Label>
-                    <Input id="toCurrencyCode" value={toCurrencyCode} onChange={(e) => setToCurrencyCode(e.target.value.toUpperCase())} placeholder="e.g. NGN" disabled={!!rate} />
+                    <Input
+                        id="toCurrencyCode"
+                        value={toCurrencyCode}
+                        onChange={(e) => setToCurrencyCode(e.target.value.toUpperCase())}
+                        placeholder="e.g. NGN"
+                        disabled={!!rate}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck="false"
+                    />
                 </div>
             </div>
 
@@ -137,7 +191,15 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                 </div>
                 <div className="grid gap-2">
                     <Label htmlFor="buyingCurrentMarketRate">Current Market Buying Rate</Label>
-                    <Input id="buyingCurrentMarketRate" type="number" value={buyingCurrentMarketRate} onChange={(e) => setBuyingCurrentMarketRate(parseFloat(e.target.value) || 0)} />
+                    <Input
+                        id="buyingCurrentMarketRate"
+                        type="number"
+                        value={buyingCurrentMarketRate}
+                        onChange={(e) => setBuyingCurrentMarketRate(parseFloat(e.target.value) || 0)}
+                        inputMode="decimal"
+                        step="0.01"
+                        min="0"
+                    />
                     <p className="text-xs text-whatsapp-text-muted">
                         This is for reference and powers the live preview below.
                         {buyingCurrentMarketRate > 0 && <>
@@ -149,7 +211,15 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                     <div className="grid gap-2">
                         <Label htmlFor="buyingMinRate">Your Minimum Buying Rate</Label>
-                        <Input id="buyingMinRate" type="number" value={buyingMinRate} onChange={(e) => setBuyingMinRate(parseFloat(e.target.value) || 0)} />
+                        <Input
+                            id="buyingMinRate"
+                            type="number"
+                            value={buyingMinRate}
+                            onChange={(e) => setBuyingMinRate(parseFloat(e.target.value) || 0)}
+                            inputMode="decimal"
+                            step="0.01"
+                            min="0"
+                        />
                         <p className="text-xs text-whatsapp-text-muted">
                             The bot will not buy for less than this.
                             {buyingMinRate > 0 && <>
@@ -160,7 +230,15 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="buyingMaxRate">Your Maximum Buying Rate</Label>
-                        <Input id="buyingMaxRate" type="number" value={buyingMaxRate} onChange={(e) => setBuyingMaxRate(parseFloat(e.target.value) || 0)} />
+                        <Input
+                            id="buyingMaxRate"
+                            type="number"
+                            value={buyingMaxRate}
+                            onChange={(e) => setBuyingMaxRate(parseFloat(e.target.value) || 0)}
+                            inputMode="decimal"
+                            step="0.01"
+                            min="0"
+                        />
                         <p className="text-xs text-whatsapp-text-muted">
                             The bot will not buy for more than this.
                             {buyingMaxRate > 0 && <>
@@ -180,7 +258,15 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                 </div>
                 <div className="grid gap-2">
                     <Label htmlFor="sellingCurrentMarketRate">Current Market Selling Rate</Label>
-                    <Input id="sellingCurrentMarketRate" type="number" value={sellingCurrentMarketRate} onChange={(e) => setSellingCurrentMarketRate(parseFloat(e.target.value) || 0)} />
+                    <Input
+                        id="sellingCurrentMarketRate"
+                        type="number"
+                        value={sellingCurrentMarketRate}
+                        onChange={(e) => setSellingCurrentMarketRate(parseFloat(e.target.value) || 0)}
+                        inputMode="decimal"
+                        step="0.01"
+                        min="0"
+                    />
                     <p className="text-xs text-whatsapp-text-muted">
                         This is for reference and powers the live preview below.
                         {sellingCurrentMarketRate > 0 && <>
@@ -192,7 +278,15 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                     <div className="grid gap-2">
                         <Label htmlFor="sellingMinRate">Your Minimum Selling Rate</Label>
-                        <Input id="sellingMinRate" type="number" value={sellingMinRate} onChange={(e) => setSellingMinRate(parseFloat(e.target.value) || 0)} />
+                        <Input
+                            id="sellingMinRate"
+                            type="number"
+                            value={sellingMinRate}
+                            onChange={(e) => setSellingMinRate(parseFloat(e.target.value) || 0)}
+                            inputMode="decimal"
+                            step="0.01"
+                            min="0"
+                        />
                         <p className="text-xs text-whatsapp-text-muted">
                             The bot will not sell for less than this.
                             {sellingMinRate > 0 && <>
@@ -203,7 +297,15 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="sellingMaxRate">Your Maximum Selling Rate</Label>
-                        <Input id="sellingMaxRate" type="number" value={sellingMaxRate} onChange={(e) => setSellingMaxRate(parseFloat(e.target.value) || 0)} />
+                        <Input
+                            id="sellingMaxRate"
+                            type="number"
+                            value={sellingMaxRate}
+                            onChange={(e) => setSellingMaxRate(parseFloat(e.target.value) || 0)}
+                            inputMode="decimal"
+                            step="0.01"
+                            min="0"
+                        />
                         <p className="text-xs text-whatsapp-text-muted">
                             The bot will not sell for more than this.
                             {sellingMaxRate > 0 && <>
@@ -241,11 +343,25 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                 <div className="grid grid-cols-1 sm:grid-cols-2 items-center gap-4">
                     <div className='grid gap-2'>
                         <Label>{fromCode || "From"}</Label>
-                        <Input type="number" value={fromAmount} onChange={handleFromAmountChange} />
+                        <Input
+                            type="number"
+                            value={fromAmount}
+                            onChange={handleFromAmountChange}
+                            inputMode="decimal"
+                            step="0.01"
+                            min="0"
+                        />
                     </div>
                     <div className='grid gap-2'>
                         <Label>{toCode || "To"}</Label>
-                        <Input type="number" value={toAmount} onChange={handleToAmountChange} />
+                        <Input
+                            type="number"
+                            value={toAmount}
+                            onChange={handleToAmountChange}
+                            inputMode="decimal"
+                            step="0.01"
+                            min="0"
+                        />
                     </div>
                 </div>
                 <p className="text-xs text-whatsapp-text-muted mt-2">
@@ -263,8 +379,8 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                 </div>
             )}
 
-            <DialogFooter>
-                <Button type="submit">Save Rate</Button>
+            <DialogFooter className="flex-shrink-0 pt-4">
+                <Button type="submit" className="w-full sm:w-auto">Save Rate</Button>
             </DialogFooter>
         </form>
     )
@@ -336,18 +452,18 @@ export const RatesView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => {
     }
 
     return (
-        <div className="h-full flex flex-col bg-whatsapp-chat-bg text-whatsapp-text-primary">
+        <div className="h-full flex flex-col bg-whatsapp-chat-bg text-whatsapp-text-primary overflow-hidden">
             <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-whatsapp-panel-bg border-b border-whatsapp-border px-4 py-3 flex-shrink-0 gap-3">
                 <h2 className="text-lg font-medium">Exchange Rates</h2>
                 <Dialog open={isAddEditDialogOpen} onOpenChange={setAddEditDialogOpen}>
                     <DialogTrigger asChild>
                         <Button size="sm" onClick={handleAddNew} className="w-full sm:w-auto"><PlusCircle className="w-4 h-4 mr-2" /> Add New</Button>
                     </DialogTrigger>
-                    <DialogContent className="max-h-[90vh] overflow-hidden">
-                        <DialogHeader>
+                    <DialogContent className="max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+                        <DialogHeader className="flex-shrink-0">
                             <DialogTitle>{selectedRate ? 'Edit' : 'Add'} Exchange Rate</DialogTitle>
                         </DialogHeader>
-                        <ScrollArea className="max-h-[calc(90vh-120px)]">
+                        <ScrollArea className="max-h-[calc(95vh-140px)] sm:max-h-[calc(90vh-120px)]">
                             <div className="pr-4">
                                 <RateForm rate={selectedRate} onSave={onFormSaved} />
                             </div>
@@ -356,7 +472,7 @@ export const RatesView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => {
                 </Dialog>
             </header>
 
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-4 pb-8">
                 {rates === undefined && <FullScreenLoader message="Loading rates..." />}
                 {rates && rates.length === 0 && (
                     <EmptyState
