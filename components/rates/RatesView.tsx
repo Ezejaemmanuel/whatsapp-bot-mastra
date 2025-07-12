@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { DollarSign, Edit, Trash, PlusCircle, AreaChart, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { EmptyState } from '../ui/empty-state';
@@ -107,7 +108,7 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                     <Label htmlFor="fromCurrencyName">From Currency Name</Label>
                     <Input id="fromCurrencyName" value={fromCurrencyName} onChange={(e) => setFromCurrencyName(e.target.value)} placeholder="e.g. United States Dollar" />
@@ -117,7 +118,7 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                     <Input id="fromCurrencyCode" value={fromCurrencyCode} onChange={(e) => setFromCurrencyCode(e.target.value.toUpperCase())} placeholder="e.g. USD" disabled={!!rate} />
                 </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                     <Label htmlFor="toCurrencyName">To Currency Name</Label>
                     <Input id="toCurrencyName" value={toCurrencyName} onChange={(e) => setToCurrencyName(e.target.value)} placeholder="e.g. Nigerian Naira" />
@@ -145,7 +146,7 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                         </>}
                     </p>
                 </div>
-                <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                     <div className="grid gap-2">
                         <Label htmlFor="buyingMinRate">Your Minimum Buying Rate</Label>
                         <Input id="buyingMinRate" type="number" value={buyingMinRate} onChange={(e) => setBuyingMinRate(parseFloat(e.target.value) || 0)} />
@@ -188,7 +189,7 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                         </>}
                     </p>
                 </div>
-                <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                     <div className="grid gap-2">
                         <Label htmlFor="sellingMinRate">Your Minimum Selling Rate</Label>
                         <Input id="sellingMinRate" type="number" value={sellingMinRate} onChange={(e) => setSellingMinRate(parseFloat(e.target.value) || 0)} />
@@ -237,7 +238,7 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                         </Button>
                     </div>
                 </div>
-                <div className="grid grid-cols-2 items-center gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 items-center gap-4">
                     <div className='grid gap-2'>
                         <Label>{fromCode || "From"}</Label>
                         <Input type="number" value={fromAmount} onChange={handleFromAmountChange} />
@@ -336,17 +337,21 @@ export const RatesView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => {
 
     return (
         <div className="h-full flex flex-col bg-whatsapp-chat-bg text-whatsapp-text-primary">
-            <header className="flex items-center justify-between bg-whatsapp-panel-bg border-b border-whatsapp-border px-4 py-3 flex-shrink-0">
+            <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-whatsapp-panel-bg border-b border-whatsapp-border px-4 py-3 flex-shrink-0 gap-3">
                 <h2 className="text-lg font-medium">Exchange Rates</h2>
                 <Dialog open={isAddEditDialogOpen} onOpenChange={setAddEditDialogOpen}>
                     <DialogTrigger asChild>
-                        <Button size="sm" onClick={handleAddNew}><PlusCircle className="w-4 h-4 mr-2" /> Add New</Button>
+                        <Button size="sm" onClick={handleAddNew} className="w-full sm:w-auto"><PlusCircle className="w-4 h-4 mr-2" /> Add New</Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="max-h-[90vh] overflow-hidden">
                         <DialogHeader>
                             <DialogTitle>{selectedRate ? 'Edit' : 'Add'} Exchange Rate</DialogTitle>
                         </DialogHeader>
-                        <RateForm rate={selectedRate} onSave={onFormSaved} />
+                        <ScrollArea className="max-h-[calc(90vh-120px)]">
+                            <div className="pr-4">
+                                <RateForm rate={selectedRate} onSave={onFormSaved} />
+                            </div>
+                        </ScrollArea>
                     </DialogContent>
                 </Dialog>
             </header>
@@ -360,7 +365,7 @@ export const RatesView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => {
                         message="Get started by adding your first exchange rate."
                     />
                 )}
-                <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                     {rates?.map(rate => (
                         <Card key={rate._id} className="bg-whatsapp-panel-bg border-whatsapp-border">
                             <CardHeader>
@@ -395,11 +400,11 @@ export const RatesView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => {
 
                                 <p className="text-xs text-whatsapp-text-muted pt-2">Last Updated: {new Date(rate.lastUpdated).toLocaleString()}</p>
                             </CardContent>
-                            <CardFooter className="flex justify-end gap-2">
-                                <Button variant="outline" size="sm" onClick={() => handleEdit(rate)}><Edit className="w-4 h-4 mr-2" /> Edit</Button>
+                            <CardFooter className="flex flex-col sm:flex-row justify-end gap-2">
+                                <Button variant="outline" size="sm" onClick={() => handleEdit(rate)} className="w-full sm:w-auto"><Edit className="w-4 h-4 mr-2" /> Edit</Button>
                                 <Dialog open={isDeleteDialogOpen && selectedRate?._id === rate._id} onOpenChange={(open) => !open && setSelectedRate(undefined)}>
                                     <DialogTrigger asChild>
-                                        <Button variant="destructive" size="sm" onClick={() => handleDelete(rate)}><Trash className="w-4 h-4 mr-2" /> Delete</Button>
+                                        <Button variant="destructive" size="sm" onClick={() => handleDelete(rate)} className="w-full sm:w-auto"><Trash className="w-4 h-4 mr-2" /> Delete</Button>
                                     </DialogTrigger>
                                     {selectedRate && <DeleteConfirmationDialog rate={selectedRate} onDeleted={onRateDeleted} />}
                                 </Dialog>
