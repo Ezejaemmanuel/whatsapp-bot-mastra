@@ -41,11 +41,11 @@ export async function POST(request: NextRequest) {
             const transactionDetails = `\n\nTransaction ID: ${transaction._id.slice(-8)}\nAmount: ${transaction.amountFrom} ${transaction.currencyFrom}`;
 
             if (isConfirmation) {
-                notificationMessage = message || `Good news! Your transaction has been confirmed and the funds have been sent to your account. ${transactionDetails}`;
+                notificationMessage = message || `✅ Good news! Your transaction has been confirmed, and the funds have been sent to your account.${transactionDetails}`;
             } else if (isCancellation) {
                 notificationMessage = message
-                    ? `Your transaction has been cancelled for the following reason: ${message}. ${transactionDetails}`
-                    : `Your transaction has been cancelled. If you have any questions, please contact support. ${transactionDetails}`;
+                    ? `❌ Your transaction has been cancelled for the following reason: ${message}.${transactionDetails}`
+                    : `❌ Your transaction has been cancelled. If you have any questions, please contact support.${transactionDetails}`;
             }
 
             const whatsAppClient = WhatsAppClientService.getInstance().getClient();

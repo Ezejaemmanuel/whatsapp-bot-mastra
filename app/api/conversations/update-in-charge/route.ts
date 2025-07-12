@@ -22,12 +22,12 @@ export async function POST(request: Request) {
         // 2. Determine the notification message
         let notificationMessage: string;
         if (isFirstAdminMessage) {
-            notificationMessage = "Khalid customer care has entered the chat.";
+            notificationMessage = "👋 A customer care agent has joined the chat.";
         } else {
             notificationMessage =
                 inCharge === "admin"
-                    ? "You are now chatting with Khalidwid customer care."
-                    : "You are now chatting with KhalidwidBot.";
+                    ? "💬 You are now connected with a customer care agent."
+                    : "🤖 You are now chatting with our smart assistant.";
         }
 
         // 3. Get user's WhatsApp ID
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
         await fetchMutation(api.messages.storeOutgoingMessage, {
             conversationId: conversationId as Id<"conversations">,
             senderRole: inCharge as InCharge,
-            senderName: inCharge === 'admin' ? 'Khalid Customer Care' : 'KhalidwidBot',
+            senderName: inCharge === 'admin' ? 'Customer Care' : 'Smart Assistant',
             messageType: 'system',
             content: notificationMessage,
         });
