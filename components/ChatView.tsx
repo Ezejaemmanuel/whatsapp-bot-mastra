@@ -23,6 +23,7 @@ import { useInView } from 'react-intersection-observer';
 import { ChatViewLoader } from './ui/loader';
 import { EmptyState } from './ui/empty-state';
 import { MessageSquare } from 'lucide-react';
+import { toast } from 'sonner';
 
 
 interface ChatViewProps {
@@ -176,7 +177,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
         }
 
         // Use the new action to send the message
-        await sendAdminMessage({
+       await toast.promise(sendAdminMessage({
           conversationId: chatId,
           senderRole: "admin",
           senderName: "Admin",
@@ -184,7 +185,14 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
           content: attachment ? undefined : message.trim(),
           mediaUrl: mediaUrl,
           caption: caption,
-        });
+        }), {
+          loading: 'Sending message...',
+          success: 'Message sent!',
+          error: (error) => {
+            console.error('Failed to send message:', error);
+            return 'Failed to send message';
+          }
+        }).unwrap();
 
         setMessage('');
         setAttachment(null);
