@@ -103,9 +103,14 @@ const AdminStatusIndicator: React.FC = () => {
 
   const isOffline = adminStatusData?.isInactive;
 
+  // Only render when admin is offline
+  if (!isOffline) return null;
+
   return (
     <div className="fixed top-0 left-0 right-0 z-50">
-      <div className={`h-1 w-full ${isOffline ? 'bg-gradient-to-r from-rose-400 to-red-500 animate-pulse' : 'bg-gradient-to-r from-green-400 to-emerald-500'}`} />
+      <div className="bg-gradient-to-r from-rose-400 to-red-500 animate-pulse h-8 flex items-center justify-center">
+        <span className="text-white text-sm font-medium">You are currently offline</span>
+      </div>
     </div>
   );
 };
