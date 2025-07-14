@@ -144,6 +144,8 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
   const handleStatusUpdate = (e: React.MouseEvent, transactionId: Id<"transactions">, newStatus: TransactionStatus) => {
     e.stopPropagation(); // Prevent card click event
+    e.preventDefault(); // Prevent any default behavior
+    console.log('Status update triggered:', { transactionId, newStatus });
     onUpdateStatus(transactionId, newStatus);
   };
 
@@ -396,25 +398,42 @@ const TransactionCard: React.FC<TransactionCardProps> = ({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              className="h-6 px-2 text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300"
-              onClick={(e) => e.stopPropagation()}
+              className="h-6 px-2 text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 border-whatsapp-border/50 hover:border-whatsapp-primary/50"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
             >
               Update Status
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="glass-panel border border-whatsapp-border/50 backdrop-blur-xl">
+          <DropdownMenuContent
+            className="glass-panel border border-whatsapp-border/50 backdrop-blur-xl z-[9999] min-w-[200px] shadow-2xl bg-whatsapp-panel-bg/95"
+            side="top"
+            align="end"
+            sideOffset={5}
+            collisionPadding={10}
+            forceMount
+            avoidCollisions={true}
+          >
             {transactionStatuses.map((status) => (
               <DropdownMenuItem
                 key={status}
                 onClick={(e) => onStatusUpdate(e, transaction._id, status)}
-                className="text-whatsapp-text-primary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 cursor-pointer"
+                className="text-whatsapp-text-primary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 cursor-pointer flex items-center gap-2 px-3 py-2 rounded-md"
+                onSelect={(e) => {
+                  e.preventDefault();
+                  onStatusUpdate(e as any, transaction._id, status);
+                }}
               >
-                <span className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full">
                   {getStatusIcon(status)}
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
-                </span>
+                  <span className="capitalize text-sm font-medium">
+                    {status.replace(/_/g, ' ')}
+                  </span>
+                </div>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
