@@ -71,7 +71,6 @@ export interface Transaction {
     receiptImageUrl?: string;
     extractedDetails?: any;
     status: TransactionStatus;
-    negotiationHistory?: any[];
     createdAt: number;
     updatedAt: number;
     metadata?: any;

@@ -24,13 +24,9 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
     const [toCurrencyCode, setToCurrencyCode] = useState(rate?.toCurrencyCode || '');
 
     // Buying rates (when we buy foreign currency from customer)
-    const [buyingMinRate, setBuyingMinRate] = useState(rate?.buyingMinRate || 0);
-    const [buyingMaxRate, setBuyingMaxRate] = useState(rate?.buyingMaxRate || 0);
     const [buyingCurrentMarketRate, setBuyingCurrentMarketRate] = useState(rate?.buyingCurrentMarketRate || 0);
 
     // Selling rates (when we sell foreign currency to customer)
-    const [sellingMinRate, setSellingMinRate] = useState(rate?.sellingMinRate || 0);
-    const [sellingMaxRate, setSellingMaxRate] = useState(rate?.sellingMaxRate || 0);
     const [sellingCurrentMarketRate, setSellingCurrentMarketRate] = useState(rate?.sellingCurrentMarketRate || 0);
 
     const [fromAmount, setFromAmount] = useState(1);
@@ -90,15 +86,7 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
             toast.error("Please fill all required fields.");
             return;
         }
-        if (buyingMinRate > buyingMaxRate) {
-            toast.error("Buying minimum rate cannot be higher than the buying maximum rate.");
-            return;
-        }
-        if (sellingMinRate > sellingMaxRate) {
-            toast.error("Selling minimum rate cannot be higher than the selling maximum rate.");
-            return;
-        }
-        if (buyingMaxRate <= 0 || sellingMaxRate <= 0) {
+        if (buyingCurrentMarketRate <= 0 || sellingCurrentMarketRate <= 0) {
             toast.error("Please set valid rates for both buying and selling.");
             return;
         }
@@ -108,11 +96,7 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                 fromCurrencyCode,
                 toCurrencyName,
                 toCurrencyCode,
-                buyingMinRate,
-                buyingMaxRate,
                 buyingCurrentMarketRate,
-                sellingMinRate,
-                sellingMaxRate,
                 sellingCurrentMarketRate,
             });
             toast.success(`Rate for ${fromCurrencyCode}-${toCurrencyCode} saved.`);
@@ -186,7 +170,7 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
             {/* Buying Rates Section */}
             <Card className="bg-whatsapp-conversation-bg p-4">
                 <div className="flex items-center gap-2 mb-4">
-                    <h3 className="font-semibold text-green-600">Buying Rates</h3>
+                    <h3 className="font-semibold text-green-600">Buying Rate</h3>
                     <span className="text-xs text-whatsapp-text-muted">(When we buy foreign currency from customer)</span>
                 </div>
                 <div className="grid gap-2">
@@ -208,52 +192,12 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                         </>}
                     </p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                    <div className="grid gap-2">
-                        <Label htmlFor="buyingMinRate">Your Minimum Buying Rate</Label>
-                        <Input
-                            id="buyingMinRate"
-                            type="number"
-                            value={buyingMinRate}
-                            onChange={(e) => setBuyingMinRate(parseFloat(e.target.value) || 0)}
-                            inputMode="decimal"
-                            step="0.01"
-                            min="0"
-                        />
-                        <p className="text-xs text-whatsapp-text-muted">
-                            The bot will not buy for less than this.
-                            {buyingMinRate > 0 && <>
-                                <br />
-                                (e.g., for 1 {fromCode}, you&apos;ll pay at least {buyingMinRate} {toCode})
-                            </>}
-                        </p>
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="buyingMaxRate">Your Maximum Buying Rate</Label>
-                        <Input
-                            id="buyingMaxRate"
-                            type="number"
-                            value={buyingMaxRate}
-                            onChange={(e) => setBuyingMaxRate(parseFloat(e.target.value) || 0)}
-                            inputMode="decimal"
-                            step="0.01"
-                            min="0"
-                        />
-                        <p className="text-xs text-whatsapp-text-muted">
-                            The bot will not buy for more than this.
-                            {buyingMaxRate > 0 && <>
-                                <br />
-                                (e.g., for 1 {fromCode}, you&apos;ll pay at most {buyingMaxRate} {toCode})
-                            </>}
-                        </p>
-                    </div>
-                </div>
             </Card>
 
             {/* Selling Rates Section */}
             <Card className="bg-whatsapp-conversation-bg p-4">
                 <div className="flex items-center gap-2 mb-4">
-                    <h3 className="font-semibold text-red-600">Selling Rates</h3>
+                    <h3 className="font-semibold text-red-600">Selling Rate</h3>
                     <span className="text-xs text-whatsapp-text-muted">(When we sell foreign currency to customer)</span>
                 </div>
                 <div className="grid gap-2">
@@ -274,46 +218,6 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                             (e.g., at this rate, 1 {fromCode} is worth {sellingCurrentMarketRate} {toCode})
                         </>}
                     </p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                    <div className="grid gap-2">
-                        <Label htmlFor="sellingMinRate">Your Minimum Selling Rate</Label>
-                        <Input
-                            id="sellingMinRate"
-                            type="number"
-                            value={sellingMinRate}
-                            onChange={(e) => setSellingMinRate(parseFloat(e.target.value) || 0)}
-                            inputMode="decimal"
-                            step="0.01"
-                            min="0"
-                        />
-                        <p className="text-xs text-whatsapp-text-muted">
-                            The bot will not sell for less than this.
-                            {sellingMinRate > 0 && <>
-                                <br />
-                                (e.g., for 1 {fromCode}, you&apos;ll charge at least {sellingMinRate} {toCode})
-                            </>}
-                        </p>
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="sellingMaxRate">Your Maximum Selling Rate</Label>
-                        <Input
-                            id="sellingMaxRate"
-                            type="number"
-                            value={sellingMaxRate}
-                            onChange={(e) => setSellingMaxRate(parseFloat(e.target.value) || 0)}
-                            inputMode="decimal"
-                            step="0.01"
-                            min="0"
-                        />
-                        <p className="text-xs text-whatsapp-text-muted">
-                            The bot will not sell for more than this.
-                            {sellingMaxRate > 0 && <>
-                                <br />
-                                (e.g., for 1 {fromCode}, you&apos;ll charge at most {sellingMaxRate} {toCode})
-                            </>}
-                        </p>
-                    </div>
                 </div>
             </Card>
 
@@ -369,12 +273,11 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                 </p>
             </Card>
 
-            {(buyingMinRate > buyingMaxRate || sellingMinRate > sellingMaxRate) && (
+            {buyingCurrentMarketRate <= 0 || sellingCurrentMarketRate <= 0 && (
                 <div className="flex items-center gap-2 text-red-500 text-sm">
                     <AlertTriangle className="w-4 h-4" />
                     <p>
-                        {buyingMinRate > buyingMaxRate && "Buying minimum rate cannot be higher than the buying maximum rate. "}
-                        {sellingMinRate > sellingMaxRate && "Selling minimum rate cannot be higher than the selling maximum rate."}
+                        Please set valid rates for both buying and selling.
                     </p>
                 </div>
             )}
@@ -492,10 +395,10 @@ export const RatesView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => {
                             <CardContent className="grid gap-4 text-sm">
                                 {/* Buying Rates */}
                                 <div className="border-l-4 border-green-500 pl-4">
-                                    <p className="font-semibold text-green-600 mb-2">Buying Rates</p>
-                                    <p className="text-lg font-semibold">{rate.buyingMinRate} - {rate.buyingMaxRate} {rate.toCurrencyCode}</p>
+                                    <p className="font-semibold text-green-600 mb-2">Buying Rate</p>
+                                    <p className="text-lg font-semibold">{rate.buyingCurrentMarketRate} {rate.toCurrencyCode}</p>
                                     <p className="text-xs text-whatsapp-text-muted">
-                                        For every 1 {rate.fromCurrencyCode}, we buy between {rate.buyingMinRate} and {rate.buyingMaxRate} {rate.toCurrencyCode}.
+                                        For every 1 {rate.fromCurrencyCode}, we buy {rate.buyingCurrentMarketRate} {rate.toCurrencyCode}.
                                     </p>
                                     <p className="text-xs text-whatsapp-text-muted">
                                         Market Rate: {rate.buyingCurrentMarketRate}
@@ -504,10 +407,10 @@ export const RatesView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => {
 
                                 {/* Selling Rates */}
                                 <div className="border-l-4 border-red-500 pl-4">
-                                    <p className="font-semibold text-red-600 mb-2">Selling Rates</p>
-                                    <p className="text-lg font-semibold">{rate.sellingMinRate} - {rate.sellingMaxRate} {rate.toCurrencyCode}</p>
+                                    <p className="font-semibold text-red-600 mb-2">Selling Rate</p>
+                                    <p className="text-lg font-semibold">{rate.sellingCurrentMarketRate} {rate.toCurrencyCode}</p>
                                     <p className="text-xs text-whatsapp-text-muted">
-                                        For every 1 {rate.fromCurrencyCode}, we sell between {rate.sellingMinRate} and {rate.sellingMaxRate} {rate.toCurrencyCode}.
+                                        For every 1 {rate.fromCurrencyCode}, we sell {rate.sellingCurrentMarketRate} {rate.toCurrencyCode}.
                                     </p>
                                     <p className="text-xs text-whatsapp-text-muted">
                                         Market Rate: {rate.sellingCurrentMarketRate}

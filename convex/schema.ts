@@ -114,16 +114,9 @@ export default defineSchema({
         toCurrencyCode: v.string(), // e.g. NGN
         currencyPair: v.string(), // 'USD-NGN', 'GBP-NGN', etc. auto-generated
 
-        // Buying rates (when we buy foreign currency from customer)
-        buyingMinRate: v.number(), // Minimum buying rate we offer
-        buyingMaxRate: v.number(), // Maximum buying rate we offer
-        buyingCurrentMarketRate: v.number(), // Current market buying rate for reference
-
-        // Selling rates (when we sell foreign currency to customer)
-        sellingMinRate: v.number(), // Minimum selling rate we offer
-        sellingMaxRate: v.number(), // Maximum selling rate we offer
-        sellingCurrentMarketRate: v.number(), // Current market selling rate for reference
-
+        // Only one fixed rate for buying and selling
+        buyingCurrentMarketRate: v.number(), // Current market buying rate
+        sellingCurrentMarketRate: v.number(), // Current market selling rate
         lastUpdated: v.number(), // Last update timestamp
         metadata: v.optional(v.any()), // Additional rate metadata
     })
@@ -140,12 +133,11 @@ export default defineSchema({
         currencyTo: v.string(), // Target currency (NGN, etc.)
         amountFrom: v.number(), // Amount to exchange from
         amountTo: v.number(), // Amount to receive
-        negotiatedRate: v.number(), // Final negotiated rate
+        negotiatedRate: v.number(), // Final rate (now always the fixed rate)
         paymentReference: v.optional(v.string()), // Payment reference number
         receiptImageUrl: v.optional(v.string()), // URL to receipt image
         extractedDetails: v.optional(v.any()), // OCR extracted data from receipt
         status: TransactionStatusUnion, // Transaction status
-        negotiationHistory: v.optional(v.array(v.any())), // History of rate negotiations
         createdAt: v.number(), // Transaction creation timestamp
         updatedAt: v.number(), // Last update timestamp
         metadata: v.optional(v.any()), // Additional transaction metadata

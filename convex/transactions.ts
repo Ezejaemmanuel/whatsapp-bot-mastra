@@ -15,13 +15,11 @@ export const createTransaction = mutation({
         amountFrom: v.number(),
         amountTo: v.number(),
         negotiatedRate: v.number(),
-        negotiationHistory: v.optional(v.array(v.any())),
         metadata: v.optional(v.any()),
     },
     handler: async (ctx, args) => {
         const now = Date.now();
         const status: TransactionStatus = "pending";
-
         return await ctx.db.insert("transactions", {
             userId: args.userId,
             conversationId: args.conversationId,
@@ -31,7 +29,6 @@ export const createTransaction = mutation({
             amountTo: args.amountTo,
             negotiatedRate: args.negotiatedRate,
             status,
-            negotiationHistory: args.negotiationHistory || [],
             createdAt: now,
             updatedAt: now,
             metadata: args.metadata,
@@ -64,29 +61,6 @@ export const updateTransactionStatus = mutation({
             extractedDetails: args.extractedDetails ?? transaction.extractedDetails,
             updatedAt: Date.now(),
             metadata: args.metadata ? { ...transaction.metadata, ...args.metadata } : transaction.metadata,
-        });
-    },
-});
-
-/**
- * Add negotiation to transaction history
- */
-export const addNegotiationToHistory = mutation({
-    args: {
-        transactionId: v.id("transactions"),
-        negotiation: v.any(),
-    },
-    handler: async (ctx, args) => {
-        const transaction = await ctx.db.get(args.transactionId);
-        if (!transaction) {
-            throw new Error("Transaction not found");
-        }
-
-        const updatedHistory = [...(transaction.negotiationHistory || []), args.negotiation];
-
-        return await ctx.db.patch(args.transactionId, {
-            negotiationHistory: updatedHistory,
-            updatedAt: Date.now(),
         });
     },
 });

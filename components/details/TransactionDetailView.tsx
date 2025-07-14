@@ -208,18 +208,12 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                     </div>
                 )}
 
-                {transaction.negotiationHistory && transaction.negotiationHistory.length > 0 && (
-                    <div className="space-y-3 mt-4">
-                        <p className="text-whatsapp-text-muted text-sm font-medium">Negotiation History</p>
-                        <div className="glass-panel p-4 rounded-xl border border-whatsapp-border/50 backdrop-blur-xl max-h-40 overflow-y-auto space-y-2 text-xs whatsapp-scrollbar">
-                            {transaction.negotiationHistory.map((item, index) => (
-                                <div key={index} className="p-3 bg-whatsapp-hover/30 rounded-lg backdrop-blur-sm border border-whatsapp-border/20">
-                                    <MarkdownText className="text-whatsapp-text-primary">
-                                        {typeof item === 'object' ? JSON.stringify(item) : item.toString()}
-                                    </MarkdownText>
-                                </div>
-                            ))}
-                        </div>
+                {transaction.extractedDetails && (
+                    <div className="space-y-2">
+                        <p className="text-whatsapp-text-muted text-sm font-medium">Extracted Details</p>
+                        <pre className="text-whatsapp-text-primary font-mono glass-panel p-4 rounded-xl border border-whatsapp-border/50 text-xs overflow-x-auto backdrop-blur-xl whatsapp-scrollbar">
+                            {JSON.stringify(transaction.extractedDetails, null, 2)}
+                        </pre>
                     </div>
                 )}
             </div>
@@ -375,21 +369,6 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                                 <MarkdownText>{`"${transaction.conversation.lastMessageSummary}"`}</MarkdownText>
                             </div>
                             <p className="text-xs text-whatsapp-text-muted mt-2 text-right font-medium"> - Last message from {transaction.conversation.userName}</p>
-                        </div>
-                    </div>
-                )}
-
-                {transaction.negotiationHistory && transaction.negotiationHistory.length > 0 && (
-                    <div className="space-y-3">
-                        <p className="text-whatsapp-text-muted font-medium">Negotiation History</p>
-                        <div className="glass-panel p-4 rounded-xl border border-whatsapp-border/50 backdrop-blur-xl max-h-40 overflow-y-auto space-y-2 text-xs whatsapp-scrollbar">
-                            {transaction.negotiationHistory.map((item, index) => (
-                                <div key={index} className="p-3 bg-whatsapp-hover/30 rounded-lg backdrop-blur-sm border border-whatsapp-border/20">
-                                    <MarkdownText className="text-whatsapp-text-primary">
-                                        {typeof item === 'object' ? JSON.stringify(item) : item.toString()}
-                                    </MarkdownText>
-                                </div>
-                            ))}
                         </div>
                     </div>
                 )}

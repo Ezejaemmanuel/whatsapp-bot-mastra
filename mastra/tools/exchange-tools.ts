@@ -125,13 +125,6 @@ export const createTransactionTool = createTool({
         amountFrom: z.number().describe('Amount to exchange from'),
         amountTo: z.number().describe('Amount to receive'),
         negotiatedRate: z.number().describe('Final negotiated rate'),
-        negotiationHistory: z.array(z.object({
-            timestamp: z.number().optional(),
-            customerRate: z.number().optional(),
-            counterOffer: z.number().optional(),
-            message: z.string().optional(),
-            strategy: z.string().optional()
-        })).optional().describe('History of rate negotiations'),
     }),
     execute: async ({ context, runtimeContext }) => {
         const startTime = Date.now();
@@ -197,7 +190,6 @@ export const createTransactionTool = createTool({
                 amountFrom: context.amountFrom,
                 amountTo: context.amountTo,
                 negotiatedRate: context.negotiatedRate,
-                hasNegotiationHistory: !!context.negotiationHistory && context.negotiationHistory.length > 0,
                 operation: toolId
             });
 
@@ -226,7 +218,6 @@ export const createTransactionTool = createTool({
                 amountFrom: context.amountFrom,
                 amountTo: context.amountTo,
                 negotiatedRate: context.negotiatedRate,
-                negotiationHistory: context.negotiationHistory,
             });
 
             const executionTime = Date.now() - startTime;
