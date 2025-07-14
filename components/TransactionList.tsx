@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MoreVertical, Plus, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle, XCircle, AlertCircle, ArrowRight, Wallet, MessageCircle, Send } from 'lucide-react';
+import { Search, MoreVertical, Plus, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle, XCircle, AlertCircle, ArrowRight, Wallet, MessageCircle, Send, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Textarea } from './ui/textarea';
@@ -15,6 +15,7 @@ import { Id, Doc } from '@/convex/_generated/dataModel';
 import { useInView } from 'react-intersection-observer';
 import { EmptyState } from './ui/empty-state';
 import { TransactionStatus } from '@/convex/schemaUnions';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 
 const transactionStatuses: TransactionStatus[] = [
   "pending",
@@ -23,6 +24,15 @@ const transactionStatuses: TransactionStatus[] = [
   "cancelled",
   "failed"
 ];
+
+// Map statuses to display names
+const statusDisplayNames: Record<TransactionStatus, string> = {
+  "pending": "Pending",
+  "image_received_and_being_reviewed": "Image Review",
+  "confirmed_and_money_sent_to_user": "Completed",
+  "cancelled": "Cancelled",
+  "failed": "Failed"
+};
 
 type TransactionWithDetails = Doc<"transactions"> & {
   user: Doc<"users"> | null;
@@ -54,7 +64,18 @@ export const TransactionList: React.FC<TransactionListProps> = ({
       setSearchQuery: state.setSearchQuery,
     }))
   );
-  const [activeFilter, setActiveFilter] = useState('All');
+
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Use searchParams for transaction filter state with unique keys
+  const activeFilter = searchParams.get('transactionFilter') || 'All';
+  const filterOrderParam = searchParams.get('transactionFilterOrder');
+  const defaultFilterOrder = ['All', ...transactionStatuses];
+  const filterOrder = filterOrderParam ? JSON.parse(filterOrderParam) : defaultFilterOrder;
+
+  const [showMore, setShowMore] = useState(false);
   const { ref, inView } = useInView();
 
   useEffect(() => {
@@ -63,7 +84,26 @@ export const TransactionList: React.FC<TransactionListProps> = ({
     }
   }, [inView, status, loadMore]);
 
-  const filters = ['All', 'Pending', 'Completed', 'Failed'];
+  const updateSearchParams = (updates: Record<string, string>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value) {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+    });
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const handleFilterClick = (filterId: string) => {
+    // Update active filter
+    updateSearchParams({ transactionFilter: filterId });
+
+    // Update filter order: move clicked filter to front (after 'All')
+    const newOrder = ['All', ...filterOrder.filter((id: string) => id !== 'All' && id !== filterId), filterId];
+    updateSearchParams({ transactionFilterOrder: JSON.stringify(newOrder) });
+  };
 
   const filteredTransactions = transactions?.filter(transaction => {
     const typedTransaction = transaction as any;
@@ -75,11 +115,13 @@ export const TransactionList: React.FC<TransactionListProps> = ({
       transaction._id.toLowerCase().includes(searchQuery.toLowerCase());
 
     if (activeFilter === 'All') return matchesSearch;
-    if (activeFilter === 'Pending') return matchesSearch && transaction.status === 'pending';
-    if (activeFilter === 'Completed') return matchesSearch && transaction.status === 'confirmed_and_money_sent_to_user';
-    if (activeFilter === 'Failed') return matchesSearch && transaction.status === 'failed';
-    return false; // Should not happen with the current filters
+    return matchesSearch && transaction.status === activeFilter;
   });
+
+  const getFilterCount = (filterId: string): number => {
+    if (filterId === 'All') return transactions?.length || 0;
+    return transactions?.filter(t => t.status === filterId).length || 0;
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -149,6 +191,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({
     onUpdateStatus(transactionId, newStatus);
   };
 
+  const visibleFilters = showMore ? filterOrder : filterOrder.slice(0, 4);
+  const hasMoreFilters = filterOrder.length > 4;
+
   return (
     <div className="flex flex-col h-full glass-panel border-r border-whatsapp-border backdrop-blur-xl">
       <TransactionListHeader />
@@ -156,8 +201,14 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         activeFilter={activeFilter}
-        setActiveFilter={setActiveFilter}
-        filters={filters}
+        visibleFilters={visibleFilters}
+        hasMoreFilters={hasMoreFilters}
+        showMore={showMore}
+        setShowMore={setShowMore}
+        handleFilterClick={handleFilterClick}
+        getFilterCount={getFilterCount}
+        statusDisplayNames={statusDisplayNames}
+        getStatusIcon={getStatusIcon}
       />
       <TransactionItems
         initialTransactions={transactions || []}
@@ -194,11 +245,29 @@ interface SearchAndFilterProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   activeFilter: string;
-  setActiveFilter: (filter: string) => void;
-  filters: string[];
+  visibleFilters: string[];
+  hasMoreFilters: boolean;
+  showMore: boolean;
+  setShowMore: (show: boolean) => void;
+  handleFilterClick: (filterId: string) => void;
+  getFilterCount: (filterId: string) => number;
+  statusDisplayNames: Record<TransactionStatus, string>;
+  getStatusIcon: (status: string) => React.ReactNode;
 }
 
-const TransactionSearchAndFilter: React.FC<SearchAndFilterProps> = ({ searchQuery, setSearchQuery, activeFilter, setActiveFilter, filters }) => (
+const TransactionSearchAndFilter: React.FC<SearchAndFilterProps> = ({
+  searchQuery,
+  setSearchQuery,
+  activeFilter,
+  visibleFilters,
+  hasMoreFilters,
+  showMore,
+  setShowMore,
+  handleFilterClick,
+  getFilterCount,
+  statusDisplayNames,
+  getStatusIcon
+}) => (
   <div className="p-4 bg-gradient-to-r from-whatsapp-panel-bg/90 to-whatsapp-panel-bg/70 flex-shrink-0 backdrop-blur-sm">
     <div className="relative mb-3 group">
       <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-whatsapp-text-muted group-focus-within:text-whatsapp-primary transition-colors duration-300" />
@@ -211,21 +280,47 @@ const TransactionSearchAndFilter: React.FC<SearchAndFilterProps> = ({ searchQuer
     </div>
     <ScrollArea className="w-full">
       <div className="flex gap-3">
-        {filters.map((filter) => (
+        {visibleFilters.map((filterId: string) => {
+          const displayName = filterId === 'All' ? 'All' : statusDisplayNames[filterId as TransactionStatus];
+          const count = getFilterCount(filterId);
+
+          return (
+            <Button
+              key={filterId}
+              variant={activeFilter === filterId ? "default" : "secondary"}
+              size="sm"
+              onClick={() => handleFilterClick(filterId)}
+              className={`whitespace-nowrap transition-all duration-300 hover:scale-105 flex items-center gap-1.5 ${activeFilter === filterId
+                ? 'bg-gradient-to-r from-whatsapp-primary to-whatsapp-accent text-white hover:from-whatsapp-primary/90 hover:to-whatsapp-accent/90 shadow-lg glow-purple'
+                : 'bg-whatsapp-hover/60 text-whatsapp-text-secondary hover:bg-whatsapp-border/60 hover:text-whatsapp-primary backdrop-blur-sm border border-whatsapp-border/30'
+                }`}
+            >
+              {filterId !== 'All' && getStatusIcon(filterId)}
+              {displayName}
+              {count > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="ml-1 bg-whatsapp-accent/20 text-whatsapp-accent border border-whatsapp-accent/30 text-xs"
+                >
+                  {count}
+                </Badge>
+              )}
+            </Button>
+          );
+        })}
+
+        {hasMoreFilters && !showMore && (
           <Button
-            key={filter}
-            variant={activeFilter === filter ? "default" : "secondary"}
-            size="sm"
-            onClick={() => setActiveFilter(filter)}
-            className={`whitespace-nowrap transition-all duration-300 hover:scale-105 ${activeFilter === filter
-              ? 'bg-gradient-to-r from-whatsapp-primary to-whatsapp-accent text-white hover:from-whatsapp-primary/90 hover:to-whatsapp-accent/90 shadow-lg glow-purple'
-              : 'bg-whatsapp-hover/60 text-whatsapp-text-secondary hover:bg-whatsapp-border/60 hover:text-whatsapp-primary backdrop-blur-sm border border-whatsapp-border/30'
-              }`}
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowMore(true)}
+            className="text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 backdrop-blur-sm"
           >
-            {filter}
+            <ChevronRight className="w-4 h-4" />
           </Button>
-        ))}
+        )}
       </div>
+      <ScrollBar orientation="horizontal" className="h-1" />
     </ScrollArea>
   </div>
 );
@@ -431,7 +526,7 @@ const TransactionCard: React.FC<TransactionCardProps> = ({
                 <div className="flex items-center gap-2 w-full">
                   {getStatusIcon(status)}
                   <span className="capitalize text-sm font-medium">
-                    {status.replace(/_/g, ' ')}
+                    {statusDisplayNames[status]}
                   </span>
                 </div>
               </DropdownMenuItem>

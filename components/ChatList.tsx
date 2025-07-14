@@ -13,6 +13,7 @@ import { Skeleton } from './ui/skeleton';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { ChatFilters } from './ChatFilters';
+import { useSearchParams } from 'next/navigation';
 
 type ConversationWithUser = Doc<"conversations"> & { user: Doc<"users"> | null };
 
@@ -47,9 +48,13 @@ export const ChatList: React.FC<ChatListProps> = ({
   activeTab = 'chats',
   onTabChange
 }) => {
-  const { searchQuery, activeFilter } = useUIState();
+  const { searchQuery } = useUIState();
   const setSearchQuery = useWhatsAppStore((state) => state.setSearchQuery);
   const { ref, inView } = useInView();
+
+  // Get active filter from searchParams
+  const searchParams = useSearchParams();
+  const activeFilter = searchParams.get('chatFilter') || 'All';
 
   // Get all transactions to check for image review status
   const allTransactions = useQuery(api.transactions.getAllTransactions, { paginationOpts: { numItems: 1000, cursor: null } });

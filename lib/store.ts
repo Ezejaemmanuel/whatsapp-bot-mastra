@@ -85,8 +85,6 @@ interface UIState {
     isMobile: boolean;
     searchQuery: string;
     chatFilter: 'all' | 'unread' | 'groups' | 'favorites';
-    activeFilter: string;
-    filterOrder: string[];
     isTyping: boolean;
     onlineUsers: Set<string>;
     imageDialog: {
@@ -129,8 +127,6 @@ interface WhatsAppStore {
     setIsMobile: (isMobile: boolean) => void;
     setSearchQuery: (query: string) => void;
     setChatFilter: (filter: 'all' | 'unread' | 'groups' | 'favorites') => void;
-    setActiveFilter: (filter: string) => void;
-    setFilterOrder: (order: string[]) => void;
     setIsTyping: (isTyping: boolean) => void;
     setUserOnline: (userId: string, isOnline: boolean) => void;
     openImageDialog: (imageUrl: string, title?: string) => void;
@@ -156,8 +152,6 @@ export const useWhatsAppStore = create<WhatsAppStore>()(
                 isMobile: false,
                 searchQuery: '',
                 chatFilter: 'all',
-                activeFilter: 'All',
-                filterOrder: ['All', 'Unread', 'Admin', 'Bot', 'ImageReview'],
                 isTyping: false,
                 onlineUsers: new Set(),
                 imageDialog: {
@@ -244,14 +238,6 @@ export const useWhatsAppStore = create<WhatsAppStore>()(
 
             setChatFilter: (filter) => set((state) => ({
                 ui: { ...state.ui, chatFilter: filter }
-            })),
-
-            setActiveFilter: (filter) => set((state) => ({
-                ui: { ...state.ui, activeFilter: filter }
-            })),
-
-            setFilterOrder: (order) => set((state) => ({
-                ui: { ...state.ui, filterOrder: order }
             })),
 
             setIsTyping: (isTyping) => set((state) => ({

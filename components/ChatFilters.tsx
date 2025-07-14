@@ -3,7 +3,7 @@ import { ChevronRight, MessageCircle, Eye, User, Bot, Image } from 'lucide-react
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { useWhatsAppStore, useUIState } from '@/lib/store';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 
 interface Filter {
     id: string;
@@ -19,7 +19,8 @@ const FILTERS: Filter[] = [
     { id: 'ImageReview', label: 'Image Review', icon: Image },
 ];
 
-const STORAGE_KEY = 'chat-filter-order';
+// Default filter order with ImageReview after All
+const DEFAULT_FILTER_ORDER = ['All', 'ImageReview', 'Unread', 'Admin', 'Bot'];
 
 interface ChatFiltersProps {
     conversations: any[];
@@ -27,40 +28,40 @@ interface ChatFiltersProps {
 }
 
 export const ChatFilters: React.FC<ChatFiltersProps> = ({ conversations, allTransactions }) => {
-    const { activeFilter, filterOrder } = useUIState();
-    const { setActiveFilter, setFilterOrder } = useWhatsAppStore();
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
+    // Use searchParams for filter state with unique keys
+    const activeFilter = searchParams.get('chatFilter') || 'All';
+    const filterOrderParam = searchParams.get('chatFilterOrder');
+    const filterOrder = filterOrderParam ? JSON.parse(filterOrderParam) : DEFAULT_FILTER_ORDER;
+
     const [showMore, setShowMore] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    // Load filter order from localStorage on mount
-    useEffect(() => {
-        const savedOrder = localStorage.getItem(STORAGE_KEY);
-        if (savedOrder) {
-            try {
-                const parsedOrder = JSON.parse(savedOrder);
-                setFilterOrder(parsedOrder);
-            } catch (error) {
-                console.error('Failed to parse saved filter order:', error);
+    const updateSearchParams = (updates: Record<string, string>) => {
+        const params = new URLSearchParams(searchParams.toString());
+        Object.entries(updates).forEach(([key, value]) => {
+            if (value) {
+                params.set(key, value);
+            } else {
+                params.delete(key);
             }
-        }
-    }, [setFilterOrder]);
-
-    // Save filter order to localStorage when it changes
-    useEffect(() => {
-        if (filterOrder.length > 0) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(filterOrder));
-        }
-    }, [filterOrder]);
-
-    const handleFilterClick = (filterId: string) => {
-        setActiveFilter(filterId);
-
-        // Update filter order: move clicked filter to front (after 'All')
-        const newOrder = ['All', ...filterOrder.filter(id => id !== 'All' && id !== filterId), filterId];
-        setFilterOrder(newOrder);
+        });
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     };
 
-    const getFilterCount = (filterId: string) => {
+    const handleFilterClick = (filterId: string) => {
+        // Update active filter
+        updateSearchParams({ chatFilter: filterId });
+
+        // Update filter order: move clicked filter to front (after 'All')
+        const newOrder = ['All', ...filterOrder.filter((id: string) => id !== 'All' && id !== filterId), filterId];
+        updateSearchParams({ chatFilterOrder: JSON.stringify(newOrder) });
+    };
+
+    const getFilterCount = (filterId: string): number => {
         switch (filterId) {
             case 'Unread':
                 return conversations.filter(c => (c.unreadCount || 0) > 0).length;
@@ -88,7 +89,7 @@ export const ChatFilters: React.FC<ChatFiltersProps> = ({ conversations, allTran
         <div className="flex-shrink-0 bg-gradient-to-r from-whatsapp-panel-bg/70 to-whatsapp-panel-bg/50 backdrop-blur-sm">
             <ScrollArea className="w-full">
                 <div className="flex gap-2 px-4 py-3" ref={scrollRef}>
-                    {visibleFilters.map((filterId) => {
+                    {visibleFilters.map((filterId: string) => {
                         const filter = FILTERS.find(f => f.id === filterId);
                         if (!filter) return null;
 
