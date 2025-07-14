@@ -95,6 +95,20 @@ const StatusUpdateDialog: React.FC<StatusUpdateDialogProps> = ({ isOpen, onClose
   );
 };
 
+// Admin Status Indicator Component
+const AdminStatusIndicator: React.FC = () => {
+  const adminStatusData = useQuery(api.adminStatus.getAdminStatus, {});
+
+  if (adminStatusData === undefined) return null;
+
+  const isOffline = adminStatusData?.isInactive;
+
+  return (
+    <div className="fixed top-0 left-0 right-0 z-50">
+      <div className={`h-1 w-full ${isOffline ? 'bg-gradient-to-r from-rose-400 to-red-500 animate-pulse' : 'bg-gradient-to-r from-green-400 to-emerald-500'}`} />
+    </div>
+  );
+};
 
 const WhatsAppLayoutContent: React.FC = () => {
   const router = useRouter();
@@ -313,6 +327,7 @@ const WhatsAppLayoutContent: React.FC = () => {
   if (isMobile) {
     return (
       <div className="h-[100dvh] bg-whatsapp-bg">
+        <AdminStatusIndicator />
         <div className="h-full pb-16 overflow-y-auto">
           {renderMobileView()}
         </div>
@@ -419,6 +434,7 @@ const WhatsAppLayoutContent: React.FC = () => {
 
   return (
     <div className="h-screen flex bg-whatsapp-bg overflow-hidden">
+      <AdminStatusIndicator />
       <SideNavigation activeTab={activeTab} onTabChange={handleTabChange} />
 
       {showSidebar &&

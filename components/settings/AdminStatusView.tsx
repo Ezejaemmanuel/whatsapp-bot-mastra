@@ -50,14 +50,17 @@ const AdminStatusSkeleton: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => 
     </div>
 );
 
-
 export const AdminStatusView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => {
     const adminStatusData = useQuery(api.adminStatus.getAdminStatus, {});
     const setAdminStatus = useMutation(api.adminStatus.setAdminStatus);
+    const toggleManualStatus = useMutation(api.adminStatus.toggleManualStatus);
 
     const [isManualInactive, setIsManualInactive] = useState(false);
     const [startTime, setStartTime] = useState('22:00');
     const [endTime, setEndTime] = useState('08:00');
+    const [hasScheduleChanges, setHasScheduleChanges] = useState(false);
+    const [originalStartTime, setOriginalStartTime] = useState('22:00');
+    const [originalEndTime, setOriginalEndTime] = useState('08:00');
 
     useEffect(() => {
         if (adminStatusData?.settings) {
@@ -65,19 +68,41 @@ export const AdminStatusView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) 
             setIsManualInactive(settings.isManuallyInactive ?? false);
             setStartTime(settings.recurringInactiveStart || '22:00');
             setEndTime(settings.recurringInactiveEnd || '08:00');
+            setOriginalStartTime(settings.recurringInactiveStart || '22:00');
+            setOriginalEndTime(settings.recurringInactiveEnd || '08:00');
+            setHasScheduleChanges(false);
         }
     }, [adminStatusData]);
 
-    const handleSave = async () => {
+    // Check if schedule has changed
+    useEffect(() => {
+        const hasChanged = startTime !== originalStartTime || endTime !== originalEndTime;
+        setHasScheduleChanges(hasChanged);
+    }, [startTime, endTime, originalStartTime, originalEndTime]);
+
+    const handleManualToggle = async (checked: boolean) => {
+        try {
+            await toggleManualStatus({ isManuallyInactive: checked });
+            setIsManualInactive(checked);
+            toast.success(checked ? 'Admin set to offline' : 'Admin set to online');
+        } catch (error) {
+            toast.error('Failed to update admin status.');
+            console.error(error);
+        }
+    };
+
+    const handleSaveSchedule = async () => {
         try {
             await setAdminStatus({
-                isManuallyInactive: isManualInactive,
                 recurringInactiveStart: startTime,
                 recurringInactiveEnd: endTime,
             });
-            toast.success('Admin status updated successfully!');
+            setOriginalStartTime(startTime);
+            setOriginalEndTime(endTime);
+            setHasScheduleChanges(false);
+            toast.success('Schedule updated successfully!');
         } catch (error) {
-            toast.error('Failed to update admin status.');
+            toast.error('Failed to update schedule.');
             console.error(error);
         }
     };
@@ -121,7 +146,7 @@ export const AdminStatusView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) 
                         <Switch
                             id="manual-override"
                             checked={isManualInactive}
-                            onCheckedChange={setIsManualInactive}
+                            onCheckedChange={handleManualToggle}
                         />
                     </div>
 
@@ -154,11 +179,13 @@ export const AdminStatusView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) 
                         </div>
                     </div>
                 </CardContent>
-                <CardFooter>
-                    <Button onClick={handleSave} className="ml-auto" disabled={adminStatusData === undefined}>
-                        Save Changes
-                    </Button>
-                </CardFooter>
+                {hasScheduleChanges && (
+                    <CardFooter>
+                        <Button onClick={handleSaveSchedule} className="ml-auto">
+                            Set Schedule
+                        </Button>
+                    </CardFooter>
+                )}
             </Card>
         </div>
     );
