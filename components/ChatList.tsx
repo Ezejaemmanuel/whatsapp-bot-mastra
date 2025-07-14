@@ -12,6 +12,7 @@ import { EmptyState } from './ui/empty-state';
 import { Skeleton } from './ui/skeleton';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { ChatFilters } from './ChatFilters';
 
 type ConversationWithUser = Doc<"conversations"> & { user: Doc<"users"> | null };
 
@@ -46,8 +47,7 @@ export const ChatList: React.FC<ChatListProps> = ({
   activeTab = 'chats',
   onTabChange
 }) => {
-  const [activeFilter, setActiveFilter] = useState('All');
-  const { searchQuery } = useUIState();
+  const { searchQuery, activeFilter } = useUIState();
   const setSearchQuery = useWhatsAppStore((state) => state.setSearchQuery);
   const { ref, inView } = useInView();
 
@@ -59,14 +59,6 @@ export const ChatList: React.FC<ChatListProps> = ({
       loadMore(20);
     }
   }, [inView, status, loadMore]);
-
-  const filters = [
-    { id: 'All', label: 'All', icon: MessageCircle },
-    { id: 'Unread', label: 'Unread', icon: Eye },
-    { id: 'Admin', label: 'Admin', icon: User },
-    { id: 'Bot', label: 'Bot', icon: Bot },
-    { id: 'ImageReview', label: 'Image Review', icon: Image },
-  ];
 
   const filteredChats = conversations.filter((conversation) => {
     const matchesSearch = (conversation.userName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
@@ -95,26 +87,7 @@ export const ChatList: React.FC<ChatListProps> = ({
     }
   });
 
-  const getFilterCount = (filterId: string) => {
-    switch (filterId) {
-      case 'Unread':
-        return conversations.filter(c => (c.unreadCount || 0) > 0).length;
-      case 'Admin':
-        return conversations.filter(c => c.inCharge === 'admin').length;
-      case 'Bot':
-        return conversations.filter(c => c.inCharge === 'bot').length;
-      case 'ImageReview':
-        if (!allTransactions) return 0;
-        const conversationIdsWithImageReview = new Set(
-          allTransactions.page
-            .filter((t: any) => t.status === 'image_received_and_being_reviewed')
-            .map((t: any) => t.conversationId)
-        );
-        return conversations.filter(c => conversationIdsWithImageReview.has(c._id)).length;
-      default:
-        return 0;
-    }
-  };
+
 
   return (
     <div className="flex flex-col h-full glass-panel border-r border-whatsapp-border backdrop-blur-xl">
@@ -147,39 +120,7 @@ export const ChatList: React.FC<ChatListProps> = ({
       </div>
 
       {/* Filters */}
-      <div className="flex-shrink-0 bg-gradient-to-r from-whatsapp-panel-bg/70 to-whatsapp-panel-bg/50 backdrop-blur-sm">
-        <ScrollArea className="w-full">
-          <div className="flex gap-2 px-4 py-3">
-            {filters.map((filter) => {
-              const IconComponent = filter.icon;
-              const count = getFilterCount(filter.id);
-              return (
-                <Button
-                  key={filter.id}
-                  variant={activeFilter === filter.id ? "default" : "secondary"}
-                  size="sm"
-                  onClick={() => setActiveFilter(filter.id)}
-                  className={`whitespace-nowrap transition-all duration-300 hover:scale-105 flex items-center gap-1.5 ${activeFilter === filter.id
-                    ? 'bg-gradient-to-r from-whatsapp-primary to-whatsapp-accent text-white hover:from-whatsapp-primary/90 hover:to-whatsapp-accent/90 shadow-lg glow-purple'
-                    : 'bg-whatsapp-hover/60 text-whatsapp-text-secondary hover:bg-whatsapp-border/60 hover:text-whatsapp-primary backdrop-blur-sm border border-whatsapp-border/30'
-                    }`}
-                >
-                  <IconComponent className="w-3.5 h-3.5" />
-                  {filter.label}
-                  {count > 0 && (
-                    <Badge variant="secondary" className="ml-1 bg-whatsapp-accent/20 text-whatsapp-accent border border-whatsapp-accent/30 text-xs">
-                      {count}
-                    </Badge>
-                  )}
-                </Button>
-              );
-            })}
-            <Button variant="ghost" size="icon" className="text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 hover:scale-105 backdrop-blur-sm">
-              <Plus className="w-4 h-4" />
-            </Button>
-          </div>
-        </ScrollArea>
-      </div>
+      <ChatFilters conversations={conversations} allTransactions={allTransactions} />
 
       {/* Chat List */}
       <ScrollArea className="flex-1 whatsapp-scrollbar">

@@ -25,75 +25,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 import { Button } from './ui/button';
-
-interface StatusUpdateDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  statusInfo: { transactionId: Id<"transactions">; status: TransactionStatus } | null;
-  onConfirm: (message?: string) => void;
-}
-
-const StatusUpdateDialog: React.FC<StatusUpdateDialogProps> = ({ isOpen, onClose, statusInfo, onConfirm }) => {
-  const [message, setMessage] = useState('');
-
-  useEffect(() => {
-    if (statusInfo?.status === 'confirmed_and_money_sent_to_user') {
-      setMessage('Your transaction has been processed and funds have been sent. Thank you for your business!');
-    } else {
-      setMessage('');
-    }
-  }, [statusInfo]);
-
-  const needsDialog = statusInfo?.status === 'cancelled' || statusInfo?.status === 'confirmed_and_money_sent_to_user';
-
-  useEffect(() => {
-    if (!isOpen || !needsDialog) return;
-
-    if (!needsDialog) {
-      onConfirm();
-    }
-  }, [isOpen, statusInfo, needsDialog, onConfirm]);
-
-
-  if (!isOpen || !statusInfo || !needsDialog) {
-    return null;
-  }
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="glass-panel">
-        <DialogHeader>
-          <DialogTitle>Update Transaction Status to &quot;{statusInfo.status.replace(/_/g, ' ')}&quot;</DialogTitle>
-          <DialogDescription>
-            {statusInfo.status === 'cancelled'
-              ? "Optionally, provide a reason for cancelling this transaction. This will be sent to the user."
-              : "You can send a custom message to the user or use the default one below."}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="py-4">
-          <Label htmlFor="message" className="sr-only">
-            {statusInfo.status === 'cancelled' ? "Cancellation Reason" : "Message"}
-          </Label>
-          <Textarea
-            id="message"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder={statusInfo.status === 'cancelled' ? "e.g., Duplicate transaction..." : "Your message..."}
-          />
-        </div>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline" onClick={onClose}>Cancel</Button>
-          </DialogClose>
-          <Button onClick={() => onConfirm(message)}>
-            <Send className="w-4 h-4 mr-2" />
-            Send Notification
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
+import { StatusUpdateDialog } from './statusUpadeDialog';
 
 // Admin Status Indicator Component
 const AdminStatusIndicator: React.FC = () => {
@@ -120,9 +52,13 @@ const WhatsAppLayoutContent: React.FC = () => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  // Use searchParams for main navigation state
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'chats');
   const [selectedConversationId, setSelectedConversationId] = useState(searchParams.get('chatId') as Id<"conversations"> | undefined);
   const [selectedTransactionId, setSelectedTransactionId] = useState(searchParams.get('transactionId') as Id<"transactions"> | undefined);
+
+  const { isMobile } = useUIState();
+  const setIsMobile = useWhatsAppStore((state) => state.setIsMobile);
 
   // State for the status update dialog
   const [isStatusUpdateDialogOpen, setIsStatusUpdateDialogOpen] = useState(false);
@@ -130,10 +66,6 @@ const WhatsAppLayoutContent: React.FC = () => {
     transactionId: Id<"transactions">;
     status: TransactionStatus;
   } | null>(null);
-
-
-  const { isMobile } = useUIState();
-  const setIsMobile = useWhatsAppStore((state) => state.setIsMobile);
 
   const {
     results: conversations,
@@ -193,6 +125,7 @@ const WhatsAppLayoutContent: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, [setIsMobile]);
 
+  // Sync URL with local state
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
     if (selectedConversationId) {
@@ -208,6 +141,8 @@ const WhatsAppLayoutContent: React.FC = () => {
     params.set('tab', activeTab);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }, [selectedConversationId, selectedTransactionId, activeTab, pathname, router, searchParams]);
+
+
 
   const handleChatSelect = (chatId: Id<"conversations">) => {
     setSelectedConversationId(chatId);
