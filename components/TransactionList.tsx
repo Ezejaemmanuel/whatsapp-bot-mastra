@@ -34,6 +34,8 @@ const statusDisplayNames: Record<TransactionStatus, string> = {
   "failed": "Failed"
 };
 
+const FILTERS = ['All', ...transactionStatuses];
+
 type TransactionWithDetails = Doc<"transactions"> & {
   user: Doc<"users"> | null;
   conversation: Doc<"conversations"> | null;
@@ -71,10 +73,6 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
   // Use searchParams for transaction filter state with unique keys
   const activeFilter = searchParams.get('transactionFilter') || 'All';
-  const filterOrderParam = searchParams.get('transactionFilterOrder');
-  const defaultFilterOrder = ['All', ...transactionStatuses];
-  const filterOrder = filterOrderParam ? JSON.parse(filterOrderParam) : defaultFilterOrder;
-
   const [showMore, setShowMore] = useState(false);
   const { ref, inView } = useInView();
 
@@ -84,25 +82,10 @@ export const TransactionList: React.FC<TransactionListProps> = ({
     }
   }, [inView, status, loadMore]);
 
-  const updateSearchParams = (updates: Record<string, string>) => {
+  const updateSearchParams = (filterId: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    Object.entries(updates).forEach(([key, value]) => {
-      if (value) {
-        params.set(key, value);
-      } else {
-        params.delete(key);
-      }
-    });
+    params.set('transactionFilter', filterId);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  };
-
-  const handleFilterClick = (filterId: string) => {
-    // Update active filter
-    updateSearchParams({ transactionFilter: filterId });
-
-    // Update filter order: move clicked filter to front (after 'All')
-    const newOrder = ['All', ...filterOrder.filter((id: string) => id !== 'All' && id !== filterId), filterId];
-    updateSearchParams({ transactionFilterOrder: JSON.stringify(newOrder) });
   };
 
   const filteredTransactions = transactions?.filter(transaction => {
@@ -191,8 +174,8 @@ export const TransactionList: React.FC<TransactionListProps> = ({
     onUpdateStatus(transactionId, newStatus);
   };
 
-  const visibleFilters = showMore ? filterOrder : filterOrder.slice(0, 4);
-  const hasMoreFilters = filterOrder.length > 4;
+  const visibleFilters = showMore ? FILTERS : FILTERS.slice(0, 4);
+  const hasMoreFilters = FILTERS.length > 4;
 
   return (
     <div className="flex flex-col h-full glass-panel border-r border-whatsapp-border backdrop-blur-xl">
@@ -205,7 +188,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         hasMoreFilters={hasMoreFilters}
         showMore={showMore}
         setShowMore={setShowMore}
-        handleFilterClick={handleFilterClick}
+        handleFilterClick={updateSearchParams}
         getFilterCount={getFilterCount}
         statusDisplayNames={statusDisplayNames}
         getStatusIcon={getStatusIcon}

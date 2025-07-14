@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { ChevronRight, MessageCircle, Eye, User, Bot, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,16 +11,14 @@ interface Filter {
     icon: React.ComponentType<{ className?: string }>;
 }
 
+// Static filter order with ImageReview after All
 const FILTERS: Filter[] = [
     { id: 'All', label: 'All', icon: MessageCircle },
+    { id: 'ImageReview', label: 'Image Review', icon: Image },
     { id: 'Unread', label: 'Unread', icon: Eye },
     { id: 'Admin', label: 'Admin', icon: User },
     { id: 'Bot', label: 'Bot', icon: Bot },
-    { id: 'ImageReview', label: 'Image Review', icon: Image },
 ];
-
-// Default filter order with ImageReview after All
-const DEFAULT_FILTER_ORDER = ['All', 'ImageReview', 'Unread', 'Admin', 'Bot'];
 
 interface ChatFiltersProps {
     conversations: any[];
@@ -34,31 +32,13 @@ export const ChatFilters: React.FC<ChatFiltersProps> = ({ conversations, allTran
 
     // Use searchParams for filter state with unique keys
     const activeFilter = searchParams.get('chatFilter') || 'All';
-    const filterOrderParam = searchParams.get('chatFilterOrder');
-    const filterOrder = filterOrderParam ? JSON.parse(filterOrderParam) : DEFAULT_FILTER_ORDER;
-
     const [showMore, setShowMore] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    const updateSearchParams = (updates: Record<string, string>) => {
+    const updateSearchParams = (filterId: string) => {
         const params = new URLSearchParams(searchParams.toString());
-        Object.entries(updates).forEach(([key, value]) => {
-            if (value) {
-                params.set(key, value);
-            } else {
-                params.delete(key);
-            }
-        });
+        params.set('chatFilter', filterId);
         router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    };
-
-    const handleFilterClick = (filterId: string) => {
-        // Update active filter
-        updateSearchParams({ chatFilter: filterId });
-
-        // Update filter order: move clicked filter to front (after 'All')
-        const newOrder = ['All', ...filterOrder.filter((id: string) => id !== 'All' && id !== filterId), filterId];
-        updateSearchParams({ chatFilterOrder: JSON.stringify(newOrder) });
     };
 
     const getFilterCount = (filterId: string): number => {
@@ -77,32 +57,30 @@ export const ChatFilters: React.FC<ChatFiltersProps> = ({ conversations, allTran
                         .map((t: any) => t.conversationId)
                 );
                 return conversations.filter(c => conversationIdsWithImageReview.has(c._id)).length;
+            case 'All':
+                return conversations.length;
             default:
                 return 0;
         }
     };
 
-    const visibleFilters = showMore ? filterOrder : filterOrder.slice(0, 4);
-    const hasMoreFilters = filterOrder.length > 4;
+    const visibleFilters = showMore ? FILTERS : FILTERS.slice(0, 4);
+    const hasMoreFilters = FILTERS.length > 4;
 
     return (
         <div className="flex-shrink-0 bg-gradient-to-r from-whatsapp-panel-bg/70 to-whatsapp-panel-bg/50 backdrop-blur-sm">
             <ScrollArea className="w-full">
                 <div className="flex gap-2 px-4 py-3" ref={scrollRef}>
-                    {visibleFilters.map((filterId: string) => {
-                        const filter = FILTERS.find(f => f.id === filterId);
-                        if (!filter) return null;
-
+                    {visibleFilters.map((filter) => {
                         const IconComponent = filter.icon;
-                        const count = getFilterCount(filterId);
-
+                        const count = getFilterCount(filter.id);
                         return (
                             <Button
-                                key={filterId}
-                                variant={activeFilter === filterId ? "default" : "secondary"}
+                                key={filter.id}
+                                variant={activeFilter === filter.id ? "default" : "secondary"}
                                 size="sm"
-                                onClick={() => handleFilterClick(filterId)}
-                                className={`whitespace-nowrap transition-all duration-300 hover:scale-105 flex items-center gap-1.5 ${activeFilter === filterId
+                                onClick={() => updateSearchParams(filter.id)}
+                                className={`whitespace-nowrap transition-all duration-300 hover:scale-105 flex items-center gap-1.5 ${activeFilter === filter.id
                                     ? 'bg-gradient-to-r from-whatsapp-primary to-whatsapp-accent text-white hover:from-whatsapp-primary/90 hover:to-whatsapp-accent/90 shadow-lg glow-purple'
                                     : 'bg-whatsapp-hover/60 text-whatsapp-text-secondary hover:bg-whatsapp-border/60 hover:text-whatsapp-primary backdrop-blur-sm border border-whatsapp-border/30'
                                     }`}
