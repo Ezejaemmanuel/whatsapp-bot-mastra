@@ -4,7 +4,7 @@ import { logToolCall, logToolResult, logError, logToolError } from './utils';
 
 export const getKenyaTimeTool = createTool({
     id: 'get_kenya_time',
-    description: 'Get the current time, part of the day (morning, afternoon, evening), day of the week, and special greetings for holidays/weekends in Kenya (Africa/Nairobi timezone).',
+    description: 'Get the current time, date, part of the day (morning, afternoon, evening), day of the week, and special greetings for holidays/weekends in Kenya (Africa/Nairobi timezone). Also returns the current date and a combined dateTime string for receipt verification.',
     inputSchema: z.object({}), // No parameters needed
     execute: async ({ }) => {
         const startTime = Date.now();
@@ -15,8 +15,11 @@ export const getKenyaTimeTool = createTool({
             const now = new Date();
             const timeZone = 'Africa/Nairobi';
 
-            const timeString = now.toLocaleTimeString('en-US', { timeZone, hour12: false, hour: '2-digit', minute: '2-digit' });
-            const hour = parseInt(timeString.split(':')[0], 10);
+            const timeString = now.toLocaleTimeString('en-GB', { timeZone });
+            const dateString = now.toLocaleDateString('en-CA', { timeZone }); // YYYY-MM-DD
+            const dateTimeString = `${dateString} ${timeString}`;
+
+            const hour = parseInt(now.toLocaleTimeString('en-US', { timeZone, hour12: false, hour: '2-digit', minute: '2-digit' }).split(':')[0], 10);
 
             let partOfDay;
             if (hour >= 0 && hour < 12) {
@@ -42,7 +45,9 @@ export const getKenyaTimeTool = createTool({
 
             const result = {
                 success: true,
-                time: now.toLocaleTimeString('en-GB', { timeZone }),
+                time: timeString,
+                date: dateString, // YYYY-MM-DD
+                dateTime: dateTimeString, // YYYY-MM-DD HH:mm:ss
                 partOfDay, // 'morning', 'afternoon', 'evening'
                 dayOfWeek, // 'Monday', 'Tuesday', etc.
                 specialGreeting, // 'Happy weekend!', 'Happy Sunday!', 'Happy new week!' or null

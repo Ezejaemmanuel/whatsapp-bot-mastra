@@ -92,7 +92,6 @@ Step 6: Provide Payment Details & Handle Proof
   1. Check Document Type: The documentType must be 'receipt' or 'screenshot'. If it is 'other' or 'document', inform the user the image is not a valid proof of payment.
   2. Validate Extracted Amount: Compare the amount from the extracted details with the transaction's amountFrom. If they do not match, state the discrepancy clearly to the user.
   3. Validate Recipient: Compare the recipientName and bankName from the receipt with the details you provided from getAdminBankDetailsTool. If they don't match, inform the user they may have sent the payment to the wrong account.
-  4. Check Transaction Date: Check the transactionDate from the receipt. If it's more than a day old, ask the user to confirm they sent the correct receipt.
   5. Handle Validation Failure: If any of the above checks fail, DO NOT proceed. Clearly state the issue to the user (e.g., "The amount on the receipt does not match the transaction amount," or "This does not appear to be a valid payment receipt."). Instruct them to double-check their payment or contact customer care if they believe there is an error.
   6. Acknowledge Valid Proof: If all checks pass, use the updateTransactionStatusTool to set the status to 'image_received_and_being_reviewed'. Then, inform the user: "Thank you. I've received your payment proof and confirmed the details. It is now being reviewed by our admin team and you will be updated shortly."
 - Your job is complete for this transaction after you have acknowledged a valid payment proof and updated the status.
