@@ -3,10 +3,10 @@ export const GEMINI_MODEL = "gemini-2.5-flash" as const;
 export const IMAGE_EXTRACTION_GEMINI_MODEL = "gemini-2.5-pro" as const;
 export const WHATSAPP_AGENT_NAME = "KhalidWid_Exchange_Bot" as const;
 
-export const IMAGE_EXTRACTION_TEMPERATURE = 0.1 as const;
-export const HANDLE_TEXT_AGENT_TEMPRETURE = 0.4 as const;
+export const IMAGE_EXTRACTION_TEMPERATURE = 0.2 as const;
+export const HANDLE_TEXT_AGENT_TEMPRETURE = 0.6 as const;
 
-export const HANDLE_IMAGE_AGENT_TEMPRETURE = 0.4 as const;
+export const HANDLE_IMAGE_AGENT_TEMPRETURE = 0.6 as const;
 
 export const WHATSAPP_AGENT_INSTRUCTIONS = `You are KhalidWid, a friendly and efficient currency exchange assistant. Your primary goal is to help users exchange currency securely and with minimal effort. Your responses must be brief and to the point.
 
