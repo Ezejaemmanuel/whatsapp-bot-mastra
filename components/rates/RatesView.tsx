@@ -30,7 +30,7 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
     const [sellingCurrentMarketRate, setSellingCurrentMarketRate] = useState(rate?.sellingCurrentMarketRate || 0);
 
     const [fromAmount, setFromAmount] = useState(1);
-    const [toAmount, setToAmount] = useState(rate?.buyingCurrentMarketRate || 0);
+    const [toAmount, setToAmount] = useState(rate?.buyingCurrentMarketRate ? parseFloat((1 * rate.buyingCurrentMarketRate).toFixed(4)) : 0);
     const [selectedRateType, setSelectedRateType] = useState<'buying' | 'selling'>('buying');
 
     const upsertRate = useMutation(api.exchangeRates.upsertExchangeRate);
@@ -58,7 +58,7 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
     React.useEffect(() => {
         const currentRate = selectedRateType === 'buying' ? buyingCurrentMarketRate : sellingCurrentMarketRate;
         if (currentRate > 0) {
-            setToAmount(fromAmount * currentRate);
+            setToAmount(parseFloat((fromAmount * currentRate).toFixed(4)));
         }
     }, [buyingCurrentMarketRate, sellingCurrentMarketRate, fromAmount, selectedRateType]);
 
@@ -67,7 +67,7 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
         setFromAmount(value);
         const currentRate = selectedRateType === 'buying' ? buyingCurrentMarketRate : sellingCurrentMarketRate;
         if (currentRate > 0) {
-            setToAmount(value * currentRate);
+            setToAmount(parseFloat((value * currentRate).toFixed(4)));
         }
     };
 
@@ -76,7 +76,7 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
         setToAmount(value);
         const currentRate = selectedRateType === 'buying' ? buyingCurrentMarketRate : sellingCurrentMarketRate;
         if (currentRate > 0) {
-            setFromAmount(value / currentRate);
+            setFromAmount(parseFloat((value / currentRate).toFixed(4)));
         }
     };
 
@@ -181,14 +181,15 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                         value={buyingCurrentMarketRate}
                         onChange={(e) => setBuyingCurrentMarketRate(parseFloat(e.target.value) || 0)}
                         inputMode="decimal"
-                        step="0.01"
+                        step="0.0001"
                         min="0"
+                        placeholder="0.0000"
                     />
                     <p className="text-xs text-whatsapp-text-muted">
                         This is for reference and powers the live preview below.
                         {buyingCurrentMarketRate > 0 && <>
                             <br />
-                            (e.g., at this rate, 1 {fromCode} is worth {buyingCurrentMarketRate} {toCode})
+                            (e.g., at this rate, 1 {fromCode} is worth {buyingCurrentMarketRate.toFixed(4)} {toCode})
                         </>}
                     </p>
                 </div>
@@ -208,14 +209,15 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                         value={sellingCurrentMarketRate}
                         onChange={(e) => setSellingCurrentMarketRate(parseFloat(e.target.value) || 0)}
                         inputMode="decimal"
-                        step="0.01"
+                        step="0.0001"
                         min="0"
+                        placeholder="0.0000"
                     />
                     <p className="text-xs text-whatsapp-text-muted">
                         This is for reference and powers the live preview below.
                         {sellingCurrentMarketRate > 0 && <>
                             <br />
-                            (e.g., at this rate, 1 {fromCode} is worth {sellingCurrentMarketRate} {toCode})
+                            (e.g., at this rate, 1 {fromCode} is worth {sellingCurrentMarketRate.toFixed(4)} {toCode})
                         </>}
                     </p>
                 </div>
@@ -252,8 +254,9 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                             value={fromAmount}
                             onChange={handleFromAmountChange}
                             inputMode="decimal"
-                            step="0.01"
+                            step="0.0001"
                             min="0"
+                            placeholder="0.0000"
                         />
                     </div>
                     <div className='grid gap-2'>
@@ -263,13 +266,14 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                             value={toAmount}
                             onChange={handleToAmountChange}
                             inputMode="decimal"
-                            step="0.01"
+                            step="0.0001"
                             min="0"
+                            placeholder="0.0000"
                         />
                     </div>
                 </div>
                 <p className="text-xs text-whatsapp-text-muted mt-2">
-                    Preview using {selectedRateType} rate: {(selectedRateType === 'buying' ? buyingCurrentMarketRate : sellingCurrentMarketRate).toFixed(2)}
+                    Preview using {selectedRateType} rate: {(selectedRateType === 'buying' ? buyingCurrentMarketRate : sellingCurrentMarketRate).toFixed(4)}
                 </p>
             </Card>
 
@@ -396,24 +400,24 @@ export const RatesView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => {
                                 {/* Buying Rates */}
                                 <div className="border-l-4 border-green-500 pl-4">
                                     <p className="font-semibold text-green-600 mb-2">Buying Rate</p>
-                                    <p className="text-lg font-semibold">{rate.buyingCurrentMarketRate} {rate.toCurrencyCode}</p>
+                                    <p className="text-lg font-semibold">{rate.buyingCurrentMarketRate.toFixed(4)} {rate.toCurrencyCode}</p>
                                     <p className="text-xs text-whatsapp-text-muted">
-                                        For every 1 {rate.fromCurrencyCode}, we buy {rate.buyingCurrentMarketRate} {rate.toCurrencyCode}.
+                                        For every 1 {rate.fromCurrencyCode}, we buy {rate.buyingCurrentMarketRate.toFixed(4)} {rate.toCurrencyCode}.
                                     </p>
                                     <p className="text-xs text-whatsapp-text-muted">
-                                        Market Rate: {rate.buyingCurrentMarketRate}
+                                        Market Rate: {rate.buyingCurrentMarketRate.toFixed(4)}
                                     </p>
                                 </div>
 
                                 {/* Selling Rates */}
                                 <div className="border-l-4 border-red-500 pl-4">
                                     <p className="font-semibold text-red-600 mb-2">Selling Rate</p>
-                                    <p className="text-lg font-semibold">{rate.sellingCurrentMarketRate} {rate.toCurrencyCode}</p>
+                                    <p className="text-lg font-semibold">{rate.sellingCurrentMarketRate.toFixed(4)} {rate.toCurrencyCode}</p>
                                     <p className="text-xs text-whatsapp-text-muted">
-                                        For every 1 {rate.fromCurrencyCode}, we sell {rate.sellingCurrentMarketRate} {rate.toCurrencyCode}.
+                                        For every 1 {rate.fromCurrencyCode}, we sell {rate.sellingCurrentMarketRate.toFixed(4)} {rate.toCurrencyCode}.
                                     </p>
                                     <p className="text-xs text-whatsapp-text-muted">
-                                        Market Rate: {rate.sellingCurrentMarketRate}
+                                        Market Rate: {rate.sellingCurrentMarketRate.toFixed(4)}
                                     </p>
                                 </div>
 
