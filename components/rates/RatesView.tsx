@@ -62,10 +62,13 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
         }
     }, [buyingCurrentMarketRate, sellingCurrentMarketRate, fromAmount, selectedRateType]);
 
-    // Helper function to convert comma to decimal point and handle multiple commas
-    const convertCommaToDecimal = (value: string): string => {
+    // Helper function to validate and convert input to proper decimal format
+    const validateAndConvertNumber = (value: string): string => {
+        // Only allow numbers, commas, and periods
+        const cleaned = value.replace(/[^0-9,.]/g, '');
+
         // Replace all commas with dots
-        let converted = value.replace(/,/g, '.');
+        let converted = cleaned.replace(/,/g, '.');
 
         // If there are multiple dots, keep only the first one
         const dotCount = (converted.match(/\./g) || []).length;
@@ -78,8 +81,8 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
     };
 
     const handleFromAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const convertedValue = convertCommaToDecimal(e.target.value);
-        const value = parseFloat(convertedValue) || 0;
+        const validatedValue = validateAndConvertNumber(e.target.value);
+        const value = parseFloat(validatedValue) || 0;
         setFromAmount(value);
         const currentRate = selectedRateType === 'buying' ? buyingCurrentMarketRate : sellingCurrentMarketRate;
         if (currentRate > 0) {
@@ -88,8 +91,8 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
     };
 
     const handleToAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const convertedValue = convertCommaToDecimal(e.target.value);
-        const value = parseFloat(convertedValue) || 0;
+        const validatedValue = validateAndConvertNumber(e.target.value);
+        const value = parseFloat(validatedValue) || 0;
         setToAmount(value);
         const currentRate = selectedRateType === 'buying' ? buyingCurrentMarketRate : sellingCurrentMarketRate;
         if (currentRate > 0) {
@@ -98,13 +101,13 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
     };
 
     const handleBuyingRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const convertedValue = convertCommaToDecimal(e.target.value);
-        setBuyingCurrentMarketRate(parseFloat(convertedValue) || 0);
+        const validatedValue = validateAndConvertNumber(e.target.value);
+        setBuyingCurrentMarketRate(parseFloat(validatedValue) || 0);
     };
 
     const handleSellingRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const convertedValue = convertCommaToDecimal(e.target.value);
-        setSellingCurrentMarketRate(parseFloat(convertedValue) || 0);
+        const validatedValue = validateAndConvertNumber(e.target.value);
+        setSellingCurrentMarketRate(parseFloat(validatedValue) || 0);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -204,12 +207,10 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                     <Label htmlFor="buyingCurrentMarketRate">Current Market Buying Rate</Label>
                     <Input
                         id="buyingCurrentMarketRate"
-                        type="number"
-                        value={buyingCurrentMarketRate}
+                        type="text"
+                        value={buyingCurrentMarketRate || ''}
                         onChange={handleBuyingRateChange}
                         inputMode="decimal"
-                        step="0.0001"
-                        min="0"
                         placeholder="0.0000"
                     />
                     <p className="text-xs text-whatsapp-text-muted">
@@ -234,12 +235,10 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                     <Label htmlFor="sellingCurrentMarketRate">Current Market Selling Rate</Label>
                     <Input
                         id="sellingCurrentMarketRate"
-                        type="number"
-                        value={sellingCurrentMarketRate}
+                        type="text"
+                        value={sellingCurrentMarketRate || ''}
                         onChange={handleSellingRateChange}
                         inputMode="decimal"
-                        step="0.0001"
-                        min="0"
                         placeholder="0.0000"
                     />
                     <p className="text-xs text-whatsapp-text-muted">
@@ -281,24 +280,20 @@ const RateForm: React.FC<{ rate?: ExchangeRate; onSave: () => void }> = ({ rate,
                     <div className='grid gap-2'>
                         <Label>{fromCode || "From"}</Label>
                         <Input
-                            type="number"
-                            value={fromAmount}
+                            type="text"
+                            value={fromAmount || ''}
                             onChange={handleFromAmountChange}
                             inputMode="decimal"
-                            step="0.0001"
-                            min="0"
                             placeholder="0.0000"
                         />
                     </div>
                     <div className='grid gap-2'>
                         <Label>{toCode || "To"}</Label>
                         <Input
-                            type="number"
-                            value={toAmount}
+                            type="text"
+                            value={toAmount || ''}
                             onChange={handleToAmountChange}
                             inputMode="decimal"
-                            step="0.0001"
-                            min="0"
                             placeholder="0.0000"
                         />
                     </div>
