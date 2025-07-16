@@ -21,6 +21,7 @@ import {
     formatErrorForTestMode,
     sendErrorResponse
 } from './error-handler';
+import { getWhatsappAgent } from '@/mastra/agents/whatsapp-agent';
 
 
 /**
@@ -65,7 +66,8 @@ export async function handleTextMessage(
             runtimeContext.set('conversationId', conversation._id);
             runtimeContext.set('phoneNumber', messageInfo.from);
 
-            const agent = mastra.getAgent('whatsappAgent');
+            // const agent = mastra.getAgent('whatsappAgent');
+            const agent = await getWhatsappAgent();
             // Use the enhanced WhatsApp Exchange Agent to generate a response
             let agentResponse;
             const maxRetries = 3;

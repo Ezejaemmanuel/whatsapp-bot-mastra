@@ -27,3 +27,6 @@ export const TEST_MODE = false; // Set to false in production
 
 export const WHATSAPP_TEST_MODE = false;
 
+export const PROMPT_KEY = 'whatsapp_agent:instructions';
+
+

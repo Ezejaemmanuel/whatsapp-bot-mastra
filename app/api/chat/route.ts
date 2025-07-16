@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mastra } from '@/mastra';
 import { RuntimeContext } from '@mastra/core/runtime-context';
+import { getWhatsappAgent } from '@/mastra/agents/whatsapp-agent';
 
 export async function POST(request: NextRequest) {
     try {
@@ -14,7 +15,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Get the WhatsApp agent from Mastra
-        const agent = mastra.getAgent('whatsappAgent');
+        // const agent = mastra.getAgent('whatsappAgent');
+        const agent = await getWhatsappAgent();
 
         if (!agent) {
             return NextResponse.json(
@@ -58,8 +60,9 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        // Get the WhatsApp agent from Mastra
-        const agent = mastra.getAgent('whatsappAgent');
+        // Get the WhatsApp agent from Mastra   
+        // const agent = mastra.getAgent('whatsappAgent');
+        const agent = await getWhatsappAgent();
 
         if (!agent) {
             return NextResponse.json(

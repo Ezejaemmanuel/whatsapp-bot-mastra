@@ -27,6 +27,7 @@ import {
     generateImageAgentContent
 } from './media-processor';
 import { checkOcrDuplicateAndStore } from './checkOcrDuplicateAndStore';
+import { getWhatsappAgent } from '@/mastra/agents/whatsapp-agent';
 
 
 /**
@@ -157,7 +158,8 @@ export async function handleMediaMessage(
                 runtimeContext.set('phoneNumber', messageInfo.from);
 
                 // Process image with exchange agent for receipt analysis
-                const agent = mastra.getAgent('whatsappAgent');
+                // const agent = mastra.getAgent('whatsappAgent');
+                const agent = await getWhatsappAgent();
                 const agentResponse = await agent.generate([
                     {
                         role: 'user',

@@ -7,7 +7,8 @@ import { getCurrentRatesTool, createTransactionTool, updateTransactionStatusTool
 import { getUserTransactionsTool, getLatestUserTransactionTool, getAdminBankDetailsTool, getUserTool, updateUserBankDetailsTool } from '../tools/exchange-tools-2';
 import { getKenyaTimeTool } from '../tools/time-tool';
 import { getAdminStatusTool } from '../tools/admin-status-tool';
-
+import { Redis } from '@upstash/redis';
+import { PROMPT_KEY } from '@/constant';    
 
 const GOOGLE_GENERATIVE_AI_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 console.log("GOOGLE_GENERATIVE_AI_API_KEY", GOOGLE_GENERATIVE_AI_API_KEY);
@@ -144,23 +145,43 @@ const memory = new Memory({
     },
 });
 
-// Create the enhanced WhatsApp Exchange Agent with comprehensive state management
-export const whatsappAgent = new Agent({
-    name: WHATSAPP_AGENT_NAME,
-    description: 'An intelligent WhatsApp exchange bot for KhalidWid Exchange, specializing in currency exchange with comprehensive user verification, smart state management, transaction processing, and fraud prevention.',
-    instructions: WHATSAPP_AGENT_INSTRUCTIONS,
-    model: google(GEMINI_MODEL), // API key should be set via GOOGLE_GENERATIVE_AI_API_KEY environment variable
-    memory,
-    tools: {
-        getCurrentRatesTool,
-        createTransactionTool,
-        updateTransactionStatusTool,
-        getUserTransactionsTool,
-        getLatestUserTransactionTool,
-        getAdminBankDetailsTool,
-        getUserTool,
-        updateUserBankDetailsTool,
-        getKenyaTimeTool,
-        getAdminStatusTool,
-    },
-}); 
+// Helper function to fetch the system prompt from Redis
+async function fetchSystemPromptFromRedis(): Promise<string> {
+    const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+    const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+    if (!redisUrl || !redisToken) {
+        throw new Error('Upstash Redis credentials are not configured in environment variables.');
+    }
+    const redis = new Redis({ url: redisUrl, token: redisToken });
+    // You can change this key as needed
+    const prompt = await redis.get(PROMPT_KEY);
+    if (typeof prompt === 'string' && prompt.trim().length > 0) {
+        return prompt;
+    }
+    // Fallback to the default instructions if not found in Redis
+    return WHATSAPP_AGENT_INSTRUCTIONS;
+}
+
+// Export an async function to get the WhatsApp agent with dynamic instructions
+export async function getWhatsappAgent() {
+    const instructions = await fetchSystemPromptFromRedis();
+    return new Agent({
+        name: WHATSAPP_AGENT_NAME,
+        description: 'An intelligent WhatsApp exchange bot for KhalidWid Exchange, specializing in currency exchange with comprehensive user verification, smart state management, transaction processing, and fraud prevention.',
+        instructions,
+        model: google(GEMINI_MODEL), // API key should be set via GOOGLE_GENERATIVE_AI_API_KEY environment variable
+        memory,
+        tools: {
+            getCurrentRatesTool,
+            createTransactionTool,
+            updateTransactionStatusTool,
+            getUserTransactionsTool,
+            getLatestUserTransactionTool,
+            getAdminBankDetailsTool,
+            getUserTool,
+            updateUserBankDetailsTool,
+            getKenyaTimeTool,
+            getAdminStatusTool,
+        },
+    });
+} 

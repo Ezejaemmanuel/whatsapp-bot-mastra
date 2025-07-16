@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 const AdminStatusSkeleton: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => (
     <div className={`p-4 h-full ${!isMobile ? 'flex items-center justify-center' : ''}`}>
@@ -117,6 +118,14 @@ export const AdminStatusView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) 
 
     return (
         <div className={`p-4 ${isMobile ? '' : 'h-full flex items-center justify-center bg-whatsapp-light-bg dark:bg-whatsapp-dark-bg'}`}>
+            {/* Button to navigate to AI Instructions Editor */}
+            <div className="mb-4 flex justify-end">
+                <Link href="/settings/ai-instructions">
+                    <Button variant="outline" className="font-semibold">
+                        Change AI Instructions
+                    </Button>
+                </Link>
+            </div>
             <Card className={`w-full ${!isMobile ? 'max-w-2xl' : ''}`}>
                 <CardHeader>
                     <CardTitle className="text-2xl font-bold">Admin Status Settings</CardTitle>
