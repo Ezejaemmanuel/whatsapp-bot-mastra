@@ -185,3 +185,23 @@ export async function getWhatsappAgent() {
         },
     });
 } 
+
+export const whatsappAgent = new Agent({
+    name: WHATSAPP_AGENT_NAME,
+    description: 'An intelligent WhatsApp exchange bot for KhalidWid Exchange, specializing in currency exchange with comprehensive user verification, smart state management, transaction processing, and fraud prevention.',
+    instructions: WHATSAPP_AGENT_INSTRUCTIONS,
+    model: google(GEMINI_MODEL), // API key should be set via GOOGLE_GENERATIVE_AI_API_KEY environment variable
+    memory,
+    tools: {
+        getCurrentRatesTool,
+        createTransactionTool,
+        updateTransactionStatusTool,
+        getUserTransactionsTool,
+        getLatestUserTransactionTool,
+        getAdminBankDetailsTool,
+        getUserTool,
+        updateUserBankDetailsTool,
+        getKenyaTimeTool,
+        getAdminStatusTool,
+    },
+});
