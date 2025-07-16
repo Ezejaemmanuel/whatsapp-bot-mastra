@@ -105,7 +105,7 @@ export default function AiInstructionsPage() {
                         <div>
                             <h1 className="text-xl sm:text-2xl font-bold text-foreground">AI System Instructions</h1>
                             <p className="text-sm text-muted-foreground">
-                                Edit the system prompt that guides the WhatsApp bot's behavior
+                                Edit the system prompt that guides the WhatsApp bot&apos;s behavior
                             </p>
                         </div>
                     </div>

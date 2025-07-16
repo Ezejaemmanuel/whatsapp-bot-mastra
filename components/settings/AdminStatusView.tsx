@@ -130,7 +130,7 @@ export const AdminStatusView: React.FC<{ isMobile?: boolean }> = ({ isMobile }) 
                         </div>
                         <h3 className="text-lg font-semibold mb-2">AI Instructions</h3>
                         <p className="text-sm text-muted-foreground mb-4">
-                            Customize the system prompt that guides the WhatsApp bot's behavior and responses.
+                            Customize the system prompt that guides the WhatsApp bot&apos;s behavior and responses.
                         </p>
                         <Link href="/settings/ai-instructions">
                             <Button
