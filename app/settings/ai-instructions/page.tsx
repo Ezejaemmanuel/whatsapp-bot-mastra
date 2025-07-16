@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -94,8 +93,8 @@ export default function AiInstructionsPage() {
     return (
         <div className="min-h-screen bg-background flex flex-col">
             {/* Header */}
-            <div className="border-b bg-card flex-shrink-0">
-                <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+            <div className="border-b bg-card flex-shrink-0 px-4 py-4">
+                <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <Link href="/dashboard">
                             <Button variant="ghost" size="sm">
@@ -142,26 +141,19 @@ export default function AiInstructionsPage() {
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className="flex-1 container mx-auto px-4 py-4 sm:py-6">
-                <Card className="h-full">
-                    <CardHeader className="pb-4">
-                        <CardTitle className="text-lg">Edit Instructions</CardTitle>
-                    </CardHeader>
-                    <CardContent className="h-full flex flex-col">
-                        <Label htmlFor="ai-instructions" className="mb-2 text-sm font-medium">
-                            System Instructions (Markdown Supported)
-                        </Label>
-                        <textarea
-                            id="ai-instructions"
-                            className="flex-1 w-full border rounded-lg p-4 font-mono text-sm bg-background text-foreground resize-none focus:ring-2 focus:ring-ring focus:border-transparent"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            spellCheck={false}
-                            placeholder="Enter your AI system instructions here..."
-                        />
-                    </CardContent>
-                </Card>
+            {/* Full Screen Editor */}
+            <div className="flex-1 flex flex-col p-4">
+                <Label htmlFor="ai-instructions" className="mb-2 text-sm font-medium">
+                    System Instructions (Markdown Supported)
+                </Label>
+                <textarea
+                    id="ai-instructions"
+                    className="flex-1 w-full border rounded-lg p-4 font-mono text-sm bg-background text-foreground resize-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    spellCheck={false}
+                    placeholder="Enter your AI system instructions here..."
+                />
             </div>
         </div>
     );
