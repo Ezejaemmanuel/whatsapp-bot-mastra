@@ -176,5 +176,25 @@ export default defineSchema({
     })
         .index("by_is_manually_inactive", ["isManuallyInactive"])
         .index("by_recurring_inactive_start", ["recurringInactiveStart"])
-        .index("by_recurring_inactive_end", ["recurringInactiveEnd"])
+        .index("by_recurring_inactive_end", ["recurringInactiveEnd"]),
+
+    /**
+     * OCR Embeddings table - stores embeddings of raw OCR text for duplicate detection
+     */
+    ocrEmbeddings: defineTable({
+        rawOcrText: v.string(), // The raw OCR text extracted from receipt
+        embedding: v.array(v.float64()), // Embedding vector for the OCR text
+        transactionId: v.optional(v.string()), // Associated transaction ID (if available)
+        paymentReference: v.optional(v.string()), // Payment reference (if available)
+        userId: v.optional(v.id("users")), // Reference to user
+        messageId: v.optional(v.id("messages")), // Reference to message
+        createdAt: v.number(), // Timestamp when embedding was created
+        metadata: v.optional(v.any()), // Additional metadata
+    })
+        .index("by_transaction_id", ["transactionId"])
+        .index("by_payment_reference", ["paymentReference"])
+        .vectorIndex("by_embedding", {
+            vectorField: "embedding",
+            dimensions: 1536, // Adjust to match your embedding model's output size
+        }),
 }); 

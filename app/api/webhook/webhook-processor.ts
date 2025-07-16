@@ -12,16 +12,17 @@ import {
     extractMessageInfo
 } from './utils';
 import {
-    handleTextMessage,
-    handleMediaMessage,
+
     handleLocationMessage,
     handleContactMessage
-} from './message-handlers';
+} from './handleOtherMessages';
 import { processStatusUpdate } from './status-handlers';
 import { markMessageAsRead } from './response-sender';
 import { sendErrorResponse } from './error-handler';
 import { isMediaMessage } from './media-processor';
 import { sendDebugMessage } from '@/mastra/tools/utils';
+import { handleMediaMessage } from './handleMediaMessage';
+import { handleTextMessage } from './handleTextMessage';
 
 /**
  * Service configuration for webhook processing

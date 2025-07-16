@@ -48,11 +48,10 @@ export {
 } from './error-handler';
 
 export {
-    handleTextMessage,
-    handleMediaMessage,
+ 
     handleLocationMessage,
     handleContactMessage
-} from './message-handlers';
+} from './handleOtherMessages';
 
 export {
     isMediaMessage,

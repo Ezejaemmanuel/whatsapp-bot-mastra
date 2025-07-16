@@ -19,6 +19,7 @@ import type * as conversations from "../conversations.js";
 import type * as exchangeRates from "../exchangeRates.js";
 import type * as mediaFiles from "../mediaFiles.js";
 import type * as messages from "../messages.js";
+import type * as ocrEmbeddings from "../ocrEmbeddings.js";
 import type * as schemaUnions from "../schemaUnions.js";
 import type * as seed from "../seed.js";
 import type * as transactions from "../transactions.js";
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   exchangeRates: typeof exchangeRates;
   mediaFiles: typeof mediaFiles;
   messages: typeof messages;
+  ocrEmbeddings: typeof ocrEmbeddings;
   schemaUnions: typeof schemaUnions;
   seed: typeof seed;
   transactions: typeof transactions;
