@@ -8,14 +8,24 @@ const redis = new Redis({
     token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 });
 
-// GET: Return the current AI instructions
+// GET: Return the current AI instructions, set default if not exists
 export async function GET() {
     try {
         const value = await redis.get(PROMPT_KEY);
+
+        // If no instructions exist, set the default and return it
+        if (!value || typeof value !== 'string' || value.trim().length === 0) {
+            await redis.set(PROMPT_KEY, WHATSAPP_AGENT_INSTRUCTIONS);
+            return NextResponse.json({
+                instructions: WHATSAPP_AGENT_INSTRUCTIONS,
+            });
+        }
+
         return NextResponse.json({
-            instructions: typeof value === 'string' && value.trim().length > 0 ? value : WHATSAPP_AGENT_INSTRUCTIONS,
+            instructions: value,
         });
     } catch (e) {
+        console.error('Error fetching AI instructions:', e);
         return NextResponse.json({ error: 'Failed to fetch instructions.' }, { status: 500 });
     }
 }
@@ -30,6 +40,7 @@ export async function POST(req: NextRequest) {
         await redis.set(PROMPT_KEY, instructions);
         return NextResponse.json({ success: true });
     } catch (e) {
+        console.error('Error updating AI instructions:', e);
         return NextResponse.json({ error: 'Failed to update instructions.' }, { status: 500 });
     }
 } 

@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MarkdownText } from "@/components/MarkdownText";
 import { toast } from "sonner";
+import { ArrowLeft, Save } from "lucide-react";
+import Link from "next/link";
 
 // Fetch the current AI instructions from the API
 async function fetchInstructions() {
@@ -39,6 +39,7 @@ export default function AiInstructionsPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["ai-instructions"] });
             toast.success("AI instructions updated successfully!");
+            setHasChanges(false);
         },
         onError: () => {
             toast.error("Failed to update AI instructions.");
@@ -46,65 +47,122 @@ export default function AiInstructionsPage() {
     });
 
     const [editValue, setEditValue] = useState<string>("");
-    const [isEditing, setIsEditing] = useState(false);
+    const [hasChanges, setHasChanges] = useState(false);
 
-    React.useEffect(() => {
-        if (data && !isEditing) setEditValue(data);
-    }, [data, isEditing]);
+    useEffect(() => {
+        if (data) {
+            setEditValue(data);
+            setHasChanges(false);
+        }
+    }, [data]);
+
+    useEffect(() => {
+        setHasChanges(editValue !== data);
+    }, [editValue, data]);
+
+    const handleSave = () => {
+        mutation.mutate(editValue);
+    };
+
+    const handleCancel = () => {
+        setEditValue(data || "");
+        setHasChanges(false);
+    };
 
     if (isLoading) {
-        return <div className="p-8 text-center">Loading AI instructions...</div>;
+        return (
+            <div className="min-h-screen bg-background flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading AI instructions...</p>
+                </div>
+            </div>
+        );
     }
+
     if (isError) {
-        return <div className="p-8 text-center text-red-500">Failed to load AI instructions.</div>;
+        return (
+            <div className="min-h-screen bg-background flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-red-500 mb-4">Failed to load AI instructions.</p>
+                    <Button onClick={() => window.location.reload()}>Retry</Button>
+                </div>
+            </div>
+        );
     }
 
     return (
-        <div className="max-w-3xl mx-auto p-4">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Edit AI System Instructions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <div>
-                        <Label className="mb-2 block">Current Instructions (Markdown Preview):</Label>
-                        <div className="border rounded p-4 bg-muted max-h-64 overflow-auto">
-                            <MarkdownText>{data}</MarkdownText>
+        <div className="min-h-screen bg-background flex flex-col">
+            {/* Header */}
+            <div className="border-b bg-card flex-shrink-0">
+                <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <Link href="/dashboard">
+                            <Button variant="ghost" size="sm">
+                                <ArrowLeft className="h-4 w-4 mr-2" />
+                                Back
+                            </Button>
+                        </Link>
+                        <div>
+                            <h1 className="text-xl sm:text-2xl font-bold text-foreground">AI System Instructions</h1>
+                            <p className="text-sm text-muted-foreground">
+                                Edit the system prompt that guides the WhatsApp bot's behavior
+                            </p>
                         </div>
                     </div>
-                    <div>
-                        <Label htmlFor="ai-instructions" className="mb-2 block">Edit Instructions (Markdown Supported):</Label>
+                    {hasChanges && (
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleCancel}
+                                disabled={mutation.isPending}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                size="sm"
+                                onClick={handleSave}
+                                disabled={mutation.isPending}
+                            >
+                                {mutation.isPending ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                        Saving...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save className="h-4 w-4 mr-2" />
+                                        Save Changes
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="flex-1 container mx-auto px-4 py-4 sm:py-6">
+                <Card className="h-full">
+                    <CardHeader className="pb-4">
+                        <CardTitle className="text-lg">Edit Instructions</CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-full flex flex-col">
+                        <Label htmlFor="ai-instructions" className="mb-2 text-sm font-medium">
+                            System Instructions (Markdown Supported)
+                        </Label>
                         <textarea
                             id="ai-instructions"
-                            className="w-full min-h-[180px] border rounded p-2 font-mono"
+                            className="flex-1 w-full border rounded-lg p-4 font-mono text-sm bg-background text-foreground resize-none focus:ring-2 focus:ring-ring focus:border-transparent"
                             value={editValue}
-                            onChange={e => setEditValue(e.target.value)}
+                            onChange={(e) => setEditValue(e.target.value)}
                             spellCheck={false}
+                            placeholder="Enter your AI system instructions here..."
                         />
-                    </div>
-                </CardContent>
-                <CardFooter className="flex justify-end gap-2">
-                    <Button
-                        variant="outline"
-                        onClick={() => {
-                            setEditValue(data);
-                            setIsEditing(false);
-                        }}
-                        disabled={!isEditing}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={() => {
-                            mutation.mutate(editValue);
-                            setIsEditing(false);
-                        }}
-                        disabled={mutation.isPending || editValue === data}
-                    >
-                        {mutation.isPending ? "Saving..." : "Save"}
-                    </Button>
-                </CardFooter>
-            </Card>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
     );
 } 
