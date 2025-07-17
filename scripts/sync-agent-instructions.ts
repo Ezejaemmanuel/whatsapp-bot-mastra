@@ -16,7 +16,6 @@ const __dirname = join(__filename, '..', '..');
 // Path to agent-instructions.ts
 const AGENT_INSTRUCTIONS_PATH = join(__dirname, 'mastra', 'agents', 'agent-instructions.ts');
 
-// Redis client setup
 const redis = new Redis({
     url: process.env.UPSTASH_REDIS_REST_URL!,
     token: process.env.UPSTASH_REDIS_REST_TOKEN!,
