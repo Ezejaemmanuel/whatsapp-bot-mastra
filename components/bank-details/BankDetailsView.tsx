@@ -22,7 +22,7 @@ const BankDetailsForm: React.FC<{ detail?: BankDetails; onSave: () => void }> = 
     const [accountName, setAccountName] = useState(detail?.accountName || '');
     const [accountNumber, setAccountNumber] = useState(detail?.accountNumber || '');
     const [description, setDescription] = useState(detail?.description || '');
-    const [isMain, setIsMain] = useState(detail?.isMain ?? false);
+    const [accountType, setAccountType] = useState<'buy' | 'sell' | 'both'>(detail?.accountType || 'both');
 
     const upsertDetails = useMutation(api.adminBankDetails.upsertAdminBankDetails);
 
@@ -39,7 +39,7 @@ const BankDetailsForm: React.FC<{ detail?: BankDetails; onSave: () => void }> = 
                 accountName,
                 accountNumber,
                 description,
-                isMain,
+                accountType,
             });
             toast.success("Bank details saved.");
             onSave();
@@ -67,10 +67,18 @@ const BankDetailsForm: React.FC<{ detail?: BankDetails; onSave: () => void }> = 
                 <Label htmlFor="description">Description</Label>
                 <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional description" />
             </div>
-
-            <div className="flex items-center space-x-2">
-                <Switch id="isMain" checked={isMain} onCheckedChange={setIsMain} />
-                <Label htmlFor="isMain">Set as Main Account</Label>
+            <div className="grid gap-2">
+                <Label htmlFor="accountType">Account Type</Label>
+                <select
+                    id="accountType"
+                    value={accountType}
+                    onChange={e => setAccountType(e.target.value as 'buy' | 'sell' | 'both')}
+                    className="border rounded px-2 py-1"
+                >
+                    <option value="buy">Buy (for buying currency)</option>
+                    <option value="sell">Sell (for selling currency)</option>
+                    <option value="both">Both</option>
+                </select>
             </div>
             <DialogFooter>
                 <Button type="submit">Save Details</Button>
@@ -110,7 +118,6 @@ const DeleteConfirmationDialog: React.FC<{ detail: BankDetails, onDeleted: () =>
 
 export const BankDetailsView: React.FC<{ isMobile?: boolean }> = () => {
     const bankDetails = useQuery(api.adminBankDetails.getAllAdminBankDetails);
-    const setMainAccount = useMutation(api.adminBankDetails.setMainAdminBankDetails);
 
     const [isAddEditDialogOpen, setAddEditDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -129,16 +136,6 @@ export const BankDetailsView: React.FC<{ isMobile?: boolean }> = () => {
     const handleAddNew = () => {
         setSelectedDetail(undefined);
         setAddEditDialogOpen(true);
-    }
-
-    const handleSetMain = async (bankDetailsId: Id<"adminBankDetails">) => {
-        try {
-            await setMainAccount({ bankDetailsId });
-            toast.success("Main account updated.");
-        } catch (error) {
-            console.error("Failed to set main account:", error);
-            toast.error("Failed to set main account.");
-        }
     }
 
     const onFormSaved = () => {
@@ -179,22 +176,21 @@ export const BankDetailsView: React.FC<{ isMobile?: boolean }> = () => {
                 )}
                 <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                     {bankDetails?.map(detail => (
-                        <Card key={detail._id} className={`bg-whatsapp-panel-bg border-whatsapp-border ${detail.isMain ? 'border-whatsapp-primary' : ''}`}>
+                        <Card key={detail._id} className="bg-whatsapp-panel-bg border-whatsapp-border">
                             <CardHeader>
                                 <CardTitle className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <Landmark /> {detail.bankName}
                                     </div>
-                                    {detail.isMain && <CheckCircle className="text-whatsapp-primary" />}
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="grid gap-2 text-sm">
                                 <p><strong>A/C Name:</strong> {detail.accountName}</p>
                                 <p><strong>A/C Number:</strong> {detail.accountNumber}</p>
                                 {detail.description && <p><strong>Desc:</strong> {detail.description}</p>}
+                                <p><strong>Account Type:</strong> {detail.accountType === 'buy' ? 'Buy' : detail.accountType === 'sell' ? 'Sell' : 'Both'}</p>
                             </CardContent>
                             <CardFooter className="flex justify-end gap-2 flex-wrap">
-                                {!detail.isMain && <Button variant="outline" size="sm" onClick={() => handleSetMain(detail._id)}><Star className="w-4 h-4 mr-2" /> Set Main</Button>}
                                 <Button variant="outline" size="sm" onClick={() => handleEdit(detail)}><Edit className="w-4 h-4 mr-2" /> Edit</Button>
                                 <Dialog open={isDeleteDialogOpen && selectedDetail?._id === detail._id} onOpenChange={(open) => !open && setSelectedDetail(undefined)}>
                                     <DialogTrigger asChild>

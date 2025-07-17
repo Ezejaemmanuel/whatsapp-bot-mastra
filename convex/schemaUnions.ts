@@ -77,4 +77,12 @@ export type TransactionStatus =
     | "image_received_and_being_reviewed"
     | "confirmed_and_money_sent_to_user"
     | "cancelled"
-    | "failed"; 
+    | "failed";
+
+/** Admin bank account type */
+export const AdminBankAccountTypeUnion = v.union(
+    v.literal("buy"),
+    v.literal("sell"),
+    v.literal("both")
+);
+export type AdminBankAccountType = "buy" | "sell" | "both"; 

@@ -8,7 +8,8 @@ import {
     MessageTypeUnion,
     MessageStatusUnion,
     UploadStatusUnion,
-    TransactionStatusUnion
+    TransactionStatusUnion,
+    AdminBankAccountTypeUnion
 } from "./schemaUnions";
 
 /**
@@ -158,13 +159,12 @@ export default defineSchema({
         accountName: v.string(), // Admin account holder name
         bankName: v.string(), // Admin bank name
         description: v.optional(v.string()), // Optional description for the account
-        isMain: v.optional(v.boolean()), // Whether this is the default account
+        accountType: AdminBankAccountTypeUnion, // 'buy', 'sell', or 'both'
         createdAt: v.number(), // Account creation timestamp
         updatedAt: v.number(), // Last update timestamp
         metadata: v.optional(v.any()), // Additional account metadata
     })
-        .index("by_account_number", ["accountNumber"])
-        .index("by_is_main", ["isMain"]),
+        .index("by_account_number", ["accountNumber"]),
 
     /**
      * Admin status table - stores admin's manual and scheduled availability, along with their timezone
