@@ -96,7 +96,7 @@ export default function AiInstructionsPage() {
             <div className="border-b bg-card flex-shrink-0 px-4 py-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Link href="/dashboard">
+                        <Link href="/">
                             <Button variant="ghost" size="sm">
                                 <ArrowLeft className="h-4 w-4 mr-2" />
                                 Back
