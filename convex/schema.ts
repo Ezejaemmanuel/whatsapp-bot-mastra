@@ -144,6 +144,10 @@ export default defineSchema({
         metadata: v.optional(v.any()), // Additional transaction metadata
         isRead: v.optional(v.boolean()), // Whether the transaction has been read by an admin/agent
         lastReadAt: v.optional(v.number()), // Timestamp when it was last read
+        // Transaction-specific bank details (collected after receipt confirmation)
+        transactionBankName: v.optional(v.string()), // Bank name for this specific transaction
+        transactionAccountNumber: v.optional(v.string()), // Account number for this specific transaction
+        transactionAccountName: v.optional(v.string()), // Account name for this specific transaction
     })
         .index("by_user_id", ["userId"])
         .index("by_conversation_id", ["conversationId"])
@@ -159,7 +163,7 @@ export default defineSchema({
         accountName: v.string(), // Admin account holder name
         bankName: v.string(), // Admin bank name
         description: v.optional(v.string()), // Optional description for the account
-        accountType: AdminBankAccountTypeUnion, // 'buy', 'sell', or 'both'
+        accountType: AdminBankAccountTypeUnion, // 'buy' or 'sell'
         createdAt: v.number(), // Account creation timestamp
         updatedAt: v.number(), // Last update timestamp
         metadata: v.optional(v.any()), // Additional account metadata
@@ -197,4 +201,4 @@ export default defineSchema({
             vectorField: "embedding",
             dimensions: 1536, // Adjust to match your embedding model's output size
         }),
-}); 
+});

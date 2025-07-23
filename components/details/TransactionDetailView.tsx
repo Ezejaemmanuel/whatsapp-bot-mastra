@@ -19,6 +19,9 @@ import { Button } from '@/components/ui/button';
 interface TransactionDetailViewProps {
     transaction: Doc<"transactions"> & {
         receiptImageUrls?: string[];
+        transactionBankName?: string;
+        transactionAccountNumber?: string;
+        transactionAccountName?: string;
         user?: {
             profileName?: string;
             phoneNumber?: string;
@@ -166,6 +169,26 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                         </div>
                     </div>
                 </div>
+
+                {(transaction.transactionBankName || transaction.transactionAccountNumber || transaction.transactionAccountName) && (
+                    <div className="glass-panel rounded-xl p-5 space-y-4 text-sm mt-4 backdrop-blur-xl border border-whatsapp-accent/50">
+                        <h3 className="text-whatsapp-accent font-semibold">Transaction Bank Details</h3>
+                        <div className="space-y-3">
+                            <div className="flex justify-between">
+                                <span className="text-whatsapp-text-muted">Bank Name</span>
+                                <span className="font-medium text-whatsapp-text-primary">{transaction.transactionBankName || 'N/A'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-whatsapp-text-muted">Account Name</span>
+                                <span className="font-medium text-whatsapp-text-primary">{transaction.transactionAccountName || 'N/A'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-whatsapp-text-muted">Account Number</span>
+                                <span className="font-medium text-whatsapp-text-primary">{transaction.transactionAccountNumber || 'N/A'}</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {(imageUrls.length > 0) && (
                     <div className="space-y-3 mt-4">
@@ -338,6 +361,26 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                     </div>
                 </div>
 
+                {(transaction.transactionBankName || transaction.transactionAccountNumber || transaction.transactionAccountName) && (
+                    <div className="space-y-3">
+                        <p className="text-whatsapp-text-muted text-sm font-medium">Transaction Bank Details</p>
+                        <div className="glass-panel p-5 rounded-xl backdrop-blur-xl border border-whatsapp-accent/50 space-y-4 text-sm">
+                            <div className="flex justify-between">
+                                <span className="text-whatsapp-text-muted">Bank Name</span>
+                                <span className="font-semibold text-whatsapp-text-primary">{transaction.transactionBankName || 'N/A'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-whatsapp-text-muted">Account Name</span>
+                                <span className="font-semibold text-whatsapp-text-primary">{transaction.transactionAccountName || 'N/A'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-whatsapp-text-muted">Account Number</span>
+                                <span className="font-semibold text-whatsapp-text-primary">{transaction.transactionAccountNumber || 'N/A'}</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="space-y-3">
                     <p className="text-whatsapp-text-muted text-sm font-medium">Transaction</p>
                     <div className="glass-panel p-5 rounded-xl backdrop-blur-xl border border-whatsapp-border/50 space-y-4">
@@ -384,4 +427,4 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
             </div>
         </div>
     );
-}; 
+};

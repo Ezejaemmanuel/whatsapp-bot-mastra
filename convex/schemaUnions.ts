@@ -82,7 +82,6 @@ export type TransactionStatus =
 /** Admin bank account type */
 export const AdminBankAccountTypeUnion = v.union(
     v.literal("buy"),
-    v.literal("sell"),
-    v.literal("both")
+    v.literal("sell")
 );
-export type AdminBankAccountType = "buy" | "sell" | "both"; 
+export type AdminBankAccountType = "buy" | "sell";

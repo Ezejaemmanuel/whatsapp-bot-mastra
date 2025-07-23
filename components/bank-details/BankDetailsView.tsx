@@ -22,7 +22,7 @@ const BankDetailsForm: React.FC<{ detail?: BankDetails; onSave: () => void }> = 
     const [accountName, setAccountName] = useState(detail?.accountName || '');
     const [accountNumber, setAccountNumber] = useState(detail?.accountNumber || '');
     const [description, setDescription] = useState(detail?.description || '');
-    const [accountType, setAccountType] = useState<'buy' | 'sell' | 'both'>(detail?.accountType || 'both');
+    const [accountType, setAccountType] = useState<'buy' | 'sell'>(detail?.accountType || 'buy');
 
     const upsertDetails = useMutation(api.adminBankDetails.upsertAdminBankDetails);
 
@@ -72,12 +72,12 @@ const BankDetailsForm: React.FC<{ detail?: BankDetails; onSave: () => void }> = 
                 <select
                     id="accountType"
                     value={accountType}
-                    onChange={e => setAccountType(e.target.value as 'buy' | 'sell' | 'both')}
+                    onChange={e => setAccountType(e.target.value as 'buy' | 'sell')}
                     className="border rounded px-2 py-1"
                 >
                     <option value="buy">Buy (for buying currency)</option>
                     <option value="sell">Sell (for selling currency)</option>
-                    <option value="both">Both</option>
+    
                 </select>
             </div>
             <DialogFooter>
@@ -188,7 +188,7 @@ export const BankDetailsView: React.FC<{ isMobile?: boolean }> = () => {
                                 <p><strong>A/C Name:</strong> {detail.accountName}</p>
                                 <p><strong>A/C Number:</strong> {detail.accountNumber}</p>
                                 {detail.description && <p><strong>Desc:</strong> {detail.description}</p>}
-                                <p><strong>Account Type:</strong> {detail.accountType === 'buy' ? 'Buy' : detail.accountType === 'sell' ? 'Sell' : 'Both'}</p>
+                                <p><strong>Account Type:</strong> {detail.accountType === 'buy' ? 'Buy' : 'Sell'}</p>
                             </CardContent>
                             <CardFooter className="flex justify-end gap-2 flex-wrap">
                                 <Button variant="outline" size="sm" onClick={() => handleEdit(detail)}><Edit className="w-4 h-4 mr-2" /> Edit</Button>

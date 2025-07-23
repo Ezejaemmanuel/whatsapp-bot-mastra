@@ -13,39 +13,30 @@ import { logToolCall, logInfo, logSuccess, logToolResult, logError, logToolError
 
 
 
+// Note: updateUserBankDetailsTool has been removed. 
+// User bank details are now automatically updated when transaction bank details are saved
+// via updateTransactionBankDetailsTool to maintain the latest account details.
+
 /**
- * Tool to update user bank details
+ * Tool to update transaction bank details after receipt confirmation
  */
-export const updateUserBankDetailsTool = createTool({
-    id: 'update_user_bank_details',
-    description: 'Update user bank account details. The userId is automatically extracted from the agent memory context.',
+export const updateTransactionBankDetailsTool = createTool({
+    id: 'update_transaction_bank_details',
+    description: 'Update transaction-specific bank details after receipt confirmation. This stores the bank details that the user wants to use for this specific transaction.',
     inputSchema: z.object({
-        bankName: z.string().describe('Customer bank name'),
-        accountNumber: z.string().describe('Customer account number'),
-        accountName: z.string().describe('Customer account name'),
+        transactionId: z.string().describe('Transaction ID - must be a valid Convex document ID'),
+        transactionBankName: z.string().describe('Bank name for this specific transaction'),
+        transactionAccountNumber: z.string().describe('Account number for this specific transaction'),
+        transactionAccountName: z.string().describe('Account name for this specific transaction'),
     }),
     execute: async ({ context, runtimeContext }) => {
         const startTime = Date.now();
-        const toolId = 'update_user_bank_details';
+        const toolId = 'update_transaction_bank_details';
 
         // Extract context data using new consistent naming
         const phoneNumber = runtimeContext?.get('phoneNumber') as string;
         const userId = runtimeContext?.get('userId') as string;
         const conversationId = runtimeContext?.get('conversationId') as string;
-
-        // Send debug message about tool start
-        if (phoneNumber) {
-            // await sendDebugMessage(phoneNumber, 'UPDATE USER BANK DETAILS TOOL STARTED', {
-            //     toolId,
-            //     startTime: new Date(startTime).toISOString(),
-            //     bankName: context.bankName,
-            //     accountName: context.accountName,
-            //     accountNumberMasked: context.accountNumber.slice(0, 4) + '****',
-            //     operation: 'Updating customer bank account details',
-            //     userId,
-            //     conversationId
-            // });
-        }
 
         logToolCall(toolId, context);
 
@@ -53,78 +44,47 @@ export const updateUserBankDetailsTool = createTool({
             // Validate that we have the required context
             if (!userId) {
                 const errorMsg = 'Unable to extract userId from runtime context. Make sure the agent is called with proper context configuration.';
-
-                if (phoneNumber) {
-                    // await sendDebugMessage(phoneNumber, 'USER ID EXTRACTION FAILED', {
-                    //     error: errorMsg,
-                    //     runtimeContextAvailable: !!runtimeContext,
-                    //     userId: userId || 'missing',
-                    //     conversationId: conversationId || 'missing',
-                    //     phoneNumber: phoneNumber || 'missing'
-                    // });
-                }
-
                 throw new Error(errorMsg);
             }
 
-            // Send debug message about extracted context
-            if (phoneNumber) {
-                // await sendDebugMessage(phoneNumber, 'USER CONTEXT EXTRACTED', {
-                //     userId,
-                //     conversationId,
-                //     phoneNumber,
-                //     userIdType: typeof userId,
-                //     operation: 'Ready to update bank details'
-                // });
-            }
+            logInfo('Updating transaction bank details', {
+                transactionId: context.transactionId,
+                userId,
+                operation: toolId
+            });
 
+            // Update the transaction with bank details
+            const updatedTransaction = await fetchMutation(api.transactions.updateTransactionBankDetails, {
+                transactionId: context.transactionId as Id<"transactions">,
+                transactionBankName: context.transactionBankName,
+                transactionAccountNumber: context.transactionAccountNumber,
+                transactionAccountName: context.transactionAccountName,
+            });
 
-
-            // Send debug message about database mutation
-            if (phoneNumber) {
-                // await sendDebugMessage(phoneNumber, 'DATABASE MUTATION STARTED', {
-                //     operation: 'api.users.updateUserBankDetails',
-                //     userId,
-                //     bankName: context.bankName,
-                //     accountName: context.accountName,
-                //     accountNumberMasked: context.accountNumber.slice(0, 4) + '****'
-                // });
-            }
-
-            const updatedUser = await fetchMutation(api.users.updateUserBankDetails, {
+            // Also update the user's bank details to keep them as the latest account details
+            // This ensures the user table always has the most recent bank details for future reference
+            await fetchMutation(api.users.updateUserBankDetails, {
                 userId: userId as Id<"users">,
-                bankName: context.bankName,
-                accountNumber: context.accountNumber,
-                accountName: context.accountName,
+                bankName: context.transactionBankName,
+                accountNumber: context.transactionAccountNumber,
+                accountName: context.transactionAccountName,
             });
 
             const executionTime = Date.now() - startTime;
 
             const result = {
                 success: true,
-                data: updatedUser,
-                message: `User bank details updated successfully`
+                data: updatedTransaction,
+                transactionId: context.transactionId,
+                message: `Transaction bank details updated successfully for transaction ${context.transactionId}. User's latest bank details also updated.`,
+                workingMemoryUpdate: `Transaction ${context.transactionId} now has bank details: ${context.transactionBankName}, Account: ${context.transactionAccountName} (${context.transactionAccountNumber.slice(0, 4)}****). User's account details updated to latest.`
             };
 
-            // Send debug message with successful result
-            if (phoneNumber) {
-                //  await sendDebugMessage(phoneNumber, 'BANK DETAILS UPDATED SUCCESSFULLY', {
-                //     success: true,
-                //     userId,
-                //     bankName: context.bankName,
-                //     accountName: context.accountName,
-                //     executionTimeMs: executionTime,
-                //     message: result.message
-                // });
-
-                // Send complete result
-                // await sendDebugMessage(phoneNumber, 'COMPLETE UPDATE RESULT', result);
-            }
-
-            logSuccess('User bank details updated successfully', {
+            logSuccess('Transaction bank details updated successfully', {
+                transactionId: context.transactionId,
                 userId,
-                bankName: context.bankName,
-                accountName: context.accountName,
+                bankName: context.transactionBankName,
+                accountName: context.transactionAccountName,
                 executionTimeMs: executionTime,
                 operation: toolId
             });
@@ -134,23 +94,11 @@ export const updateUserBankDetailsTool = createTool({
 
         } catch (error) {
             const executionTime = Date.now() - startTime;
-            const errorMessage = `Failed to update user bank details for ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            const errorMessage = `Failed to update transaction bank details for ${context.transactionId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
 
-            // Send debug message about error
-            // if (phoneNumber) {
-            //     await sendDebugMessage(phoneNumber, 'UPDATE BANK DETAILS ERROR', {
-            //         error: errorMessage,
-            //         errorType: error instanceof Error ? error.constructor.name : typeof error,
-            //         userId,
-            //         bankName: context.bankName,
-            //         executionTimeMs: executionTime,
-            //         stack: error instanceof Error ? error.stack : undefined
-            //     });
-            // }
-
-            logError('Failed to update user bank details', error as Error, {
+            logError('Failed to update transaction bank details', error as Error, {
+                transactionId: context.transactionId,
                 userId,
-                bankName: context.bankName,
                 executionTimeMs: executionTime,
                 operation: toolId
             });

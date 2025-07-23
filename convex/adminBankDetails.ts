@@ -36,7 +36,7 @@ export const upsertAdminBankDetails = mutation({
         accountName: v.string(),
         bankName: v.string(),
         description: v.optional(v.string()),
-        accountType: v.union(v.literal("buy"), v.literal("sell"), v.literal("both")),
+        accountType: v.union(v.literal("buy"), v.literal("sell")),
         metadata: v.optional(v.any()),
     },
     handler: async (ctx, { _id, ...args }) => {
@@ -65,4 +65,4 @@ export const deleteAdminBankDetails = mutation({
         await ctx.db.delete(args.bankDetailsId);
         return { success: true, deletedId: args.bankDetailsId };
     },
-}); 
+});

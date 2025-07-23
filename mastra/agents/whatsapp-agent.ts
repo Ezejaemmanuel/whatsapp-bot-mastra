@@ -4,7 +4,7 @@ import { UpstashStore, UpstashVector } from '@mastra/upstash';
 import { google } from '@ai-sdk/google';
 import { WHATSAPP_AGENT_NAME, WHATSAPP_AGENT_INSTRUCTIONS, GEMINI_MODEL } from './agent-instructions';
 import { getCurrentRatesTool, createTransactionTool, updateTransactionStatusTool } from '../tools/exchange-tools';
-import { getUserTransactionsTool, getLatestUserTransactionTool, getAdminBankDetailsTool, getUserTool, updateUserBankDetailsTool } from '../tools/exchange-tools-2';
+import { getUserTransactionsTool, getLatestUserTransactionTool, getAdminBankDetailsTool, getUserTool, updateTransactionBankDetailsTool } from '../tools/exchange-tools-2';
 import { getKenyaTimeTool } from '../tools/time-tool';
 import { getAdminStatusTool } from '../tools/admin-status-tool';
 import { Redis } from '@upstash/redis';
@@ -179,7 +179,7 @@ export async function getWhatsappAgent() {
             getLatestUserTransactionTool,
             getAdminBankDetailsTool,
             getUserTool,
-            updateUserBankDetailsTool,
+            updateTransactionBankDetailsTool,
             getKenyaTimeTool,
             getAdminStatusTool,
         },
@@ -200,7 +200,7 @@ export const whatsappAgent = new Agent({
         getLatestUserTransactionTool,
         getAdminBankDetailsTool,
         getUserTool,
-        updateUserBankDetailsTool,
+        updateTransactionBankDetailsTool,
         getKenyaTimeTool,
         getAdminStatusTool,
     },

@@ -66,6 +66,31 @@ export const updateTransactionStatus = mutation({
 });
 
 /**
+ * Update transaction bank details
+ */
+export const updateTransactionBankDetails = mutation({
+    args: {
+        transactionId: v.id("transactions"),
+        transactionBankName: v.string(),
+        transactionAccountNumber: v.string(),
+        transactionAccountName: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const transaction = await ctx.db.get(args.transactionId);
+        if (!transaction) {
+            throw new Error("Transaction not found");
+        }
+
+        return await ctx.db.patch(args.transactionId, {
+            transactionBankName: args.transactionBankName,
+            transactionAccountNumber: args.transactionAccountNumber,
+            transactionAccountName: args.transactionAccountName,
+            updatedAt: Date.now(),
+        });
+    },
+});
+
+/**
  * Get transaction by ID
  */
 export const getTransaction = query({
@@ -325,4 +350,4 @@ export const getTransactionStats = query({
 
         return stats;
     },
-}); 
+});
