@@ -445,19 +445,21 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
                     <div className="flex flex-col">
                       {msg.messageType === 'image' && msg.mediaUrl ? (
                         <div
-                          className="relative w-64 h-64 mb-1 cursor-pointer group"
+                          className="relative w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg mb-2 cursor-pointer group overflow-hidden rounded-lg"
                           onClick={() => openImageDialog(msg.mediaUrl as string, msg.caption || 'Image')}
                         >
-                          <Image
-                            src={msg.mediaUrl}
-                            alt={msg.caption || 'Image'}
-                            layout="fill"
-                            objectFit="cover"
-                            className="rounded-md transition-all duration-300 group-hover:brightness-110"
-                          />
-                          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md flex items-center justify-center">
-                            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <div className="relative aspect-square w-full">
+                            <Image
+                              src={msg.mediaUrl}
+                              alt={msg.caption || 'Image'}
+                              fill
+                              className="object-cover rounded-lg transition-all duration-300 group-hover:scale-105 group-hover:brightness-110"
+                              sizes="(max-width: 640px) 280px, (max-width: 768px) 320px, (max-width: 1024px) 384px, 448px"
+                            />
+                          </div>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-lg flex items-center justify-center">
+                            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/30 transform scale-90 group-hover:scale-100 transition-transform duration-300">
+                              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                               </svg>
                             </div>
