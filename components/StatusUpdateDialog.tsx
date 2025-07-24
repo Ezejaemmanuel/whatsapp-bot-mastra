@@ -163,9 +163,7 @@ export const StatusUpdateDialog: React.FC<StatusUpdateDialogProps> = ({
   });
 
   const handleConfirm = () => {
-    const shouldSendMessage = selectedStatus === 'confirmed_and_money_sent_to_user' ||
-      selectedStatus === 'cancelled' ||
-      selectedStatus === 'failed';
+    const shouldSendMessage = shouldShowMessageInput;
 
     const promise = updateStatusMutation.mutateAsync({
       transactionId: transaction._id,
@@ -184,10 +182,11 @@ export const StatusUpdateDialog: React.FC<StatusUpdateDialogProps> = ({
     });
   };
 
-  const willSendNotification = (selectedStatus === 'confirmed_and_money_sent_to_user' ||
+  const shouldShowMessageInput = selectedStatus === 'confirmed_and_money_sent_to_user' ||
     selectedStatus === 'cancelled' ||
-    selectedStatus === 'failed') &&
-    transaction.user?.phoneNumber;
+    selectedStatus === 'failed';
+
+  const willSendNotification = shouldShowMessageInput && transaction.user?.phoneNumber;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -267,13 +266,19 @@ export const StatusUpdateDialog: React.FC<StatusUpdateDialogProps> = ({
           </div>
 
           {/* Message Section */}
-          {willSendNotification && (
+          {shouldShowMessageInput && (
             <div className="space-y-2">
               <Label htmlFor="message" className="text-whatsapp-text-primary font-medium">
                 Notification Message
-                <span className="text-whatsapp-text-muted text-sm ml-2">
-                  (Will be sent to {transaction.user?.phoneNumber})
-                </span>
+                {transaction.user?.phoneNumber ? (
+                  <span className="text-whatsapp-text-muted text-sm ml-2">
+                    (Will be sent to {transaction.user?.phoneNumber})
+                  </span>
+                ) : (
+                  <span className="text-yellow-400 text-sm ml-2">
+                    (No phone number available - message will be logged only)
+                  </span>
+                )}
               </Label>
               <Textarea
                 id="message"
@@ -286,7 +291,7 @@ export const StatusUpdateDialog: React.FC<StatusUpdateDialogProps> = ({
             </div>
           )}
 
-          {!willSendNotification && selectedStatus !== transaction.status && (
+          {!shouldShowMessageInput && selectedStatus !== transaction.status && (
             <div className="glass-panel p-3 rounded-lg border border-blue-500/30 bg-blue-500/5">
               <p className="text-blue-400 text-sm">
                 ℹ️ No notification will be sent for this status change.

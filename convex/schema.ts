@@ -182,23 +182,26 @@ export default defineSchema({
         .index("by_recurring_inactive_start", ["recurringInactiveStart"])
         .index("by_recurring_inactive_end", ["recurringInactiveEnd"]),
 
+
+
     /**
-     * OCR Embeddings table - stores embeddings of raw OCR text for duplicate detection
+     * Image Hashes table - stores cryptographic and perceptual hashes for image duplicate detection
      */
-    ocrEmbeddings: defineTable({
-        rawOcrText: v.string(), // The raw OCR text extracted from receipt
-        embedding: v.array(v.float64()), // Embedding vector for the OCR text
+    imageHashes: defineTable({
+        cryptographicHash: v.string(), // SHA-256 hash for exact duplicate detection
+        perceptualHash: v.string(), // Perceptual hash for near-duplicate detection
+        imageUrl: v.string(), // URL of the original image
         transactionId: v.optional(v.string()), // Associated transaction ID (if available)
         paymentReference: v.optional(v.string()), // Payment reference (if available)
         userId: v.optional(v.id("users")), // Reference to user
         messageId: v.optional(v.id("messages")), // Reference to message
-        createdAt: v.number(), // Timestamp when embedding was created
+        createdAt: v.number(), // Timestamp when hashes were created
         metadata: v.optional(v.any()), // Additional metadata
     })
+        .index("by_cryptographic_hash", ["cryptographicHash"])
+        .index("by_perceptual_hash", ["perceptualHash"])
         .index("by_transaction_id", ["transactionId"])
         .index("by_payment_reference", ["paymentReference"])
-        .vectorIndex("by_embedding", {
-            vectorField: "embedding",
-            dimensions: 1536, // Adjust to match your embedding model's output size
-        }),
+        .index("by_user_id", ["userId"])
+        .index("by_message_id", ["messageId"]),
 });

@@ -26,7 +26,8 @@ import {
     processImageAnalysis,
     generateImageAgentContent
 } from './media-processor';
-import { checkOcrDuplicateAndStore } from './checkOcrDuplicateAndStore';
+
+import { checkImageDuplicateAndStore, DuplicateCheckResult, validateImageBuffer } from './checkImageDuplicateAndStore';
 import { getWhatsappAgent } from '@/mastra/agents/whatsapp-agent';
 
 
@@ -96,6 +97,91 @@ export async function handleMediaMessage(
                 }
             }
 
+            // --- Image Duplicate Detection Logic (Dual Hash) ---
+            let isDuplicate = false;
+            let duplicateInfo: DuplicateCheckResult['originalImageHash'] | null = null;
+            let duplicateType: 'exact' | 'similar' | null = null;
+            let confidence = 0;
+            
+            if (imageUrl) {
+                try {
+                    // Download image buffer for hash generation
+                    const imageResponse = await fetch(imageUrl);
+                    if (imageResponse.ok) {
+                        const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+                        
+                        // Validate image buffer
+                        if (validateImageBuffer(imageBuffer)) {
+                            logInfo('Starting dual hash duplicate detection', {
+                                messageId: messageInfo.id,
+                                from: messageInfo.from,
+                                imageSize: imageBuffer.length,
+                                operation: 'handleMediaMessage'
+                            });
+                            
+                            // Get user for context
+                            const user = await databaseService.getOrCreateUser(messageInfo.from);
+                            
+                            // Check for image duplicates using dual hash approach
+                            const duplicateResult = await checkImageDuplicateAndStore(
+                                imageBuffer,
+                                imageUrl,
+                                undefined, // transactionId - will be set later if needed
+                                undefined, // paymentReference - will be set later if needed
+                                user._id,
+                                storedMessageId,
+                                5 // maxHammingDistance for perceptual hash similarity
+                            );
+                            
+                            isDuplicate = duplicateResult.isDuplicate;
+                            duplicateInfo = duplicateResult.originalImageHash;
+                            duplicateType = duplicateResult.duplicateType || null;
+                            confidence = duplicateResult.confidence || 0;
+                            
+                            if (isDuplicate) {
+                                logWarning('Image duplicate detected', {
+                                    messageId: messageInfo.id,
+                                    from: messageInfo.from,
+                                    duplicateType,
+                                    confidence,
+                                    hammingDistance: duplicateResult.hammingDistance,
+                                    originalImageUrl: duplicateInfo?.imageUrl,
+                                    operation: 'handleMediaMessage'
+                                });
+                            } else {
+                                logInfo('No image duplicate found, new hashes stored', {
+                                    messageId: messageInfo.id,
+                                    from: messageInfo.from,
+                                    operation: 'handleMediaMessage'
+                                });
+                            }
+                        } else {
+                            logWarning('Invalid image buffer, skipping duplicate detection', {
+                                messageId: messageInfo.id,
+                                from: messageInfo.from,
+                                bufferSize: imageBuffer.length,
+                                operation: 'handleMediaMessage'
+                            });
+                        }
+                    } else {
+                        logWarning('Failed to download image for duplicate detection', {
+                            messageId: messageInfo.id,
+                            from: messageInfo.from,
+                            imageUrl: imageUrl.substring(0, 100) + '...',
+                            status: imageResponse.status,
+                            operation: 'handleMediaMessage'
+                        });
+                    }
+                } catch (duplicateError) {
+                    logError('Error in image duplicate detection', duplicateError as Error, {
+                        messageId: messageInfo.id,
+                        from: messageInfo.from,
+                        operation: 'handleMediaMessage'
+                    });
+                    // Continue processing even if duplicate detection fails
+                }
+            }
+
             // Analyze the image directly if URL is available
             let imageAnalysisResults = null;
             let ocrRawText = null;
@@ -113,28 +199,29 @@ export async function handleMediaMessage(
                 }
             }
 
-            // --- OCR Duplicate Detection Logic ---
-            let isDuplicate = false;
-            let duplicateInfo: Doc<'ocrEmbeddings'>[] = [];
-            if (ocrRawText && ocrRawText.length > 20) { // Only embed if text is long enough
-                // Use the new utility function for duplicate detection and storage
-                const result = await checkOcrDuplicateAndStore({
-                    ocrRawText,
-                    context: {
-                        messageId: messageInfo.id,
-                        from: messageInfo.from,
-                    }
-                });
-                isDuplicate = result.isDuplicate;
-                duplicateInfo = result.duplicateInfo;
-            }
-
             // Prepare text content for agent - include extracted text if available
             const caption = messageInfo.mediaInfo?.caption ?? null;
             let agentContent: string;
-            if (isDuplicate && duplicateInfo && duplicateInfo.length > 0) {
-                // If duplicate, inform the agent to notify the user, including both OCR texts
-                agentContent = `This image appears to be a duplicate of a previously submitted receipt.\n\nOriginal OCR Text:\n${duplicateInfo[0].rawOcrText}\n\nDuplicate OCR Text:\n${ocrRawText}\n\nPlease inform the user that this receipt has already been submitted.`;
+            
+            if (isDuplicate && duplicateInfo) {
+                // If duplicate, inform the agent to notify the user with detailed information
+                const confidencePercent = Math.round(confidence * 100);
+                const duplicateTypeText = duplicateType === 'exact' ? 'exact duplicate' : 'very similar image';
+                
+                agentContent = `🚨 DUPLICATE IMAGE DETECTED 🚨
+
+This image appears to be ${duplicateType === 'exact' ? 'an exact duplicate' : 'very similar to'} a previously submitted receipt.
+
+**Duplicate Detection Details:**
+- Type: ${duplicateTypeText.toUpperCase()}
+- Confidence: ${confidencePercent}%
+- Original submission: ${duplicateInfo.createdAt ? new Date(duplicateInfo.createdAt).toLocaleString() : 'Unknown'}
+- Original image: ${duplicateInfo.imageUrl ? 'Available' : 'Not available'}
+
+**Current Image Analysis:**
+${imageAnalysisResults ? generateImageAgentContent(imageUrl ?? null, imageAnalysisResults, caption as string | null) : 'Image analysis not available'}
+
+Please inform the user that this receipt has already been submitted and ask them to provide a different receipt if they have a new transaction.`;
             } else {
                 agentContent = generateImageAgentContent(imageUrl ?? null, imageAnalysisResults, caption as string | null);
             }
