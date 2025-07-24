@@ -5,6 +5,7 @@ import { Doc, Id } from '@/convex/_generated/dataModel';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ArrowUpRight, ChevronLeft, ChevronRight, Smartphone } from 'lucide-react';
+import { TransactionStatus } from '@/convex/schemaUnions';
 import {
     Select,
     SelectContent,
@@ -60,7 +61,7 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
 
     const handleUpdateTransactionStatus = async (
         transactionId: Id<"transactions">,
-        status: Doc<"transactions">["status"]
+        status: TransactionStatus
     ) => {
         try {
             await updateTransactionStatus({ transactionId, status });
@@ -71,20 +72,16 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'completed':
-                return 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
             case 'pending':
                 return 'bg-amber-500/20 text-amber-400 border border-amber-500/30';
-            case 'verified':
+            case 'image_received_and_being_reviewed':
                 return 'bg-blue-500/20 text-blue-400 border border-blue-500/30';
-            case 'paid':
-                return 'bg-green-500/20 text-green-400 border border-green-500/30';
-            case 'failed':
-                return 'bg-red-500/20 text-red-400 border border-red-500/30';
+            case 'confirmed_and_money_sent_to_user':
+                return 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
             case 'cancelled':
                 return 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
-            case 'image_sent_waiting_for_confirmation':
-                return 'bg-purple-500/20 text-purple-400 border border-purple-500/30';
+            case 'failed':
+                return 'bg-red-500/20 text-red-400 border border-red-500/30';
             default:
                 return 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
         }
@@ -102,7 +99,7 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                             onValueChange={(newStatus) =>
                                 handleUpdateTransactionStatus(
                                     transaction._id,
-                                    newStatus as Doc<"transactions">["status"]
+                                    newStatus as TransactionStatus
                                 )
                             }
                         >
@@ -112,12 +109,10 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                             <SelectContent className="glass-panel border border-whatsapp-border/50 backdrop-blur-xl">
                                 {[
                                     "pending",
-                                    "paid",
-                                    "verified",
-                                    "completed",
-                                    "failed",
+                                    "image_received_and_being_reviewed",
+                                    "confirmed_and_money_sent_to_user",
                                     "cancelled",
-                                    "image_sent_waiting_for_confirmation",
+                                    "failed",
                                 ].map((status) => (
                                     <SelectItem key={status} value={status} className="hover:bg-whatsapp-hover/60 transition-all duration-300">
                                         <Badge variant="outline" className={getStatusColor(status) + " text-xs mr-2 backdrop-blur-sm font-medium"}>
@@ -294,7 +289,7 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                                 onValueChange={(newStatus) =>
                                     handleUpdateTransactionStatus(
                                         transaction._id,
-                                        newStatus as Doc<"transactions">["status"]
+                                        newStatus as TransactionStatus
                                     )
                                 }
                             >
@@ -304,12 +299,10 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                                 <SelectContent className="glass-panel border border-whatsapp-border/50 backdrop-blur-xl">
                                     {[
                                         "pending",
-                                        "paid",
-                                        "verified",
-                                        "completed",
-                                        "failed",
+                                        "image_received_and_being_reviewed",
+                                        "confirmed_and_money_sent_to_user",
                                         "cancelled",
-                                        "image_sent_waiting_for_confirmation",
+                                        "failed",
                                     ].map((status) => (
                                         <SelectItem key={status} value={status} className="hover:bg-whatsapp-hover/60 transition-all duration-300">
                                             <Badge variant="outline" className={getStatusColor(status) + " text-xs mr-2 backdrop-blur-sm font-medium"}>
