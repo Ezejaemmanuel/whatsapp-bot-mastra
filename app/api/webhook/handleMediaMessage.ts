@@ -199,111 +199,118 @@ export async function handleMediaMessage(
                 }
             }
 
-            // Prepare text content for agent - include extracted text if available
-            const caption = messageInfo.mediaInfo?.caption ?? null;
-            let agentContent: string;
-            
-            if (isDuplicate && duplicateInfo) {
-                // If duplicate, inform the agent to notify the user with detailed information
-                const confidencePercent = Math.round(confidence * 100);
-                const duplicateTypeText = duplicateType === 'exact' ? 'exact duplicate' : 'very similar image';
-                
-                agentContent = `🚨 DUPLICATE IMAGE DETECTED 🚨
-
-This image appears to be ${duplicateType === 'exact' ? 'an exact duplicate' : 'very similar to'} a previously submitted receipt.
-
-**Duplicate Detection Details:**
-- Type: ${duplicateTypeText.toUpperCase()}
-- Confidence: ${confidencePercent}%
-- Original submission: ${duplicateInfo.createdAt ? new Date(duplicateInfo.createdAt).toLocaleString() : 'Unknown'}
-- Original image: ${duplicateInfo.imageUrl ? 'Available' : 'Not available'}
-
-**Current Image Analysis:**
-${imageAnalysisResults ? generateImageAgentContent(imageUrl ?? null, imageAnalysisResults, caption as string | null) : 'Image analysis not available'}
-
-Please inform the user that this receipt has already been submitted and ask them to provide a different receipt if they have a new transaction.`;
-            } else {
-                agentContent = generateImageAgentContent(imageUrl ?? null, imageAnalysisResults, caption as string | null);
-            }
-
             let response: string;
 
-            try {
-                // Get user and conversation for proper memory context
-                const user = await databaseService.getOrCreateUser(messageInfo.from);
-                const userName = user.profileName || user.phoneNumber || messageInfo.from;
-                const conversation = await databaseService.getOrCreateConversation(user._id, userName);
+            // Check if duplicate was detected - send direct message without AI agent processing
+            if (isDuplicate && duplicateInfo) {
+                const confidencePercent = Math.round(confidence * 100);
+                const duplicateTypeText = duplicateType === 'exact' ? 'exact duplicate' : 'very similar image';
+                const originalDate = duplicateInfo.createdAt ? new Date(duplicateInfo.createdAt).toLocaleString() : 'Unknown';
+                
+                response = `🚨 **Duplicate Receipt Detected** 🚨
 
-                // Create runtime context with memory context for tools
-                const runtimeContext = new RuntimeContext<{
-                    userId: string;
-                    conversationId: string;
-                    phoneNumber: string;
-                }>();
-                runtimeContext.set('userId', user._id);
-                runtimeContext.set('conversationId', conversation._id);
-                runtimeContext.set('phoneNumber', messageInfo.from);
+I've already processed this receipt before!
 
-                // Process image with exchange agent for receipt analysis
-                // const agent = mastra.getAgent('whatsappAgent');
-                const agent = await getWhatsappAgent();
-                const agentResponse = await agent.generate([
-                    {
-                        role: 'user',
-                        content: agentContent,
-                    }
-                ], {
-                    memory: {
-                        thread: `whatsapp-${messageInfo.from}`,
-                        resource: messageInfo.from,
-                    },
-                    runtimeContext,
-                    temperature: HANDLE_IMAGE_AGENT_TEMPRETURE,
-                });
+📋 **Details:**
+• Type: ${duplicateTypeText}
+• Confidence: ${confidencePercent}%
+• Previously submitted: ${originalDate}
 
-                response = agentResponse.text || 'Got your receipt! 📸 Let me analyze the details...';
+❗ **What to do next:**
+If you have a new transaction, please send a different receipt. If this is the same transaction, no need to resubmit - I already have it on record! 📝
 
-                logInfo('Generated exchange agent response for image', {
+Need help? Just ask! 😊`;
+                
+                logInfo('Duplicate image detected - sending direct response without AI agent', {
                     messageId: messageInfo.id,
                     from: messageInfo.from,
-                    responseLength: response.length,
-                    threadId: `whatsapp-${messageInfo.from}`,
-                    hasImageUrl: !!imageUrl,
-                    hasToolCalls: agentResponse.toolCalls && agentResponse.toolCalls.length > 0,
-                    toolCallsCount: agentResponse.toolCalls?.length || 0,
+                    duplicateType,
+                    confidence: confidencePercent,
+                    originalDate,
                     operation: 'handleMediaMessage'
                 });
+            } else {
+                // No duplicate detected - process with AI agent as usual
+                const caption = messageInfo.mediaInfo?.caption ?? null;
+                const agentContent = generateImageAgentContent(imageUrl ?? null, imageAnalysisResults, caption as string | null);
 
-            } catch (agentError) {
-                const agentErrorMessage = agentError instanceof Error ? agentError.message : 'Unknown agent error';
+                try {
+                    // Get user and conversation for proper memory context
+                    const user = await databaseService.getOrCreateUser(messageInfo.from);
+                    const userName = user.profileName || user.phoneNumber || messageInfo.from;
+                    const conversation = await databaseService.getOrCreateConversation(user._id, userName);
 
-                logError('Exchange agent failed to process image message', agentError as Error, {
-                    messageId: messageInfo.id,
-                    from: messageInfo.from,
-                    hasImageUrl: !!imageUrl,
-                    imageUrl: imageUrl ? 'provided' : 'missing',
-                    threadId: `whatsapp-${messageInfo.from}`,
-                    agentErrorMessage,
-                    operation: 'handleMediaMessage',
-                    fallbackUsed: true
-                });
+                    // Create runtime context with memory context for tools
+                    const runtimeContext = new RuntimeContext<{
+                        userId: string;
+                        conversationId: string;
+                        phoneNumber: string;
+                    }>();
+                    runtimeContext.set('userId', user._id);
+                    runtimeContext.set('conversationId', conversation._id);
+                    runtimeContext.set('phoneNumber', messageInfo.from);
 
-                // Fallback response when agent fails for images - use test mode formatting if enabled
-                response = formatErrorForTestMode(agentError, {
-                    operation: 'handleMediaMessage',
-                    messageId: messageInfo.id,
-                    from: messageInfo.from,
-                    hasImageUrl: !!imageUrl,
-                    imageUrl: imageUrl ? 'provided' : 'missing',
-                    threadId: `whatsapp-${messageInfo.from}`,
-                    errorType: 'agent_error_media'
-                });
+                    // Process image with exchange agent for receipt analysis
+                    // const agent = mastra.getAgent('whatsappAgent');
+                    const agent = await getWhatsappAgent();
+                    const agentResponse = await agent.generate([
+                        {
+                            role: 'user',
+                            content: agentContent,
+                        }
+                    ], {
+                        memory: {
+                            thread: `whatsapp-${messageInfo.from}`,
+                            resource: messageInfo.from,
+                        },
+                        runtimeContext,
+                        temperature: HANDLE_IMAGE_AGENT_TEMPRETURE,
+                    });
 
-                // If not in test mode, use friendly fallback
-                if (!TEST_MODE) {
-                    response = imageUrl ?
-                        'I received your receipt image but had trouble analyzing it. Could you try sending it again or provide the transaction details as text?' :
-                        'I had trouble processing your image. Could you try sending it again or send me the transaction details as text?';
+                    response = agentResponse.text || 'Got your receipt! 📸 Let me analyze the details...';
+
+                    logInfo('Generated exchange agent response for image', {
+                        messageId: messageInfo.id,
+                        from: messageInfo.from,
+                        responseLength: response.length,
+                        threadId: `whatsapp-${messageInfo.from}`,
+                        hasImageUrl: !!imageUrl,
+                        hasToolCalls: agentResponse.toolCalls && agentResponse.toolCalls.length > 0,
+                        toolCallsCount: agentResponse.toolCalls?.length || 0,
+                        operation: 'handleMediaMessage'
+                    });
+
+                } catch (agentError) {
+                    const agentErrorMessage = agentError instanceof Error ? agentError.message : 'Unknown agent error';
+
+                    logError('Exchange agent failed to process image message', agentError as Error, {
+                        messageId: messageInfo.id,
+                        from: messageInfo.from,
+                        hasImageUrl: !!imageUrl,
+                        imageUrl: imageUrl ? 'provided' : 'missing',
+                        threadId: `whatsapp-${messageInfo.from}`,
+                        agentErrorMessage,
+                        operation: 'handleMediaMessage',
+                        fallbackUsed: true
+                    });
+
+                    // Fallback response when agent fails for images - use test mode formatting if enabled
+                    response = formatErrorForTestMode(agentError, {
+                        operation: 'handleMediaMessage',
+                        messageId: messageInfo.id,
+                        from: messageInfo.from,
+                        hasImageUrl: !!imageUrl,
+                        imageUrl: imageUrl ? 'provided' : 'missing',
+                        threadId: `whatsapp-${messageInfo.from}`,
+                        errorType: 'agent_error_media'
+                    });
+
+                    // If not in test mode, use friendly fallback
+                    if (!TEST_MODE) {
+                        response = imageUrl ?
+                            'I received your receipt image but had trouble analyzing it. Could you try sending it again or provide the transaction details as text?' :
+                            'I had trouble processing your image. Could you try sending it again or send me the transaction details as text?';
+                    }
                 }
             }
 
