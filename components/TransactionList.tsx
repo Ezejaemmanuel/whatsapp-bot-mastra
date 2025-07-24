@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
@@ -473,58 +473,20 @@ const TransactionCard: React.FC<TransactionCardProps> = ({
         )}
       </div>
       <div className="flex items-center gap-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-6 px-2 text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 border-whatsapp-border/50 hover:border-whatsapp-primary/50"
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-              }}
-            >
-              Update Status
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="glass-panel border border-whatsapp-border/50 backdrop-blur-xl z-[9999] min-w-[200px] shadow-2xl bg-whatsapp-panel-bg/95"
-            side="top"
-            align="end"
-            sideOffset={5}
-            collisionPadding={10}
-            forceMount
-            avoidCollisions={true}
-          >
-            {transactionStatuses.map((status) => (
-              <DropdownMenuItem
-                key={status}
-                onClick={(e) => onStatusUpdate(e, transaction._id, status)}
-                className="text-whatsapp-text-primary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 cursor-pointer flex items-center gap-2 px-3 py-2 rounded-md"
-                onSelect={(e) => {
-                  e.preventDefault();
-                  onStatusUpdate(e as any, transaction._id, status);
-                }}
-              >
-                <div className="flex items-center gap-2 w-full">
-                  {getStatusIcon(status)}
-                  <span className="capitalize text-sm font-medium">
-                    {statusDisplayNames[status]}
-                  </span>
-                </div>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-6 px-2 text-whatsapp-text-secondary hover:bg-whatsapp-hover/60 hover:text-whatsapp-primary transition-all duration-300 border-whatsapp-border/50 hover:border-whatsapp-primary/50"
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onSelect(transaction._id);
+          }}
+        >
+          View Details
+        </Button>
         <ArrowRight className="w-4 h-4 text-whatsapp-text-muted group-hover:text-whatsapp-primary transition-colors duration-300" />
       </div>
     </div>
   </div>
 );
-
-interface StatusUpdateDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  statusInfo: { transactionId: Id<"transactions">; status: TransactionStatus } | null;
-  onConfirm: (message?: string) => void;
-}

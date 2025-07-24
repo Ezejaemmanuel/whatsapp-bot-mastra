@@ -1,20 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useMutation } from 'convex/react';
-import { api } from '@/convex/_generated/api';
+import { useQueryClient } from '@tanstack/react-query';
 import { Doc, Id } from '@/convex/_generated/dataModel';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { ArrowUpRight, ChevronLeft, ChevronRight, Smartphone } from 'lucide-react';
+import { ArrowUpRight, ChevronLeft, ChevronRight, Smartphone, Edit } from 'lucide-react';
 import { TransactionStatus } from '@/convex/schemaUnions';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import { ClickableImage } from '@/components/ClickableImage';
 import { Button } from '@/components/ui/button';
+import { StatusUpdateDialog } from '@/components/StatusUpdateDialog';
 
 interface TransactionDetailViewProps {
     transaction: Doc<"transactions"> & {
@@ -42,8 +35,9 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
     transaction,
     isMobile = false,
 }) => {
-    const updateTransactionStatus = useMutation(api.transactions.updateTransactionStatus);
+    const queryClient = useQueryClient();
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
 
     const imageUrls = transaction.receiptImageUrls || [];
 
@@ -59,16 +53,7 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
         setCurrentImageIndex((prev) => (prev === imageUrls.length - 1 ? 0 : prev + 1));
     };
 
-    const handleUpdateTransactionStatus = async (
-        transactionId: Id<"transactions">,
-        status: TransactionStatus
-    ) => {
-        try {
-            await updateTransactionStatus({ transactionId, status });
-        } catch (error) {
-            console.error("Failed to update transaction status", error);
-        }
-    };
+  
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -94,34 +79,20 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                 <div className="glass-panel rounded-2xl p-6 space-y-5 backdrop-blur-xl border border-whatsapp-border/50 shadow-xl">
                     <div className="space-y-3">
                         <p className="text-whatsapp-text-muted font-semibold text-sm uppercase tracking-wide">Transaction Status</p>
-                        <Select
-                            value={transaction.status}
-                            onValueChange={(newStatus) =>
-                                handleUpdateTransactionStatus(
-                                    transaction._id,
-                                    newStatus as TransactionStatus
-                                )
-                            }
-                        >
-                            <SelectTrigger className="w-full glass-panel border border-whatsapp-border/50 hover:border-whatsapp-primary/50 transition-all duration-300 h-12">
-                                <SelectValue placeholder="Update status" />
-                            </SelectTrigger>
-                            <SelectContent className="glass-panel border border-whatsapp-border/50 backdrop-blur-xl">
-                                {[
-                                    "pending",
-                                    "image_received_and_being_reviewed",
-                                    "confirmed_and_money_sent_to_user",
-                                    "cancelled",
-                                    "failed",
-                                ].map((status) => (
-                                    <SelectItem key={status} value={status} className="hover:bg-whatsapp-hover/60 transition-all duration-300">
-                                        <Badge variant="outline" className={getStatusColor(status) + " text-xs mr-2 backdrop-blur-sm font-medium"}>
-                                            {status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')}
-                                        </Badge>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <div className="flex items-center gap-3">
+                            <Badge variant="outline" className={getStatusColor(transaction.status) + " text-sm backdrop-blur-sm font-medium flex-1 justify-center py-2"}>
+                                {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1).replace(/_/g, ' ')}
+                            </Badge>
+                            <Button
+                                onClick={() => setIsStatusDialogOpen(true)}
+                                variant="outline"
+                                size="sm"
+                                className="glass-panel border border-whatsapp-border/50 hover:border-whatsapp-primary/50 transition-all duration-300 h-10 px-4"
+                            >
+                                <Edit className="w-4 h-4 mr-2" />
+                                Update
+                            </Button>
+                        </div>
                     </div>
                     
                     {/* Amount Cards */}
@@ -257,6 +228,13 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                         </pre>
                     </div>
                 )}
+
+                {/* Status Update Dialog */}
+                <StatusUpdateDialog
+                    isOpen={isStatusDialogOpen}
+                    onClose={() => setIsStatusDialogOpen(false)}
+                    transaction={transaction}
+                />
             </div>
         );
     }
@@ -284,34 +262,20 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                     <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
                         <div className="space-y-3">
                             <p className="text-whatsapp-text-muted font-semibold text-sm uppercase tracking-wide">Status</p>
-                            <Select
-                                value={transaction.status}
-                                onValueChange={(newStatus) =>
-                                    handleUpdateTransactionStatus(
-                                        transaction._id,
-                                        newStatus as TransactionStatus
-                                    )
-                                }
-                            >
-                                <SelectTrigger className="w-full glass-panel border border-whatsapp-border/50 hover:border-whatsapp-primary/50 transition-all duration-300 h-12">
-                                    <SelectValue placeholder="Update status" />
-                                </SelectTrigger>
-                                <SelectContent className="glass-panel border border-whatsapp-border/50 backdrop-blur-xl">
-                                    {[
-                                        "pending",
-                                        "image_received_and_being_reviewed",
-                                        "confirmed_and_money_sent_to_user",
-                                        "cancelled",
-                                        "failed",
-                                    ].map((status) => (
-                                        <SelectItem key={status} value={status} className="hover:bg-whatsapp-hover/60 transition-all duration-300">
-                                            <Badge variant="outline" className={getStatusColor(status) + " text-xs mr-2 backdrop-blur-sm font-medium"}>
-                                                {status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')}
-                                            </Badge>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <div className="flex flex-col gap-3">
+                                <Badge variant="outline" className={getStatusColor(transaction.status) + " text-sm backdrop-blur-sm font-medium justify-center py-3"}>
+                                    {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1).replace(/_/g, ' ')}
+                                </Badge>
+                                <Button
+                                    onClick={() => setIsStatusDialogOpen(true)}
+                                    variant="outline"
+                                    size="sm"
+                                    className="glass-panel border border-whatsapp-border/50 hover:border-whatsapp-primary/50 transition-all duration-300 h-10"
+                                >
+                                    <Edit className="w-4 h-4 mr-2" />
+                                    Update Status
+                                </Button>
+                            </div>
                         </div>
                         
                         <div className="space-y-3">
@@ -465,15 +429,22 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
 
                     {/* Extracted Details */}
                     {transaction.extractedDetails && (
-                        <div className="space-y-4">
-                            <h3 className="text-whatsapp-text-muted font-semibold text-lg uppercase tracking-wide">Extracted Details</h3>
-                            <pre className="text-whatsapp-text-primary font-mono glass-panel p-6 rounded-2xl border border-whatsapp-border/50 text-sm overflow-x-auto backdrop-blur-xl whatsapp-scrollbar shadow-xl">
+                        <div className="space-y-3">
+                            <p className="text-whatsapp-text-muted font-semibold text-sm uppercase tracking-wide">Extracted Details</p>
+                            <pre className="text-whatsapp-text-primary font-mono glass-panel p-4 rounded-xl border border-whatsapp-border/50 text-xs overflow-x-auto backdrop-blur-xl whatsapp-scrollbar shadow-xl">
                                 {JSON.stringify(transaction.extractedDetails, null, 2)}
                             </pre>
                         </div>
                     )}
                 </div>
             </div>
+
+            {/* Status Update Dialog */}
+            <StatusUpdateDialog
+                isOpen={isStatusDialogOpen}
+                onClose={() => setIsStatusDialogOpen(false)}
+                transaction={transaction}
+            />
         </div>
     );
 };
