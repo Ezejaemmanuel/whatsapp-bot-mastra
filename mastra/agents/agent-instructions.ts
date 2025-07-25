@@ -1,9 +1,9 @@
 // AI Model Configuration //TODO: MIGHT HAVE TO CHANGE THIS TO GEMINI 2.5 FLASH LITE
-export const GEMINI_MODEL = "gemini-2.5-pro-preview-06-05" as const;
+export const GEMINI_MODEL = "gemini-2.5-pro" as const;
 export const IMAGE_EXTRACTION_GEMINI_MODEL = "gemini-2.5-pro" as const;
 export const WHATSAPP_AGENT_NAME = "KhalidWid_Exchange_Bot" as const;
 
-export const IMAGE_EXTRACTION_TEMPERATURE = 0.2 as const;
+export const IMAGE_EXTRACTION_TEMPERATURE = 0.1 as const;
 export const HANDLE_TEXT_AGENT_TEMPRETURE = 0.6 as const;
 
 export const HANDLE_IMAGE_AGENT_TEMPRETURE = 0.6 as const;
