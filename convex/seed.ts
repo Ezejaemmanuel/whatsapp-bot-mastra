@@ -45,8 +45,7 @@ export const seedDatabase = action({
 
         const user: Doc<"users"> | null = await ctx.runMutation(api.users.getOrCreateUser, {
           whatsappId,
-          profileName,
-          phoneNumber,
+          profileName
         });
 
         if (!user) {
