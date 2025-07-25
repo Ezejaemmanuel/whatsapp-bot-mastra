@@ -304,13 +304,14 @@ export const createTransactionTool = createTool({
 
 /**
  * Tool to update transaction status with validation
+ * Accepts simplified status values and maps them to proper enum types
  */
 export const updateTransactionStatusTool = createTool({
     id: 'update_transaction_status',
-    description: 'Update transaction status (pending, paid, verified, completed, failed, cancelled). This tool automatically validates the transaction ID before updating. If validation fails, it returns helpful guidance instead of throwing an error.',
+    description: 'Update transaction status with simplified inputs. Use "pending" for pending transactions and "image_received" when user submits payment proof. This tool automatically validates the transaction ID and maps status values to proper enum types.',
     inputSchema: z.object({
         transactionId: z.string().describe('Transaction ID - must be a valid Convex document ID that belongs to the current user'),
-        status: z.enum(["pending", "image_received_and_being_reviewed", "confirmed_and_money_sent_to_user", "cancelled", "failed"]).describe('New status: pending, image_received_and_being_reviewed, confirmed_and_money_sent_to_user, cancelled, failed'),
+        status: z.enum(["pending", "image_received"]).describe('Simplified status: "pending" (maps to pending) or "image_received" (maps to image_received_and_being_reviewed)'),
         paymentReference: z.string().optional().describe('Payment reference number'),
         receiptImageUrl: z.string().optional().describe('URL to receipt image'),
         extractedDetails: z.record(z.unknown()).optional().describe('OCR extracted details from receipt as key-value pairs'),
@@ -323,21 +324,21 @@ export const updateTransactionStatusTool = createTool({
         const phoneNumber = runtimeContext?.get('phoneNumber') as string;
         const userId = runtimeContext?.get('userId') as string;
         const conversationId = runtimeContext?.get('conversationId') as string;
-
-        // Send debug message about tool start
-        if (phoneNumber) {
-            // await sendDebugMessage(phoneNumber, 'UPDATE TRANSACTION STATUS TOOL STARTED', {
-            //     toolId,
-            //     startTime: new Date(startTime).toISOString(),
-            //     transactionId: context.transactionId,
-            //     newStatus: context.status,
-            //     hasPaymentReference: !!context.paymentReference,
-            //     hasReceiptImage: !!context.receiptImageUrl,
-            //     hasExtractedDetails: !!context.extractedDetails && Object.keys(context.extractedDetails).length > 0,
-            //     userId,
-            //     conversationId
-            // });
+        const statusMapping = {
+            'pending': 'pending' as const,
+            'image_received': 'image_received_and_being_reviewed' as const
+        };
+        
+        const mappedStatus = statusMapping[context.status];
+        if (!mappedStatus) {
+            // throw new Error(`Invalid status: ${context.status}. Use 'pending' or 'image_received'.`);
+            return {
+                success: false,
+                message: `Invalid status: ${context.status}. Use 'pending' or 'image_received'.`,
+                suggestion: 'Use only the values "pending" or "image_received".'
+            }
         }
+    
 
         logToolCall(toolId, context);
 
@@ -350,29 +351,12 @@ export const updateTransactionStatusTool = createTool({
                     suggestion: 'Check your agent context configuration.'
                 };
 
-                if (phoneNumber) {
-                    // await sendDebugMessage(phoneNumber, 'USER ID EXTRACTION FAILED', {
-                    //     error: result.message,
-                    //     suggestion: result.suggestion,
-                    //     runtimeContextAvailable: !!runtimeContext,
-                    //     userId: userId || 'missing',
-                    //     conversationId: conversationId || 'missing',
-                    //     phoneNumber: phoneNumber || 'missing'
-                    // });
-                }
+              
 
                 logToolResult(toolId, result, Date.now() - startTime);
                 return result;
             }
 
-            // Send debug message about validation start
-            if (phoneNumber) {
-                // await sendDebugMessage(phoneNumber, 'TRANSACTION VALIDATION STARTED', {
-                //     transactionId: context.transactionId,
-                //     userId,
-                //     operation: 'Validating transaction ID format and ownership'
-                // });
-            }
 
             // First validate the transaction ID format
             if (!isValidConvexId(context.transactionId)) {
@@ -383,13 +367,6 @@ export const updateTransactionStatusTool = createTool({
                     suggestion: 'Use validateTransactionTool to check the transaction ID, or use getLatestUserTransactionTool to get the most recent transaction ID, or use getUserTransactionsTool to see all available transaction IDs for this user.'
                 };
 
-                if (phoneNumber) {
-                    // await sendDebugMessage(phoneNumber, 'INVALID TRANSACTION ID FORMAT', {
-                    //     transactionId: context.transactionId,
-                    //     expectedFormat: '16+ alphanumeric characters',
-                    //     suggestion: result.suggestion
-                    // });
-                }
 
                 logToolResult(toolId, result, Date.now() - startTime);
                 return result;
@@ -433,21 +410,9 @@ export const updateTransactionStatusTool = createTool({
                 operation: toolId
             });
 
-            // Send debug message about status update
-            if (phoneNumber) {
-                // await sendDebugMessage(phoneNumber, 'TRANSACTION STATUS UPDATE STARTED', {
-                //     transactionId: context.transactionId,
-                //     currentStatus: transaction.status,
-                //     newStatus: context.status,
-                //     paymentReference: context.paymentReference,
-                //     receiptImageUrl: context.receiptImageUrl,
-                //     extractedDetailsKeys: context.extractedDetails ? Object.keys(context.extractedDetails) : []
-                // });
-            }
-
             await fetchMutation(api.transactions.updateTransactionStatus, {
                 transactionId: context.transactionId as Id<"transactions">,
-                status: context.status,
+                status: mappedStatus,
                 paymentReference: context.paymentReference,
                 receiptImageUrl: context.receiptImageUrl,
                 extractedDetails: context.extractedDetails,
@@ -459,30 +424,16 @@ export const updateTransactionStatusTool = createTool({
                 success: true,
                 transactionId: context.transactionId,
                 previousStatus: transaction.status,
-                newStatus: context.status,
-                message: `Transaction ${context.transactionId} status updated from ${transaction.status} to ${context.status} successfully`,
-                workingMemoryUpdate: `Transaction ${context.transactionId} is now in ${context.status} status. Keep this transaction ID in your working memory for future updates.`
+                inputStatus: context.status,
+                newStatus: mappedStatus,
+                message: `Transaction ${context.transactionId} status updated from ${transaction.status} to ${mappedStatus} successfully (input: ${context.status})`,
+                workingMemoryUpdate: `Transaction ${context.transactionId} is now in ${mappedStatus} status. Keep this transaction ID in your working memory for future updates.`
             };
-
-            // Send debug message about successful update
-            if (phoneNumber) {
-                // await sendDebugMessage(phoneNumber, 'TRANSACTION STATUS UPDATED SUCCESSFULLY', {
-                //     success: true,
-                //     transactionId: context.transactionId,
-                //     previousStatus: transaction.status,
-                //     newStatus: context.status,
-                //     executionTimeMs: executionTime,
-                //     workingMemoryUpdate: result.workingMemoryUpdate
-                // });
-
-                // Send complete result
-                // await sendDebugMessage(phoneNumber, 'COMPLETE UPDATE RESULT', result);
-            }
-
             logSuccess('Transaction status updated successfully', {
                 transactionId: context.transactionId,
                 previousStatus: transaction.status,
-                newStatus: context.status,
+                inputStatus: context.status,
+                newStatus: mappedStatus,
                 paymentReference: context.paymentReference,
                 executionTimeMs: executionTime,
                 operation: toolId
@@ -495,21 +446,10 @@ export const updateTransactionStatusTool = createTool({
             const executionTime = Date.now() - startTime;
             const errorMessage = `Failed to update transaction status for ${context.transactionId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
 
-            // Send debug message about error
-            if (phoneNumber) {
-                // await sendDebugMessage(phoneNumber, 'UPDATE TRANSACTION STATUS ERROR', {
-                //     error: errorMessage,
-                //     errorType: error instanceof Error ? error.constructor.name : typeof error,
-                //     transactionId: context.transactionId,
-                //     newStatus: context.status,
-                //     executionTimeMs: executionTime,
-                //     stack: error instanceof Error ? error.stack : undefined
-                // });
-            }
-
             logError('Failed to update transaction status', error as Error, {
                 transactionId: context.transactionId,
-                newStatus: context.status,
+                inputStatus: context.status,
+                mappedStatus: mappedStatus,
                 executionTimeMs: executionTime,
                 operation: toolId
             });
