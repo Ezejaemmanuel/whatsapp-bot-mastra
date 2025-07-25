@@ -8,7 +8,6 @@ export const getOrCreateUser = mutation({
     args: {
         whatsappId: v.string(),
         profileName: v.optional(v.string()),
-        phoneNumber: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         // Check if user already exists
@@ -18,21 +17,40 @@ export const getOrCreateUser = mutation({
             .first();
 
         if (existingUser) {
+            // Prepare updates object
+            const updates: { profileName?: string; phoneNumber?: string } = {};
+            let hasUpdates = false;
+
             // Update profile name if provided and different
             if (args.profileName && existingUser.profileName !== args.profileName) {
-                await ctx.db.patch(existingUser._id, {
-                    profileName: args.profileName,
-                });
-                return { ...existingUser, profileName: args.profileName };
+                updates.profileName = args.profileName;
+                hasUpdates = true;
             }
+
+            // Update phone number - always derive it from whatsappId by adding '+' prefix
+            const phoneNumber = `+${args.whatsappId}`;
+            if (phoneNumber && existingUser.phoneNumber !== phoneNumber) {
+                updates.phoneNumber = phoneNumber;
+                hasUpdates = true;
+            }
+
+            // Apply updates if any
+            if (hasUpdates) {
+                await ctx.db.patch(existingUser._id, updates);
+                return { ...existingUser, ...updates };
+            }
+            
             return existingUser;
         }
 
         // Create new user
+        // Always derive phoneNumber from whatsappId by adding '+' prefix
+        const phoneNumber = `+${args.whatsappId}`;
+        
         const userId = await ctx.db.insert("users", {
             whatsappId: args.whatsappId,
             profileName: args.profileName,
-            phoneNumber: args.phoneNumber,
+            phoneNumber: phoneNumber,
             isBlocked: false,
         });
 
@@ -178,4 +196,4 @@ export const getUsersWithRecentActivity = query({
 
         return users.filter(user => user !== null);
     },
-}); 
+});

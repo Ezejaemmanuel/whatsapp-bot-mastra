@@ -20,12 +20,11 @@ export class DatabaseService {
     /**
      * Get or create a user by WhatsApp ID
      */
-    async getOrCreateUser(whatsappId: string, profileName?: string, phoneNumber?: string): Promise<User> {
+    async getOrCreateUser(whatsappId: string, profileName?: string): Promise<User> {
         try {
             const user = await fetchMutation(api.users.getOrCreateUser, {
                 whatsappId,
                 profileName,
-                phoneNumber,
             });
 
             if (!user) {
