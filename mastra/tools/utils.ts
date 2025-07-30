@@ -143,24 +143,3 @@ export function logInfo(message: string, data?: Record<string, any>): void {
     logExchangeEvent('INFO', message, data);
 }
 
-/**
- * Generate an embedding vector for a given text using Google text embedding model
- * @param text - The input text to embed
- * @returns Promise<number[]> - The embedding vector
- */
-export async function generateTextEmbedding(text: string): Promise<number[]> {
-    if (!text || typeof text !== 'string') {
-        throw new Error('Text must be a non-empty string for embedding');
-    }
-    // Use the same model and dimensionality as the agent
-    const embedder = google.textEmbeddingModel('text-embedding-004', {
-        outputDimensionality: 1536, // Match schema and agent config
-    });
-    // The correct input is { values: [text] }
-    const result = await embedder.doEmbed({ values: [text] });
-    // The result is { embeddings: number[][] }
-    if (!result || !Array.isArray(result.embeddings) || !Array.isArray(result.embeddings[0])) {
-        throw new Error('Failed to generate embedding');
-    }
-    return result.embeddings[0];
-}
