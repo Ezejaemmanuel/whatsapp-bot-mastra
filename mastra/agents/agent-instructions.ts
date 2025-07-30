@@ -1,6 +1,9 @@
 // AI Model Configuration - Using Vercel AI Gateway
-export const GEMINI_MODEL = "google/gemini-2.5-pro" as const;
-export const IMAGE_EXTRACTION_GEMINI_MODEL = "gemini-2.5-pro" as const;
+export const CHAT_AI_MODEL_GATEWAY = "google/gemini-2.5-pro" as const;
+export const CHAT_AI_MODEL_NORMAL = "gemini-2.5-pro" as const;
+
+export const IMAGE_EXTRACTION_AI_MODEL_NORMAL = "gemini-2.5-pro" as const;
+export const IMAGE_EXTRACTION_AI_MODEL_GATEWAY = "google/gemini-2.5-pro" as const;
 export const WHATSAPP_AGENT_NAME = "KhalidWid_Exchange_Bot" as const;
 
 export const IMAGE_EXTRACTION_TEMPERATURE = 0.1 as const;

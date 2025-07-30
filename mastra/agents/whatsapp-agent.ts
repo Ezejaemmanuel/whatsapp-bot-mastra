@@ -2,7 +2,7 @@ import { Agent } from '@mastra/core';
 import { Memory } from '@mastra/memory';
 import { UpstashStore, UpstashVector } from '@mastra/upstash';
 import { gateway } from '@ai-sdk/gateway';
-import { WHATSAPP_AGENT_NAME, WHATSAPP_AGENT_INSTRUCTIONS, GEMINI_MODEL } from './agent-instructions';
+import { WHATSAPP_AGENT_NAME, WHATSAPP_AGENT_INSTRUCTIONS,  CHAT_AI_MODEL_GATEWAY } from './agent-instructions';
 import { getCurrentRatesTool, createTransactionTool, updateTransactionStatusTool } from '../tools/exchange-tools';
 import { getUserTransactionsTool, getLatestUserTransactionTool, getAdminBankDetailsTool, getUserTool, updateTransactionBankDetailsTool } from '../tools/exchange-tools-2';
 import { getKenyaTimeTool } from '../tools/time-tool';
@@ -56,9 +56,7 @@ const upstashVector = new UpstashVector({
 const memory = new Memory({
     storage: upstashStorage, // Redis for general storage
     vector: upstashVector, // Vector database for embeddings
-    embedder: google.textEmbeddingModel('text-embedding-004', {
-        outputDimensionality: 768, // Optional: adjust dimensions
-    }),
+    embedder: google.textEmbeddingModel('text-embedding-004'),
     options: {
         lastMessages: 12, // Increased to capture more conversation context
         semanticRecall: {
@@ -170,7 +168,7 @@ export async function getWhatsappAgent() {
         name: WHATSAPP_AGENT_NAME,
         description: 'An intelligent WhatsApp exchange bot for KhalidWid Exchange, specializing in currency exchange with comprehensive user verification, smart state management, transaction processing, and fraud prevention.',
         instructions,
-        model: gateway('google/gemini-2.5-pro'), // Using Vercel AI Gateway for unified model management
+        model: gateway(CHAT_AI_MODEL_GATEWAY), // Using Vercel AI Gateway for unified model management
         memory,
         tools: {
             getCurrentRatesTool,
@@ -191,7 +189,7 @@ export const whatsappAgent = new Agent({
     name: WHATSAPP_AGENT_NAME,
     description: 'An intelligent WhatsApp exchange bot for KhalidWid Exchange, specializing in currency exchange with comprehensive user verification, smart state management, transaction processing, and fraud prevention.',
     instructions: WHATSAPP_AGENT_INSTRUCTIONS,
-    model: google(GEMINI_MODEL), // API key should be set via GOOGLE_GENERATIVE_AI_API_KEY environment variable
+    model: gateway(CHAT_AI_MODEL_GATEWAY), // API key should be set via GOOGLE_GENERATIVE_AI_API_KEY environment variable
     memory,
     tools: {
         getCurrentRatesTool,

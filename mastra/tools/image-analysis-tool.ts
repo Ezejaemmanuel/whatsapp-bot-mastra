@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
-import { IMAGE_EXTRACTION_GEMINI_MODEL, IMAGE_EXTRACTION_TEMPERATURE } from "../agents/agent-instructions";
+import {  IMAGE_EXTRACTION_AI_MODEL_NORMAL, IMAGE_EXTRACTION_TEMPERATURE } from "../agents/agent-instructions";
 // import { sendDebugMessage } from "./utils";
 
 // API key setup
@@ -220,7 +220,7 @@ Analyze the document and provide the structured output.`;
 
         // Use generateObject for structured outputs with AI SDK
         const result = await generateObject({
-            model: google(IMAGE_EXTRACTION_GEMINI_MODEL),
+            model: google(IMAGE_EXTRACTION_AI_MODEL_NORMAL),
             temperature: IMAGE_EXTRACTION_TEMPERATURE, // Lower temperature for more precise text extraction
             messages: [
                 {
