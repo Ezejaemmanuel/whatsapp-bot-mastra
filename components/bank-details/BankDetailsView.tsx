@@ -57,59 +57,59 @@ const BankDetailsForm: React.FC<{ detail?: BankDetails; onSave: () => void }> = 
                     <Landmark className="w-4 h-4 inline mr-2" />
                     Bank Name
                 </Label>
-                <Input 
-                    id="bankName" 
-                    value={bankName} 
-                    onChange={(e) => setBankName(e.target.value)} 
-                    placeholder="e.g., Central Bank" 
+                <Input
+                    id="bankName"
+                    value={bankName}
+                    onChange={(e) => setBankName(e.target.value)}
+                    placeholder="e.g., Central Bank"
                     className="transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
             </div>
-            
+
             <div className="grid gap-3">
                 <Label htmlFor="accountName" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     <Star className="w-4 h-4 inline mr-2" />
                     Account Name
                 </Label>
-                <Input 
-                    id="accountName" 
-                    value={accountName} 
-                    onChange={(e) => setAccountName(e.target.value)} 
-                    placeholder="e.g., John Doe" 
+                <Input
+                    id="accountName"
+                    value={accountName}
+                    onChange={(e) => setAccountName(e.target.value)}
+                    placeholder="e.g., John Doe"
                     className="transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
             </div>
-            
+
             <div className="grid gap-3">
                 <Label htmlFor="accountNumber" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     <CreditCard className="w-4 h-4 inline mr-2" />
                     Account Number
                 </Label>
                 <div className="relative">
-                    <Input 
-                        id="accountNumber" 
-                        value={accountNumber} 
-                        onChange={(e) => setAccountNumber(e.target.value)} 
-                        placeholder="e.g., 1234567890" 
+                    <Input
+                        id="accountNumber"
+                        value={accountNumber}
+                        onChange={(e) => setAccountNumber(e.target.value)}
+                        placeholder="e.g., 1234567890"
                         className="pl-10 transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border-2 hover:border-blue-300 focus:shadow-lg"
                     />
                     <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 </div>
             </div>
-            
+
             <div className="grid gap-3">
                 <Label htmlFor="description" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Description (Optional)
                 </Label>
-                <Input 
-                    id="description" 
-                    value={description} 
-                    onChange={(e) => setDescription(e.target.value)} 
-                    placeholder="Optional description" 
+                <Input
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Optional description"
                     className="transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
             </div>
-            
+
             <div className="grid gap-3">
                 <Label htmlFor="accountType" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Account Type
@@ -141,7 +141,7 @@ const BankDetailsForm: React.FC<{ detail?: BankDetails; onSave: () => void }> = 
                     </SelectContent>
                 </Select>
             </div>
-            
+
             <DialogFooter className="pt-4">
                 <Button type="submit" className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl">
                     <CheckCircle className="w-4 h-4 mr-2" />
