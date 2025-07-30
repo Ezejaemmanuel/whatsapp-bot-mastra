@@ -6,7 +6,7 @@ export const mastra = new Mastra({
   agents: {
     whatsappAgent, // Enhanced KhalidWid Exchange Bot with full functionality
   },
-
+  aiSdkCompat: 'v4',
   logger: new PinoLogger({
     name: 'KhalidWid-Exchange-Mastra',
     level: 'info',
