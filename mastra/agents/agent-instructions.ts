@@ -1,5 +1,5 @@
 // AI Model Configuration - Using Vercel AI Gateway
-export const CHAT_AI_MODEL_GATEWAY = "google/gemini-2.5-pro" as const;
+export const CHAT_AI_MODEL_GATEWAY = "moonshotai/kimi-k2" as const;
 export const CHAT_AI_MODEL_NORMAL = "gemini-2.5-pro" as const;
 
 export const IMAGE_EXTRACTION_AI_MODEL_NORMAL = "gemini-2.5-pro" as const;
