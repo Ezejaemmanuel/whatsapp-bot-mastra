@@ -84,25 +84,8 @@ function getMimeTypeFromUrl(url: string): string {
 
 // Schema for OCR extraction - simplified to only return what's actually used
 export const ocrSchema = z.object({
-    documentType: z.enum(['receipt', 'invoice', 'screenshot', 'document', 'other'])
-        .describe('The type of document identified in the image.'),
-    ocrResults: z.object({
-        rawText: z.string().describe("Complete raw text extracted from the image")
-    }),
-    extractedFields: z.object({
-        amount: z.number().optional().describe('The primary transaction amount found on the receipt.'),
-        transactionDate: z.string().optional().describe('The transaction date (and time if available) in ISO 8601 format (YYYY-MM-DDTHH:mm:ssZ).'),
-        recipientName: z.string().optional().describe('The name of the recipient or beneficiary.'),
-        senderName: z.string().optional().describe('The name of the sender.'),
-        bankName: z.string().optional().describe('The name of the bank.'),
-        accountNumber: z.string().optional().describe('The bank account number (partially masked if possible).'),
-        transactionReference: z.string().optional().describe('Any transaction ID or reference number.'),
-    }).describe('Key-value pairs of extracted transaction details from the document.'),
-    imageQuality: z.object({
-        quality: z.enum(['excellent', 'good', 'fair', 'poor']).describe("Quality of the image for text extraction"),
-        confidence: z.enum(['high', 'medium', 'low']).describe("Confidence level in text extraction"),
-        issues: z.array(z.string()).optional().describe("Any issues affecting text extraction")
-    })
+    rawText: z.string().describe("Complete raw text extracted from the image"),
+    transactionReference: z.string().optional().describe('Transaction reference or ID')
 });
 
 /**
@@ -174,31 +157,11 @@ export async function analyzeImageDirectly(
     }
 
     // Create the analysis prompt
-    const analysisPrompt = `You are an expert OCR and document analysis system. Your task is to:
+    const analysisPrompt = `Extract all visible text from this image and identify any transaction reference/ID numbers.
 
-1.  **CLASSIFY THE DOCUMENT**: Determine if the image is a 'receipt', 'invoice', 'screenshot' of a transaction, a generic 'document', or 'other'.
+${context ? `Context: ${context}` : ''}
 
-2.  **EXTRACT ALL TEXT**:
-    *   Capture every visible text element precisely.
-    *   Preserve formatting, line breaks, and all special characters.
-
-3.  **EXTRACT KEY FIELDS (if it's a receipt or transaction document)**:
-    *   **amount**: The main transaction amount.
-    *   **transactionDate**: The date and time of the transaction. Convert to ISO 8601 format.
-    *   **recipientName**: The name of the person or company receiving the money.
-    *   **senderName**: The name of the person sending the money.
-    *   **bankName**: The bank name associated with the transaction.
-    *   **accountNumber**: The account number (if visible).
-    *   **transactionReference**: Any reference or transaction ID.
-    *   If a field is not present, leave it empty.
-
-4.  **ASSESS IMAGE QUALITY**:
-    *   Note any unclear, blurry, or unreadable text.
-    *   Report your confidence level in the extraction.
-
-${context ? `\nContext: ${context}` : ''}
-
-Analyze the document and provide the structured output.`;
+Return the complete text and any transaction references found.`;
 
     try {
         logInfo('Initiating Gemini Vision analysis', {
@@ -244,10 +207,8 @@ Analyze the document and provide the structured output.`;
         const analysisResult = result.object;
 
         logSuccess('AI image analysis completed successfully', {
-            imageQuality: analysisResult.imageQuality?.quality,
-            confidence: analysisResult.imageQuality?.confidence,
-            hasIssues: !!analysisResult.imageQuality?.issues && analysisResult.imageQuality.issues.length > 0,
-            issuesCount: analysisResult.imageQuality?.issues?.length || 0,
+            hasText: !!analysisResult.rawText,
+            textLength: analysisResult.rawText?.length || 0,
             executionTimeMs: executionTime,
             operation: 'analyzeImageDirectly'
         });
@@ -257,28 +218,16 @@ Analyze the document and provide the structured output.`;
         //     await sendDebugMessage(phoneNumber, 'AI PROCESSING COMPLETED', {
         //         success: true,
         //         executionTimeMs: executionTime,
-        //         imageQuality: analysisResult.imageQuality?.quality,
-        //         confidence: analysisResult.imageQuality?.confidence,
-        //         issuesCount: analysisResult.imageQuality?.issues?.length || 0,
-        //         textLinesCount: analysisResult.ocrResults?.formattedText?.lines?.length || 0,
-        //         sectionsCount: analysisResult.ocrResults?.formattedText?.sections?.length || 0
+        //         textLength: analysisResult.rawText?.length || 0
         //     });
         // }
 
         // Send extracted OCR results as debug message
-        if (phoneNumber && analysisResult.ocrResults) {
+        if (phoneNumber && analysisResult.rawText) {
             // await sendDebugMessage(phoneNumber, 'OCR EXTRACTION RESULTS', {
-            //     rawTextLength: analysisResult.ocrResults.rawText?.length || 0,
-            //     rawTextPreview: analysisResult.ocrResults.rawText,
-            //     linesCount: analysisResult.ocrResults.formattedText?.lines?.length || 0,
-            //     sectionsCount: analysisResult.ocrResults.formattedText?.sections?.length || 0,
-            //     firstFewLines: analysisResult.ocrResults.formattedText?.lines?.slice(0, 10) || []
+            //     rawTextLength: analysisResult.rawText?.length || 0,
+            //     rawTextPreview: analysisResult.rawText
             // });
-
-            // // Send the complete raw text as a separate message for full OCR visibility
-            // if (analysisResult.ocrResults.rawText) {
-            //     await sendDebugMessage(phoneNumber, 'COMPLETE OCR RAW TEXT', analysisResult.ocrResults.rawText);
-            // }
         }
 
         if (!analysisResult) {
@@ -301,30 +250,20 @@ Analyze the document and provide the structured output.`;
         }
 
         // Validate that we got meaningful analysis
-        if (!analysisResult.imageQuality) {
-            const errorMsg = 'AI did not provide quality assessment. This suggests the analysis may be incomplete.';
-            logError('AI did not provide quality assessment', new Error('Missing quality assessment'), {
+        if (!analysisResult.rawText) {
+            const errorMsg = 'AI did not extract any text from the image.';
+            logError('AI did not extract text', new Error('Missing raw text'), {
                 executionTimeMs: executionTime,
                 operation: 'analyzeImageDirectly',
                 errorType: 'incomplete_analysis'
             });
-
-            // if (phoneNumber) {
-            //     await sendDebugMessage(phoneNumber, 'ANALYSIS VALIDATION FAILED', {
-            //         error: errorMsg,
-            //         executionTimeMs: executionTime,
-            //         type: 'Missing quality assessment'
-            //     });
-            // }
 
             throw new Error(errorMsg);
         }
 
         // Log detailed analysis results for debugging
         logInfo('General image analysis details', {
-            description: analysisResult.ocrResults?.rawText?.substring(0, 100),
-            isRelevantToExchange: false,
-            hasSuggestedAction: false,
+            description: analysisResult.rawText?.substring(0, 100),
             operation: 'analyzeImageDirectly'
         });
 
@@ -332,9 +271,7 @@ Analyze the document and provide the structured output.`;
         // if (phoneNumber) {
         //     await sendDebugMessage(phoneNumber, 'DIRECT IMAGE ANALYSIS COMPLETED SUCCESSFULLY', {
         //         totalExecutionTimeMs: executionTime,
-        //         finalQuality: analysisResult.imageQuality.quality,
-        //         finalConfidence: analysisResult.imageQuality.confidence,
-        //         hasExtractedText: !!analysisResult.ocrResults.rawText,
+        //         hasExtractedText: !!analysisResult.rawText,
         //         analysisComplete: true
         //     });
         // }
@@ -376,16 +313,7 @@ Analyze the document and provide the structured output.`;
 
         // Return a structured error response instead of throwing
         return {
-            documentType: 'other' as const,
-            ocrResults: {
-                rawText: "Error analyzing image"
-            },
-            extractedFields: {},
-            imageQuality: {
-                quality: 'poor' as const,
-                confidence: 'low' as const,
-                issues: [`Analysis failed: ${errorMessage}`]
-            }
+            rawText: "Error analyzing image"
         };
     }
 }

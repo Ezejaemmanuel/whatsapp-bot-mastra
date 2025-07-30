@@ -56,12 +56,7 @@ export const getCurrentRatesTool = createTool({
 
             const executionTime = Date.now() - startTime;
 
-            const result = {
-                success: true,
-                data: rates,
-                totalRates: Array.isArray(rates) ? rates.length : 1,
-                message: 'All exchange rates retrieved successfully'
-            };
+            const result = rates;
 
             // Send debug message with results
             if (phoneNumber) {
@@ -75,13 +70,6 @@ export const getCurrentRatesTool = createTool({
                 // // Send complete rates data
                 // await sendDebugMessage(phoneNumber, 'COMPLETE RATES DATA', rates);
             }
-
-            logSuccess('All exchange rates retrieved successfully', {
-                totalRates: result.totalRates,
-                executionTimeMs: executionTime,
-                operation: toolId,
-                ratesData: rates
-            });
 
             logToolResult(toolId, result, executionTime);
             return result;
@@ -222,13 +210,7 @@ export const createTransactionTool = createTool({
 
             const executionTime = Date.now() - startTime;
 
-            const result = {
-                success: true,
-                data: transaction,
-                transactionId: transaction,
-                message: `Transaction created successfully with ID: ${transaction}`,
-                workingMemoryUpdate: `IMPORTANT: Store this transaction ID in your working memory: ${transaction}. You will need this ID for all future updates to this transaction. Use this exact ID when calling updateTransactionStatusTool or other transaction-related tools.`
-            };
+            const result = transaction;
 
             // Send debug message with successful result
             if (phoneNumber) {
@@ -421,13 +403,8 @@ export const updateTransactionStatusTool = createTool({
             const executionTime = Date.now() - startTime;
 
             const result = {
-                success: true,
                 transactionId: context.transactionId,
-                previousStatus: transaction.status,
-                inputStatus: context.status,
-                newStatus: mappedStatus,
-                message: `Transaction ${context.transactionId} status updated from ${transaction.status} to ${mappedStatus} successfully (input: ${context.status})`,
-                workingMemoryUpdate: `Transaction ${context.transactionId} is now in ${mappedStatus} status. Keep this transaction ID in your working memory for future updates.`
+                status: mappedStatus
             };
             logSuccess('Transaction status updated successfully', {
                 transactionId: context.transactionId,

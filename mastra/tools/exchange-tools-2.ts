@@ -73,11 +73,8 @@ export const updateTransactionBankDetailsTool = createTool({
             const executionTime = Date.now() - startTime;
 
             const result = {
-                success: true,
-                data: updatedTransaction,
                 transactionId: context.transactionId,
-                message: `Transaction bank details updated successfully for transaction ${context.transactionId}. User's latest bank details also updated.`,
-                workingMemoryUpdate: `Transaction ${context.transactionId} now has bank details: ${context.transactionBankName}, Account: ${context.transactionAccountName} (${context.transactionAccountNumber.slice(0, 4)}****). User's account details updated to latest.`
+                updated: true
             };
 
             logSuccess('Transaction bank details updated successfully', {
@@ -199,25 +196,16 @@ export const getUserTransactionsTool = createTool({
 
             const executionTime = Date.now() - startTime;
 
-            const result = {
-                success: true,
-                data: transactions,
-                totalTransactions: transactions.length,
-                transactions: transactions.map(tx => ({
-                    id: tx._id,
-                    status: tx.status,
-                    currencyFrom: tx.currencyFrom,
-                    currencyTo: tx.currencyTo,
-                    amountFrom: tx.amountFrom,
-                    amountTo: tx.amountTo,
-                    negotiatedRate: tx.negotiatedRate,
-                    createdAt: tx.createdAt,
-                    updatedAt: tx.updatedAt,
-                    paymentReference: tx.paymentReference
-                })),
-                message: `Found ${transactions.length} transaction(s) for the user`,
-                workingMemoryUpdate: transactions.length > 0 ? `Available transaction IDs: ${transactions.map(tx => tx._id).join(', ')}` : 'No transactions found for this user'
-            };
+            const result = transactions.map(tx => ({
+                id: tx._id,
+                status: tx.status,
+                currencyFrom: tx.currencyFrom,
+                currencyTo: tx.currencyTo,
+                amountFrom: tx.amountFrom,
+                amountTo: tx.amountTo,
+                negotiatedRate: tx.negotiatedRate,
+                createdAt: tx.createdAt
+            }));
 
             // Send debug message with results
             if (phoneNumber) {
@@ -355,12 +343,7 @@ export const getLatestUserTransactionTool = createTool({
             const executionTime = Date.now() - startTime;
 
             if (transactions.length === 0) {
-                const result = {
-                    success: true,
-                    hasTransaction: false,
-                    message: 'No transactions found for this user',
-                    workingMemoryUpdate: 'No transaction ID to store - user has no transactions yet'
-                };
+                const result = null;
 
                 // Send debug message for no transactions found
                 if (phoneNumber) {
@@ -389,23 +372,14 @@ export const getLatestUserTransactionTool = createTool({
             const latestTransaction = transactions[0];
 
             const result = {
-                success: true,
-                hasTransaction: true,
-                data: latestTransaction,
-                transaction: {
-                    id: latestTransaction._id,
-                    status: latestTransaction.status,
-                    currencyFrom: latestTransaction.currencyFrom,
-                    currencyTo: latestTransaction.currencyTo,
-                    amountFrom: latestTransaction.amountFrom,
-                    amountTo: latestTransaction.amountTo,
-                    negotiatedRate: latestTransaction.negotiatedRate,
-                    createdAt: latestTransaction.createdAt,
-                    updatedAt: latestTransaction.updatedAt,
-                    paymentReference: latestTransaction.paymentReference
-                },
-                message: `Latest transaction found with status: ${latestTransaction.status}`,
-                workingMemoryUpdate: `Update your working memory with the latest transaction ID: ${latestTransaction._id}`
+                id: latestTransaction._id,
+                status: latestTransaction.status,
+                currencyFrom: latestTransaction.currencyFrom,
+                currencyTo: latestTransaction.currencyTo,
+                amountFrom: latestTransaction.amountFrom,
+                amountTo: latestTransaction.amountTo,
+                negotiatedRate: latestTransaction.negotiatedRate,
+                createdAt: latestTransaction.createdAt
             };
 
             // Send debug message with latest transaction
@@ -528,11 +502,7 @@ export const getAdminBankDetailsTool = createTool({
 
             const executionTime = Date.now() - startTime;
 
-            const result = {
-                success: true,
-                data: allAdminBankDetails,
-                message: `All active admin bank details retrieved successfully. The user should be asked to send payment to any of them.`
-            };
+            const result = allAdminBankDetails;
 
             // Send debug message with results (masked for security)
             if (phoneNumber) {
@@ -644,40 +614,16 @@ export const getUserTool = createTool({
             const executionTime = Date.now() - startTime;
 
             const result = {
-                success: true,
-                data: user,
                 userId: user._id,
                 whatsappId: user.whatsappId,
                 profileName: user.profileName,
                 phoneNumber: user.phoneNumber,
-                bankDetails: {
-                    bankName: user.bankName,
-                    accountNumber: user.accountNumber,
-                    accountName: user.accountName
-                },
-                message: `User information retrieved successfully`
+                bankName: user.bankName,
+                accountNumber: user.accountNumber,
+                accountName: user.accountName
             };
 
-            // Send debug message with user info (masked bank details for security)
-            if (phoneNumber) {
-                // await sendDebugMessage(phoneNumber, 'USER INFORMATION RETRIEVED', {
-                //     success: true,
-                //     userId: user._id,
-                //     whatsappId: user.whatsappId,
-                //     profileName: user.profileName,
-                //     phoneNumber: user.phoneNumber,
-                //     hasBankDetails: !!(user.bankName && user.accountNumber && user.accountName),
-                //     bankDetailsMasked: user.accountNumber ? {
-                //         bankName: user.bankName,
-                //         accountNumberMasked: user.accountNumber.slice(0, 4) + '****',
-                //         accountName: user.accountName
-                //     } : null,
-                // executionTimeMs: executionTime
-                // });
-
-                // Send complete user data for debugging
-                // await sendDebugMessage(phoneNumber, 'COMPLETE USER DATA', result);
-            }
+          
 
             logSuccess('User information retrieved successfully', {
                 userId: user._id,

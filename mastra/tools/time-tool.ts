@@ -63,4 +63,4 @@ export const getKenyaTimeTool = createTool({
             throw new Error(`Failed to get Kenya time: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     },
-}); 
+});
