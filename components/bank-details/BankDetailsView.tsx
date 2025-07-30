@@ -9,8 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { Landmark, Edit, Trash, PlusCircle, Star, CheckCircle } from 'lucide-react';
+import { Landmark, Edit, Trash, PlusCircle, Star, CheckCircle, CreditCard, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { EmptyState } from '../ui/empty-state';
 import { FullScreenLoader } from '../ui/loader';
@@ -50,38 +51,102 @@ const BankDetailsForm: React.FC<{ detail?: BankDetails; onSave: () => void }> = 
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid gap-2">
-                <Label htmlFor="bankName">Bank Name</Label>
-                <Input id="bankName" value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="e.g., Central Bank" />
+        <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid gap-3">
+                <Label htmlFor="bankName" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <Landmark className="w-4 h-4 inline mr-2" />
+                    Bank Name
+                </Label>
+                <Input 
+                    id="bankName" 
+                    value={bankName} 
+                    onChange={(e) => setBankName(e.target.value)} 
+                    placeholder="e.g., Central Bank" 
+                    className="transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
             </div>
-            <div className="grid gap-2">
-                <Label htmlFor="accountName">Account Name</Label>
-                <Input id="accountName" value={accountName} onChange={(e) => setAccountName(e.target.value)} placeholder="e.g., John Doe" />
+            
+            <div className="grid gap-3">
+                <Label htmlFor="accountName" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <Star className="w-4 h-4 inline mr-2" />
+                    Account Name
+                </Label>
+                <Input 
+                    id="accountName" 
+                    value={accountName} 
+                    onChange={(e) => setAccountName(e.target.value)} 
+                    placeholder="e.g., John Doe" 
+                    className="transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
             </div>
-            <div className="grid gap-2">
-                <Label htmlFor="accountNumber">Account Number</Label>
-                <Input id="accountNumber" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="e.g., 1234567890" />
+            
+            <div className="grid gap-3">
+                <Label htmlFor="accountNumber" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <CreditCard className="w-4 h-4 inline mr-2" />
+                    Account Number
+                </Label>
+                <div className="relative">
+                    <Input 
+                        id="accountNumber" 
+                        value={accountNumber} 
+                        onChange={(e) => setAccountNumber(e.target.value)} 
+                        placeholder="e.g., 1234567890" 
+                        className="pl-10 transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border-2 hover:border-blue-300 focus:shadow-lg"
+                    />
+                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                </div>
             </div>
-            <div className="grid gap-2">
-                <Label htmlFor="description">Description</Label>
-                <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional description" />
+            
+            <div className="grid gap-3">
+                <Label htmlFor="description" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Description (Optional)
+                </Label>
+                <Input 
+                    id="description" 
+                    value={description} 
+                    onChange={(e) => setDescription(e.target.value)} 
+                    placeholder="Optional description" 
+                    className="transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
             </div>
-            <div className="grid gap-2">
-                <Label htmlFor="accountType">Account Type</Label>
-                <select
-                    id="accountType"
-                    value={accountType}
-                    onChange={e => setAccountType(e.target.value as 'buy' | 'sell')}
-                    className="border rounded px-2 py-1"
-                >
-                    <option value="buy">Buy (for buying currency)</option>
-                    <option value="sell">Sell (for selling currency)</option>
-    
-                </select>
+            
+            <div className="grid gap-3">
+                <Label htmlFor="accountType" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Account Type
+                </Label>
+                <Select value={accountType} onValueChange={(value) => setAccountType(value as 'buy' | 'sell')}>
+                    <SelectTrigger className="w-full transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border-2 hover:border-blue-300 focus:shadow-lg">
+                        <div className="flex items-center gap-2">
+                            {accountType === 'buy' ? (
+                                <TrendingUp className="w-4 h-4 text-green-500" />
+                            ) : (
+                                <TrendingDown className="w-4 h-4 text-red-500" />
+                            )}
+                            <SelectValue placeholder="Select account type" />
+                        </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="buy" className="cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20">
+                            <div className="flex items-center gap-2">
+                                <TrendingUp className="w-4 h-4 text-green-500" />
+                                <span>Buy (for buying currency)</span>
+                            </div>
+                        </SelectItem>
+                        <SelectItem value="sell" className="cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20">
+                            <div className="flex items-center gap-2">
+                                <TrendingDown className="w-4 h-4 text-red-500" />
+                                <span>Sell (for selling currency)</span>
+                            </div>
+                        </SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
-            <DialogFooter>
-                <Button type="submit">Save Details</Button>
+            
+            <DialogFooter className="pt-4">
+                <Button type="submit" className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl">
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Save Details
+                </Button>
             </DialogFooter>
         </form>
     )
