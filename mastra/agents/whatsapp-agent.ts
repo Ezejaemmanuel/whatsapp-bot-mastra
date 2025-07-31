@@ -3,7 +3,7 @@ import { Memory } from '@mastra/memory';
 import { UpstashStore, UpstashVector } from '@mastra/upstash';
 import { gateway } from '@ai-sdk/gateway';
 import { WHATSAPP_AGENT_NAME, WHATSAPP_AGENT_INSTRUCTIONS,  CHAT_AI_MODEL_GATEWAY } from './agent-instructions';
-import { getCurrentRatesTool, createTransactionTool, updateTransactionStatusTool } from '../tools/exchange-tools';
+import { getCurrentRatesTool, manageTransactionTool } from '../tools/exchange-tools';
 import { getUserTransactionsTool, getLatestUserTransactionTool, getAdminBankDetailsTool, getUserTool, updateTransactionBankDetailsTool } from '../tools/exchange-tools-2';
 import { getKenyaTimeTool } from '../tools/time-tool';
 import { getAdminStatusTool } from '../tools/admin-status-tool';
@@ -66,76 +66,38 @@ const memory = new Memory({
         workingMemory: {
             enabled: true,
             template: `
-# 📋 CONVERSATION SNAPSHOT
+# 📋 CONVERSATION STATE
 **Last Updated**: {{timestamp}}
-**Conversation Status**: {{conversation_status}} // (initializing/active/transaction_pending/completed/paused)
+**User Name**: {{user_name}} // Store user's name here
+**User Verified**: {{user_verified}} // (yes/no)
+**Admin Status**: {{admin_status}} // (active/inactive)
 
-# 👤 USER PROFILE & VERIFICATION
-**WhatsApp ID**: {{whatsapp_id}}
-**Phone Number**: {{phone_number}}
-**Profile Name**: {{profile_name}}
-**User Name Known**: {{user_name_known}} // (yes/no)
-**User Name Retrieved**: {{user_name_retrieved}} // (yes/no)
-**User Account Status**: {{user_account_status}} // (new_user/returning_user/verified_user)
-**User Details Checked**: {{user_details_checked}} // (yes/no/pending)
-**Profile Verification Date**: {{profile_verification_date}}
+# 💱 CURRENT SESSION
+**Session Type**: {{session_type}} // (inquiry/instant_exchange/receipt_processing)
+**Currency Requested**: {{currency_requested}} // (shillings/naira)
+**Exchange Direction**: {{exchange_direction}} // (buying_shillings/selling_shillings/buying_naira/selling_naira)
+**Rate Provided**: {{rate_provided}}
+**Bank Details Sent**: {{bank_details_sent}} // (yes/no)
+**Extracted Amount**: {{extracted_amount}} // Amount from receipt
 
-# 🏦 SAVED BANK DETAILS
-**Bank Details Status**: {{bank_details_status}} // (none/exists/needs_confirmation/confirmed/needs_update)
-**Saved Bank Name**: {{saved_bank_name}}
-**Saved Account Number**: {{saved_account_number}} // (masked for security)
-**Saved Account Name**: {{saved_account_name}}
-**Bank Details Last Updated**: {{bank_details_last_updated}}
-**Bank Details Confirmed**: {{bank_details_confirmed}} // (yes/no/pending_confirmation)
+# 🔄 ACTIVE TRANSACTION
+**Transaction ID**: {{transaction_id}}
+**Transaction Status**: {{transaction_status}} // (none/pending/image_received/completed)
+**Amount From**: {{amount_from}}
+**Amount To**: {{amount_to}}
+**Rate Used**: {{rate_used}}
+**Payment Proof Received**: {{payment_proof_received}} // (yes/no)
 
-# 💱 CURRENT EXCHANGE SESSION
-**Exchange Session Status**: {{exchange_session_status}} // (none/inquiry/rate_provided/amount_confirmed/bank_details_phase/ready_to_process/processing/completed)
-**Currency Pair**: {{currency_pair}} // (e.g., USD_to_NGN, NGN_to_USD)
-**Exchange Direction**: {{exchange_direction}} // (selling_foreign/buying_foreign)
-**Requested Amount**: {{requested_amount}}
-**Calculated Receiving Amount**: {{calculated_receiving_amount}}
-**Exchange Rate Applied**: {{exchange_rate_applied}}
-**Rate Confirmation Status**: {{rate_confirmation_status}} // (pending/confirmed/expired)
+# 🏦 USER BANK DETAILS
+**Bank Details Status**: {{bank_details_status}} // (none/saved/needs_update)
+**Bank Name**: {{bank_name}}
+**Account Number**: {{account_number}}
+**Account Name**: {{account_name}}
 
-# 🔄 TRANSACTION STATE
-**Active Transaction ID**: {{active_transaction_id}}
-**Transaction Status**: {{transaction_status}} // (none/created/pending_payment/image_sent_waiting_for_confirmation/payment_received/processing/completed/failed)
-**Transaction Created Date**: {{transaction_created_date}}
-**Payment Method**: {{payment_method}}
-**Payment Status**: {{payment_status}} // (pending/received/verified/failed)
-**Admin Notification Sent**: {{admin_notification_sent}} // (yes/no)
-
-# 📊 LATEST TRANSACTION SUMMARY
-**Last Transaction ID**: {{last_transaction_id}}
-**Last Transaction Status**: {{last_transaction_status}}
-**Last Transaction Amount**: {{last_transaction_amount}}
-**Last Transaction Date**: {{last_transaction_date}}
-**Last Transaction Success**: {{last_transaction_success}} // (yes/no)
-
-# 🎯 CONVERSATION FLOW STATE
-**Current Flow Step**: {{current_flow_step}} // (user_name_verification/welcome/user_verification/exchange_inquiry/rate_confirmation/bank_details_verification/final_confirmation/transaction_processing/completion)
-**Next Expected Action**: {{next_expected_action}}
-**Waiting For User Input**: {{waiting_for_user_input}} // (none/bank_confirmation/amount_confirmation/final_approval/payment_proof/image_sent_waiting_for_confirmation)
-**Flow Completion Percentage**: {{flow_completion_percentage}}%
-
-# 🔐 SECURITY & VALIDATION
-**Security Checks Passed**: {{security_checks_passed}} // (pending/passed/failed)
-**Fraud Risk Level**: {{fraud_risk_level}} // (low/medium/high)
-**Verification Required**: {{verification_required}} // (none/phone/bank_details/payment_proof)
-**Session Security Status**: {{session_security_status}} // (secure/needs_verification/flagged)
-
-# 📝 SESSION NOTES & CONTEXT
-**Customer Preferences**: {{customer_preferences}}
-**Special Instructions**: {{special_instructions}}
-**Conversation Tone**: {{conversation_tone}} // (formal/friendly/business)
-**Language Preference**: {{language_preference}}
-**Timezone**: {{timezone}}
-
-# 🚨 ALERTS & REMINDERS
-**Pending Actions**: {{pending_actions}}
-**System Alerts**: {{system_alerts}}
-**Follow-up Required**: {{follow_up_required}} // (none/rate_update/payment_reminder/completion_confirmation)
-**Session Expiry**: {{session_expiry}}
+# 🎯 NEXT ACTION
+**Waiting For**: {{waiting_for}} // (greeting/payment_proof/bank_details/none)
+**Last Action**: {{last_action}}
+**Receipt Processing**: {{receipt_processing}} // (pending/completed/failed)
 `,
         },
         threads: {
@@ -172,8 +134,7 @@ export async function getWhatsappAgent() {
         memory,
         tools: {
             getCurrentRatesTool,
-            createTransactionTool,
-            updateTransactionStatusTool,
+            manageTransactionTool,
             getUserTransactionsTool,
             getLatestUserTransactionTool,
             getAdminBankDetailsTool,
@@ -193,8 +154,7 @@ export const whatsappAgent = new Agent({
     memory,
     tools: {
         getCurrentRatesTool,
-        createTransactionTool,
-        updateTransactionStatusTool,
+        manageTransactionTool,
         getUserTransactionsTool,
         getLatestUserTransactionTool,
         getAdminBankDetailsTool,
