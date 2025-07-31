@@ -4,48 +4,79 @@ import { Id } from "./_generated/dataModel";
 import { TransactionStatusUnion, TransactionStatus } from "./schemaUnions";
 
 /**
- * Create a new exchange transaction
+ * Create a new exchange transaction with flexible fields
+ * Most fields are optional to allow AI-driven progressive transaction building
  */
 export const createTransaction = mutation({
     args: {
         userId: v.id("users"),
         conversationId: v.id("conversations"),
-        currencyFrom: v.string(),
-        currencyTo: v.string(),
-        amountFrom: v.number(),
-        amountTo: v.number(),
-        negotiatedRate: v.number(),
+        currencyFrom: v.optional(v.string()),
+        currencyTo: v.optional(v.string()),
+        amountFrom: v.optional(v.number()),
+        amountTo: v.optional(v.number()),
+        negotiatedRate: v.optional(v.number()),
+        estimatedRate: v.optional(v.number()),
+        notes: v.optional(v.string()),
+        customerBankName: v.optional(v.string()),
+        customerAccountNumber: v.optional(v.string()),
+        customerAccountName: v.optional(v.string()),
         metadata: v.optional(v.any()),
     },
     handler: async (ctx, args) => {
         const now = Date.now();
         const status: TransactionStatus = "pending";
-        return await ctx.db.insert("transactions", {
+        
+        // Build transaction object with only provided fields
+        const transactionData: any = {
             userId: args.userId,
             conversationId: args.conversationId,
-            currencyFrom: args.currencyFrom,
-            currencyTo: args.currencyTo,
-            amountFrom: args.amountFrom,
-            amountTo: args.amountTo,
-            negotiatedRate: args.negotiatedRate,
             status,
             createdAt: now,
             updatedAt: now,
-            metadata: args.metadata,
-        });
+        };
+        
+        // Add optional fields only if provided
+        if (args.currencyFrom !== undefined) transactionData.currencyFrom = args.currencyFrom;
+        if (args.currencyTo !== undefined) transactionData.currencyTo = args.currencyTo;
+        if (args.amountFrom !== undefined) transactionData.amountFrom = args.amountFrom;
+        if (args.amountTo !== undefined) transactionData.amountTo = args.amountTo;
+        if (args.negotiatedRate !== undefined) transactionData.negotiatedRate = args.negotiatedRate;
+        if (args.estimatedRate !== undefined) transactionData.estimatedRate = args.estimatedRate;
+        if (args.notes !== undefined) transactionData.notes = args.notes;
+        if (args.customerBankName !== undefined) transactionData.customerBankName = args.customerBankName;
+        if (args.customerAccountNumber !== undefined) transactionData.customerAccountNumber = args.customerAccountNumber;
+        if (args.customerAccountName !== undefined) transactionData.customerAccountName = args.customerAccountName;
+        if (args.metadata !== undefined) transactionData.metadata = args.metadata;
+        
+        return await ctx.db.insert("transactions", transactionData);
     },
 });
 
 /**
- * Update transaction status
+ * Update transaction status and other fields
+ * Supports updating any transaction field including customer bank details
  */
 export const updateTransactionStatus = mutation({
     args: {
         transactionId: v.id("transactions"),
-        status: TransactionStatusUnion,
+        status: v.optional(TransactionStatusUnion),
+        currencyFrom: v.optional(v.string()),
+        currencyTo: v.optional(v.string()),
+        amountFrom: v.optional(v.number()),
+        amountTo: v.optional(v.number()),
+        negotiatedRate: v.optional(v.number()),
+        estimatedRate: v.optional(v.number()),
         paymentReference: v.optional(v.string()),
         receiptImageUrl: v.optional(v.string()),
         extractedDetails: v.optional(v.any()),
+        notes: v.optional(v.string()),
+        customerBankName: v.optional(v.string()),
+        customerAccountNumber: v.optional(v.string()),
+        customerAccountName: v.optional(v.string()),
+        transactionBankName: v.optional(v.string()),
+        transactionAccountNumber: v.optional(v.string()),
+        transactionAccountName: v.optional(v.string()),
         metadata: v.optional(v.any()),
     },
     handler: async (ctx, args) => {
@@ -54,14 +85,32 @@ export const updateTransactionStatus = mutation({
             throw new Error("Transaction not found");
         }
 
-        return await ctx.db.patch(args.transactionId, {
-            status: args.status,
-            paymentReference: args.paymentReference ?? transaction.paymentReference,
-            receiptImageUrl: args.receiptImageUrl ?? transaction.receiptImageUrl,
-            extractedDetails: args.extractedDetails ?? transaction.extractedDetails,
+        // Build update object with only provided fields
+        const updateData: any = {
             updatedAt: Date.now(),
-            metadata: args.metadata ? { ...transaction.metadata, ...args.metadata } : transaction.metadata,
-        });
+        };
+        
+        // Add fields only if provided
+        if (args.status !== undefined) updateData.status = args.status;
+        if (args.currencyFrom !== undefined) updateData.currencyFrom = args.currencyFrom;
+        if (args.currencyTo !== undefined) updateData.currencyTo = args.currencyTo;
+        if (args.amountFrom !== undefined) updateData.amountFrom = args.amountFrom;
+        if (args.amountTo !== undefined) updateData.amountTo = args.amountTo;
+        if (args.negotiatedRate !== undefined) updateData.negotiatedRate = args.negotiatedRate;
+        if (args.estimatedRate !== undefined) updateData.estimatedRate = args.estimatedRate;
+        if (args.paymentReference !== undefined) updateData.paymentReference = args.paymentReference;
+        if (args.receiptImageUrl !== undefined) updateData.receiptImageUrl = args.receiptImageUrl;
+        if (args.extractedDetails !== undefined) updateData.extractedDetails = args.extractedDetails;
+        if (args.notes !== undefined) updateData.notes = args.notes;
+        if (args.customerBankName !== undefined) updateData.customerBankName = args.customerBankName;
+        if (args.customerAccountNumber !== undefined) updateData.customerAccountNumber = args.customerAccountNumber;
+        if (args.customerAccountName !== undefined) updateData.customerAccountName = args.customerAccountName;
+        if (args.transactionBankName !== undefined) updateData.transactionBankName = args.transactionBankName;
+        if (args.transactionAccountNumber !== undefined) updateData.transactionAccountNumber = args.transactionAccountNumber;
+        if (args.transactionAccountName !== undefined) updateData.transactionAccountName = args.transactionAccountName;
+        if (args.metadata !== undefined) updateData.metadata = args.metadata ? { ...transaction.metadata, ...args.metadata } : transaction.metadata;
+
+        return await ctx.db.patch(args.transactionId, updateData);
     },
 });
 
@@ -344,8 +393,8 @@ export const getTransactionStats = query({
             completed: transactions.filter(t => t.status === "confirmed_and_money_sent_to_user").length,
             failed: transactions.filter(t => t.status === "failed").length,
             cancelled: transactions.filter(t => t.status === "cancelled").length,
-            totalVolume: transactions.reduce((sum, t) => sum + t.amountFrom, 0),
-            averageAmount: transactions.length > 0 ? transactions.reduce((sum, t) => sum + t.amountFrom, 0) / transactions.length : 0,
+            totalVolume: transactions.reduce((sum, t) => sum + (t.amountFrom || 0), 0),
+            averageAmount: transactions.length > 0 ? transactions.reduce((sum, t) => sum + (t.amountFrom || 0), 0) / transactions.length : 0,
         };
 
         return stats;

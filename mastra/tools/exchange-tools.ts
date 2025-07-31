@@ -66,21 +66,35 @@ export const manageTransactionTool = createTool({
     id: 'manage_transaction',
     description: 'Create a new transaction or update an existing one. For creation, provide transaction details. For updates, provide transactionId and fields to update. The userId and conversationId are automatically extracted from the agent memory context.',
     inputSchema: z.object({
-        // For creation (required when creating new transaction)
-        currencyFrom: z.string().optional().describe('Source currency (Shillings, Naira, etc.) - required for creation'),
-        currencyTo: z.string().optional().describe('Target currency (Shillings, Naira, etc.) - required for creation'),
-        amountFrom: z.number().optional().describe('Amount to exchange from - required for creation'),
-        amountTo: z.number().optional().describe('Amount to receive - required for creation'),
-        negotiatedRate: z.number().optional().describe('Final negotiated rate - required for creation'),
+        // Core transaction fields - all optional for flexible AI-driven creation
+        currencyFrom: z.string().optional().describe('Source currency (Shillings, Naira, etc.)'),
+        currencyTo: z.string().optional().describe('Target currency (Shillings, Naira, etc.)'),
+        amountFrom: z.number().optional().describe('Amount to exchange from'),
+        amountTo: z.number().optional().describe('Amount to receive'),
+        negotiatedRate: z.number().optional().describe('Final negotiated rate'),
+        estimatedRate: z.number().optional().describe('Initial estimated rate before negotiation'),
         initialStatus: z.enum(["pending", "image_received_and_being_reviewed"]).optional().describe('Initial status for new transaction (default: pending)'),
-
-        // For updates (required when updating existing transaction)
-        transactionId: z.string().optional().describe('Transaction ID to update - required for updates'),
-        status: z.enum(["pending", "image_received_and_being_reviewed", "confirmed_and_money_sent_to_user", "cancelled", "failed"]).optional().describe('New status for the transaction'),
+        
+        // Transaction details
         paymentReference: z.string().optional().describe('Payment reference number'),
         receiptImageUrl: z.string().optional().describe('URL to receipt image'),
         extractedDetails: z.record(z.unknown()).optional().describe('OCR extracted details from receipt as key-value pairs'),
-
+        notes: z.string().optional().describe('Additional transaction notes'),
+        
+        // Customer bank details
+        customerBankName: z.string().optional().describe('Customer bank name'),
+        customerAccountNumber: z.string().optional().describe('Customer account number'),
+        customerAccountName: z.string().optional().describe('Customer account name'),
+        
+        // Admin bank details for this transaction
+        transactionBankName: z.string().optional().describe('Admin bank name for this transaction'),
+        transactionAccountNumber: z.string().optional().describe('Admin account number for this transaction'),
+        transactionAccountName: z.string().optional().describe('Admin account name for this transaction'),
+        
+        // For updates
+        transactionId: z.string().optional().describe('Transaction ID to update - required for updates'),
+        status: z.enum(["pending", "image_received_and_being_reviewed", "confirmed_and_money_sent_to_user", "cancelled", "failed"]).optional().describe('New status for the transaction'),
+        
         // Operation type
         operation: z.enum(["create", "update"]).describe('Whether to create a new transaction or update an existing one'),
     }),
@@ -102,32 +116,36 @@ export const manageTransactionTool = createTool({
             }
 
             if (context.operation === 'create') {
-                // Validate required fields for creation
-                if (!context.currencyFrom || !context.currencyTo || !context.amountFrom || !context.amountTo || !context.negotiatedRate) {
-                    throw new Error('For transaction creation, currencyFrom, currencyTo, amountFrom, amountTo, and negotiatedRate are required.');
-                }
-
-                logInfo('Creating new transaction with extracted context', {
+                logInfo('Creating new transaction with available information', {
                     userId,
                     conversationId,
-                    currencyFrom: context.currencyFrom,
-                    currencyTo: context.currencyTo,
-                    amountFrom: context.amountFrom,
-                    amountTo: context.amountTo,
-                    negotiatedRate: context.negotiatedRate,
+                    hasAmount: !!context.amountFrom,
+                    hasCurrencies: !!(context.currencyFrom && context.currencyTo),
+                    hasRate: !!context.negotiatedRate,
+                    hasCustomerBankDetails: !!(context.customerBankName || context.customerAccountNumber),
                     operation: toolId
                 });
 
-                // Create transaction with initial status
-                const transactionId = await fetchMutation(api.transactions.createTransaction, {
+                // Build creation data with only provided fields
+                const createData: any = {
                     userId: userId as Id<"users">,
                     conversationId: conversationId as Id<"conversations">,
-                    currencyFrom: context.currencyFrom,
-                    currencyTo: context.currencyTo,
-                    amountFrom: context.amountFrom,
-                    amountTo: context.amountTo,
-                    negotiatedRate: context.negotiatedRate,
-                });
+                };
+
+                // Add optional fields only if provided
+                if (context.currencyFrom) createData.currencyFrom = context.currencyFrom;
+                if (context.currencyTo) createData.currencyTo = context.currencyTo;
+                if (context.amountFrom) createData.amountFrom = context.amountFrom;
+                if (context.amountTo) createData.amountTo = context.amountTo;
+                if (context.negotiatedRate) createData.negotiatedRate = context.negotiatedRate;
+                if (context.estimatedRate) createData.estimatedRate = context.estimatedRate;
+                if (context.notes) createData.notes = context.notes;
+                if (context.customerBankName) createData.customerBankName = context.customerBankName;
+                if (context.customerAccountNumber) createData.customerAccountNumber = context.customerAccountNumber;
+                if (context.customerAccountName) createData.customerAccountName = context.customerAccountName;
+
+                // Create transaction with flexible fields
+                const transactionId = await fetchMutation(api.transactions.createTransaction, createData);
 
                 // If initialStatus is provided and not pending, update the status immediately
                 if (context.initialStatus && context.initialStatus !== 'pending') {
@@ -138,16 +156,18 @@ export const manageTransactionTool = createTool({
                 }
 
                 const executionTime = Date.now() - startTime;
-                const result = {
-                    operation: 'create',
+                const result = { 
+                    operation: 'create', 
                     transactionId: transactionId,
-                    initialStatus: context.initialStatus || 'pending'
+                    initialStatus: context.initialStatus || 'pending',
+                    fieldsProvided: Object.keys(createData).filter(key => !['userId', 'conversationId'].includes(key))
                 };
 
-                logSuccess('Transaction created successfully', {
+                logSuccess('Transaction created successfully with flexible fields', {
                     transactionId: transactionId,
                     userId,
                     conversationId,
+                    fieldsProvided: result.fieldsProvided,
                     currencyPair: `${context.currencyFrom}_${context.currencyTo}`,
                     amountFrom: context.amountFrom,
                     amountTo: context.amountTo,
@@ -209,13 +229,15 @@ export const manageTransactionTool = createTool({
                 // Use status directly (no mapping needed since we now use full status names)
                 const newStatus = context.status;
 
-                logInfo('Updating transaction status after validation', {
+                logInfo('Updating transaction with provided fields', {
                     transactionId: context.transactionId,
                     currentStatus: transaction.status,
                     newStatus: newStatus,
                     hasPaymentReference: !!context.paymentReference,
                     hasReceiptImage: !!context.receiptImageUrl,
                     hasExtractedDetails: !!context.extractedDetails && Object.keys(context.extractedDetails).length > 0,
+                    hasCustomerBankDetails: !!(context.customerBankName || context.customerAccountNumber),
+                    hasTransactionBankDetails: !!(context.transactionBankName || context.transactionAccountNumber),
                     operation: toolId
                 });
 
@@ -224,18 +246,24 @@ export const manageTransactionTool = createTool({
                     transactionId: context.transactionId as Id<"transactions">,
                 };
 
-                if (newStatus !== undefined) {
-                    updateData.status = newStatus;
-                }
-                if (context.paymentReference !== undefined) {
-                    updateData.paymentReference = context.paymentReference;
-                }
-                if (context.receiptImageUrl !== undefined) {
-                    updateData.receiptImageUrl = context.receiptImageUrl;
-                }
-                if (context.extractedDetails !== undefined) {
-                    updateData.extractedDetails = context.extractedDetails;
-                }
+                // Add all possible update fields if provided
+                if (newStatus !== undefined) updateData.status = newStatus;
+                if (context.currencyFrom !== undefined) updateData.currencyFrom = context.currencyFrom;
+                if (context.currencyTo !== undefined) updateData.currencyTo = context.currencyTo;
+                if (context.amountFrom !== undefined) updateData.amountFrom = context.amountFrom;
+                if (context.amountTo !== undefined) updateData.amountTo = context.amountTo;
+                if (context.negotiatedRate !== undefined) updateData.negotiatedRate = context.negotiatedRate;
+                if (context.estimatedRate !== undefined) updateData.estimatedRate = context.estimatedRate;
+                if (context.paymentReference !== undefined) updateData.paymentReference = context.paymentReference;
+                if (context.receiptImageUrl !== undefined) updateData.receiptImageUrl = context.receiptImageUrl;
+                if (context.extractedDetails !== undefined) updateData.extractedDetails = context.extractedDetails;
+                if (context.notes !== undefined) updateData.notes = context.notes;
+                if (context.customerBankName !== undefined) updateData.customerBankName = context.customerBankName;
+                if (context.customerAccountNumber !== undefined) updateData.customerAccountNumber = context.customerAccountNumber;
+                if (context.customerAccountName !== undefined) updateData.customerAccountName = context.customerAccountName;
+                if (context.transactionBankName !== undefined) updateData.transactionBankName = context.transactionBankName;
+                if (context.transactionAccountNumber !== undefined) updateData.transactionAccountNumber = context.transactionAccountNumber;
+                if (context.transactionAccountName !== undefined) updateData.transactionAccountName = context.transactionAccountName;
 
                 await fetchMutation(api.transactions.updateTransactionStatus, updateData);
 
@@ -243,14 +271,15 @@ export const manageTransactionTool = createTool({
                 const result = {
                     operation: 'update',
                     transactionId: context.transactionId,
-                    status: newStatus
+                    status: newStatus,
+                    fieldsUpdated: Object.keys(updateData).filter(key => key !== 'transactionId')
                 };
 
-                logSuccess('Transaction status updated successfully', {
+                logSuccess('Transaction updated successfully with flexible fields', {
                     transactionId: context.transactionId,
                     previousStatus: transaction.status,
                     newStatus: newStatus,
-                    paymentReference: context.paymentReference,
+                    fieldsUpdated: result.fieldsUpdated,
                     executionTimeMs: executionTime,
                     operation: toolId
                 });

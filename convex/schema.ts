@@ -126,15 +126,17 @@ export default defineSchema({
 
     /**
      * Transactions table - stores exchange transaction details
+     * Most fields are optional to allow flexible AI-driven transaction creation
      */
     transactions: defineTable({
         userId: v.id("users"), // Reference to user
         conversationId: v.id("conversations"), // Reference to conversation
-        currencyFrom: v.string(), // Source currency (USD, GBP, EUR, etc.)
-        currencyTo: v.string(), // Target currency (NGN, etc.)
-        amountFrom: v.number(), // Amount to exchange from
-        amountTo: v.number(), // Amount to receive
-        negotiatedRate: v.number(), // Final rate (now always the fixed rate)
+        currencyFrom: v.optional(v.string()), // Source currency (USD, GBP, EUR, etc.) - AI can set later
+        currencyTo: v.optional(v.string()), // Target currency (NGN, etc.) - AI can set later
+        amountFrom: v.optional(v.number()), // Amount to exchange from - AI can set later
+        amountTo: v.optional(v.number()), // Amount to receive - AI can set later
+        negotiatedRate: v.optional(v.number()), // Final rate - AI can set during negotiation
+        estimatedRate: v.optional(v.number()), // Initial estimated rate before negotiation
         paymentReference: v.optional(v.string()), // Payment reference number
         receiptImageUrl: v.optional(v.string()), // URL to receipt image
         extractedDetails: v.optional(v.any()), // OCR extracted data from receipt
@@ -144,10 +146,15 @@ export default defineSchema({
         metadata: v.optional(v.any()), // Additional transaction metadata
         isRead: v.optional(v.boolean()), // Whether the transaction has been read by an admin/agent
         lastReadAt: v.optional(v.number()), // Timestamp when it was last read
+        notes: v.optional(v.string()), // Additional transaction notes
         // Transaction-specific bank details (collected after receipt confirmation)
         transactionBankName: v.optional(v.string()), // Bank name for this specific transaction
         transactionAccountNumber: v.optional(v.string()), // Account number for this specific transaction
         transactionAccountName: v.optional(v.string()), // Account name for this specific transaction
+        // Customer bank details for this transaction
+        customerBankName: v.optional(v.string()), // Customer's bank name
+        customerAccountNumber: v.optional(v.string()), // Customer's account number
+        customerAccountName: v.optional(v.string()), // Customer's account name
     })
         .index("by_user_id", ["userId"])
         .index("by_conversation_id", ["conversationId"])
