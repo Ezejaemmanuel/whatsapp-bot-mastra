@@ -168,9 +168,9 @@ export async function processImageAnalysis(
         logSuccess('Direct image analysis completed successfully', {
             messageId,
             from: userPhoneNumber,
-            quality: imageAnalysisResults.imageQuality?.quality,
-            confidence: imageAnalysisResults.imageQuality?.confidence,
-            hasText: !!imageAnalysisResults.ocrResults?.rawText,
+            hasText: !!imageAnalysisResults.rawText,
+            textLength: imageAnalysisResults.rawText?.length || 0,
+            hasTransactionRef: !!imageAnalysisResults.transactionReference,
             operation: 'processImageAnalysis'
         });
 
@@ -201,39 +201,32 @@ export function generateImageAgentContent(
     caption?: string | null
 ): string {
     const results = imageAnalysisResults as any;
-    if (imageUrl && results?.documentType) {
-        let content = `The user sent an image. I have analyzed it and here are the results:
+    if (imageUrl && results?.rawText) {
+        let content = `The user sent an image. I have analyzed it and extracted the following text:
 
-**DOCUMENT TYPE**: ${results.documentType}
-
-**EXTRACTED DETAILS**:
-${results.extractedFields?.amount ? `- Amount: ${results.extractedFields.amount}` : ''}
-${results.extractedFields?.transactionDate ? `- Date: ${results.extractedFields.transactionDate}` : ''}
-${results.extractedFields?.recipientName ? `- Recipient: ${results.extractedFields.recipientName}` : ''}
-${results.extractedFields?.senderName ? `- Sender: ${results.extractedFields.senderName}` : ''}
-${results.extractedFields?.bankName ? `- Bank: ${results.extractedFields.bankName}` : ''}
-${results.extractedFields?.accountNumber ? `- Account No: ${results.extractedFields.accountNumber}` : ''}
-${results.extractedFields?.transactionReference ? `- Reference: ${results.extractedFields.transactionReference}` : ''}
-
-**IMAGE QUALITY**:
-- Quality: ${results.imageQuality?.quality}
-- Confidence: ${results.imageQuality?.confidence}
-${results.imageQuality?.issues?.length ? `- Issues: ${results.imageQuality.issues.join(', ')}` : ''}
-
-**RAW OCR TEXT**:
+**EXTRACTED TEXT**:
 ---
-${results.ocrResults?.rawText || 'No raw text extracted.'}
+${results.rawText}
 ---
 
-Your task is to now validate this information against the current transaction details. Check for discrepancies in amount, recipient, and timing. If the document type is not a 'receipt' or if details do not match, flag the transaction and ask the user for clarification or to contact support.
-`;
+${results.transactionReference ? `**TRANSACTION REFERENCE**: ${results.transactionReference}\n\n` : ''}`;
+        
+        content += `Please analyze this text to identify if it's a transaction receipt or payment proof. Look for:
+- Transaction amounts
+- Dates and times
+- Recipient/sender information
+- Bank or payment service details
+- Reference numbers
+
+Validate this information against the current transaction details and check for any discrepancies.`;
+        
         if (caption) {
             content += `\n\nUser's caption: ${caption}`;
         }
         return content;
     } else if (imageUrl) {
-        return `The user sent an image but I couldn't extract any meaningful information from it. Please ask them to provide a clearer image of the transaction receipt.${caption ? `\n\nUser's caption: ${caption}` : ''}`;
+        return `The user sent an image but I couldn't extract any meaningful text from it. Please ask them to provide a clearer image of the transaction receipt.${caption ? `\n\nUser's caption: ${caption}` : ''}`;
     } else {
         return `The user sent an image but it couldn't be processed. ${caption ? `Caption: ${caption}` : ''} Please ask them to resend it or contact support if the issue persists.`;
     }
-} 
+}
