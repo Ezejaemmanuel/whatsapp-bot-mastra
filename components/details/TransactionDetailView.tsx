@@ -39,7 +39,12 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
 
-    const imageUrls = transaction.receiptImageUrls || [];
+    // Combine all available image URLs
+    const imageUrls = [
+        ...(transaction.receiptImageUrls || []),
+        ...(transaction.receiptImageUrl ? [transaction.receiptImageUrl] : []),
+        ...(transaction.imageUrl ? [transaction.imageUrl] : [])
+    ].filter(Boolean); // Remove any null/undefined values
 
     useEffect(() => {
         setCurrentImageIndex(0);
@@ -99,11 +104,11 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                     <div className="grid grid-cols-2 gap-4">
                         <div className="glass-panel p-4 rounded-xl backdrop-blur-sm border border-red-500/30 bg-red-500/5">
                             <span className="text-red-400 text-xs font-medium uppercase tracking-wide">From</span>
-                            <div className="font-bold text-red-400 text-xl mt-1">{transaction.amountFrom.toLocaleString()} {transaction.currencyFrom}</div>
+                            <div className="font-bold text-red-400 text-xl mt-1">{transaction.amountFrom?.toLocaleString() || 'N/A'} {transaction.currencyFrom || ''}</div>
                         </div>
                         <div className="glass-panel p-4 rounded-xl backdrop-blur-sm border border-emerald-500/30 bg-emerald-500/5">
                             <span className="text-emerald-400 text-xs font-medium uppercase tracking-wide">To</span>
-                            <div className="font-bold text-emerald-400 text-xl mt-1">{transaction.amountTo.toLocaleString()} {transaction.currencyTo}</div>
+                            <div className="font-bold text-emerald-400 text-xl mt-1">{transaction.amountTo?.toLocaleString() || 'N/A'} {transaction.currencyTo || ''}</div>
                         </div>
                     </div>
                     
@@ -127,7 +132,7 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                     <div className="space-y-4">
                         <div className="flex items-center gap-2">
                             <Smartphone className="w-4 h-4 text-whatsapp-primary" />
-                            <p className="text-whatsapp-text-muted font-semibold text-sm uppercase tracking-wide">Receipt Screenshots</p>
+                            <p className="text-whatsapp-text-muted font-semibold text-sm uppercase tracking-wide">Transaction Images</p>
                         </div>
                         <div className="glass-panel p-4 rounded-2xl border border-whatsapp-border/50 backdrop-blur-xl relative shadow-xl">
                             <div className="aspect-[9/16] max-w-sm mx-auto bg-gradient-to-br from-gray-900/20 to-gray-800/20 rounded-xl overflow-hidden">
@@ -312,12 +317,12 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                         <div className="flex justify-between items-center max-w-2xl mx-auto">
                             <div className="glass-panel p-6 rounded-xl backdrop-blur-sm border border-red-500/30 bg-red-500/5 text-center">
                                 <span className="text-red-400 text-sm font-medium uppercase tracking-wide block mb-2">From</span>
-                                <span className="font-bold text-red-400 text-3xl">{transaction.amountFrom.toLocaleString()} {transaction.currencyFrom}</span>
+                                <span className="font-bold text-red-400 text-3xl">{transaction.amountFrom?.toLocaleString() || 'N/A'} {transaction.currencyFrom || ''}</span>
                             </div>
                             <ArrowUpRight className="w-8 h-8 text-whatsapp-primary mx-8" />
                             <div className="glass-panel p-6 rounded-xl backdrop-blur-sm border border-emerald-500/30 bg-emerald-500/5 text-center">
                                 <span className="text-emerald-400 text-sm font-medium uppercase tracking-wide block mb-2">To</span>
-                                <span className="font-bold text-emerald-400 text-3xl">{transaction.amountTo.toLocaleString()} {transaction.currencyTo}</span>
+                                <span className="font-bold text-emerald-400 text-3xl">{transaction.amountTo?.toLocaleString() || 'N/A'} {transaction.currencyTo || ''}</span>
                             </div>
                         </div>
                         <p className="text-center text-whatsapp-text-muted font-medium mt-6">
@@ -330,7 +335,7 @@ export const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                         <div className="space-y-4">
                             <div className="flex items-center gap-3">
                                 <Smartphone className="w-5 h-5 text-whatsapp-primary" />
-                                <h3 className="text-whatsapp-text-muted font-semibold text-lg uppercase tracking-wide">Receipt Screenshots</h3>
+                                <h3 className="text-whatsapp-text-muted font-semibold text-lg uppercase tracking-wide">Transaction Images</h3>
                             </div>
                             <div className="glass-panel p-6 rounded-2xl border border-whatsapp-border/50 backdrop-blur-xl relative shadow-xl">
                                 <div className="aspect-[9/16] max-w-md mx-auto bg-gradient-to-br from-gray-900/20 to-gray-800/20 rounded-xl overflow-hidden">

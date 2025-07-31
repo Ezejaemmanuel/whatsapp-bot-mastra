@@ -17,6 +17,7 @@ export const createTransaction = mutation({
         amountTo: v.optional(v.number()),
         negotiatedRate: v.optional(v.number()),
         estimatedRate: v.optional(v.number()),
+        imageUrl: v.optional(v.string()),
         notes: v.optional(v.string()),
         customerBankName: v.optional(v.string()),
         customerAccountNumber: v.optional(v.string()),
@@ -43,6 +44,7 @@ export const createTransaction = mutation({
         if (args.amountTo !== undefined) transactionData.amountTo = args.amountTo;
         if (args.negotiatedRate !== undefined) transactionData.negotiatedRate = args.negotiatedRate;
         if (args.estimatedRate !== undefined) transactionData.estimatedRate = args.estimatedRate;
+        if (args.imageUrl !== undefined) transactionData.imageUrl = args.imageUrl;
         if (args.notes !== undefined) transactionData.notes = args.notes;
         if (args.customerBankName !== undefined) transactionData.customerBankName = args.customerBankName;
         if (args.customerAccountNumber !== undefined) transactionData.customerAccountNumber = args.customerAccountNumber;
@@ -69,6 +71,7 @@ export const updateTransactionStatus = mutation({
         estimatedRate: v.optional(v.number()),
         paymentReference: v.optional(v.string()),
         receiptImageUrl: v.optional(v.string()),
+        imageUrl: v.optional(v.string()),
         extractedDetails: v.optional(v.any()),
         notes: v.optional(v.string()),
         customerBankName: v.optional(v.string()),
@@ -100,6 +103,7 @@ export const updateTransactionStatus = mutation({
         if (args.estimatedRate !== undefined) updateData.estimatedRate = args.estimatedRate;
         if (args.paymentReference !== undefined) updateData.paymentReference = args.paymentReference;
         if (args.receiptImageUrl !== undefined) updateData.receiptImageUrl = args.receiptImageUrl;
+        if (args.imageUrl !== undefined) updateData.imageUrl = args.imageUrl;
         if (args.extractedDetails !== undefined) updateData.extractedDetails = args.extractedDetails;
         if (args.notes !== undefined) updateData.notes = args.notes;
         if (args.customerBankName !== undefined) updateData.customerBankName = args.customerBankName;

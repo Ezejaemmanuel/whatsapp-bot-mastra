@@ -209,7 +209,9 @@ export function generateImageAgentContent(
 ${results.rawText}
 ---
 
-${results.transactionReference ? `**TRANSACTION REFERENCE**: ${results.transactionReference}\n\n` : ''}`;
+${results.transactionReference ? `**TRANSACTION REFERENCE**: ${results.transactionReference}\n\n` : ''}**IMAGE URL**: ${imageUrl}
+
+`;
         
         content += `Please analyze this text to identify if it's a transaction receipt or payment proof. Look for:
 - Transaction amounts
@@ -218,6 +220,8 @@ ${results.transactionReference ? `**TRANSACTION REFERENCE**: ${results.transacti
 - Bank or payment service details
 - Reference numbers
 
+When creating or updating a transaction, include the imageUrl field with the provided image URL for reference.
+
 Validate this information against the current transaction details and check for any discrepancies.`;
         
         if (caption) {
@@ -225,7 +229,7 @@ Validate this information against the current transaction details and check for 
         }
         return content;
     } else if (imageUrl) {
-        return `The user sent an image but I couldn't extract any meaningful text from it. Please ask them to provide a clearer image of the transaction receipt.${caption ? `\n\nUser's caption: ${caption}` : ''}`;
+        return `The user sent an image but I couldn't extract any meaningful text from it. Please ask them to provide a clearer image of the transaction receipt.${caption ? `\n\nUser's caption: ${caption}` : ''}\n\n**IMAGE URL**: ${imageUrl}\n\nYou can still create or update a transaction with the imageUrl field if needed.`;
     } else {
         return `The user sent an image but it couldn't be processed. ${caption ? `Caption: ${caption}` : ''} Please ask them to resend it or contact support if the issue persists.`;
     }

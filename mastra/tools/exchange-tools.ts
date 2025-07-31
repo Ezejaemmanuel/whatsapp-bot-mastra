@@ -78,6 +78,7 @@ export const manageTransactionTool = createTool({
         // Transaction details
         paymentReference: z.string().optional().describe('Payment reference number'),
         receiptImageUrl: z.string().optional().describe('URL to receipt image'),
+        imageUrl: z.string().optional().describe('URL to any transaction-related image'),
         extractedDetails: z.record(z.unknown()).optional().describe('OCR extracted details from receipt as key-value pairs'),
         notes: z.string().optional().describe('Additional transaction notes'),
         
@@ -139,6 +140,7 @@ export const manageTransactionTool = createTool({
                 if (context.amountTo) createData.amountTo = context.amountTo;
                 if (context.negotiatedRate) createData.negotiatedRate = context.negotiatedRate;
                 if (context.estimatedRate) createData.estimatedRate = context.estimatedRate;
+                if (context.imageUrl) createData.imageUrl = context.imageUrl;
                 if (context.notes) createData.notes = context.notes;
                 if (context.customerBankName) createData.customerBankName = context.customerBankName;
                 if (context.customerAccountNumber) createData.customerAccountNumber = context.customerAccountNumber;
@@ -256,6 +258,7 @@ export const manageTransactionTool = createTool({
                 if (context.estimatedRate !== undefined) updateData.estimatedRate = context.estimatedRate;
                 if (context.paymentReference !== undefined) updateData.paymentReference = context.paymentReference;
                 if (context.receiptImageUrl !== undefined) updateData.receiptImageUrl = context.receiptImageUrl;
+                if (context.imageUrl !== undefined) updateData.imageUrl = context.imageUrl;
                 if (context.extractedDetails !== undefined) updateData.extractedDetails = context.extractedDetails;
                 if (context.notes !== undefined) updateData.notes = context.notes;
                 if (context.customerBankName !== undefined) updateData.customerBankName = context.customerBankName;

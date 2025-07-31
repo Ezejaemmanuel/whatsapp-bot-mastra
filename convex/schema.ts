@@ -139,6 +139,7 @@ export default defineSchema({
         estimatedRate: v.optional(v.number()), // Initial estimated rate before negotiation
         paymentReference: v.optional(v.string()), // Payment reference number
         receiptImageUrl: v.optional(v.string()), // URL to receipt image
+        imageUrl: v.optional(v.string()), // URL to any transaction-related image
         extractedDetails: v.optional(v.any()), // OCR extracted data from receipt
         status: TransactionStatusUnion, // Transaction status
         createdAt: v.number(), // Transaction creation timestamp

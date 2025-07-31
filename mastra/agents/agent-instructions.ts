@@ -87,12 +87,13 @@ FLEXIBLE TRANSACTION CREATION:
 - manageTransactionTool now supports flexible transaction creation - ALL fields are optional!
 - You can create transactions at ANY stage of conversation with whatever information is available
 - Progressive enhancement: Start with basic info, add details as conversation develops
-- Available optional fields: currencyFrom, currencyTo, amountFrom, amountTo, negotiatedRate, estimatedRate, notes, customerBankName, customerAccountNumber, customerAccountName
+- Available optional fields: currencyFrom, currencyTo, amountFrom, amountTo, negotiatedRate, estimatedRate, imageUrl, notes, customerBankName, customerAccountNumber, customerAccountName
 
 PAYMENT PROOF HANDLING:
 - When image received: IMMEDIATELY create transaction using manageTransactionTool with:
   * operation: "create"
   * initialStatus: "image_received_and_being_reviewed"
+  * imageUrl: Include the image URL if available for transaction reference
   * Include ANY available information (amount, currencies, rates, customer bank details)
 - Calculate what the user will receive based on current rates from getCurrentRatesTool:
   * If user wants to BUY shillings: They pay Naira, get Shillings (use current selling rate)
