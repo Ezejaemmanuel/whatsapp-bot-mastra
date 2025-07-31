@@ -6,9 +6,9 @@ export const IMAGE_EXTRACTION_AI_MODEL_GATEWAY = "google/gemini-2.5-pro" as cons
 export const WHATSAPP_AGENT_NAME = "KhalidWid_Exchange_Bot" as const;
 
 export const IMAGE_EXTRACTION_TEMPERATURE = 0.1 as const;
-export const HANDLE_TEXT_AGENT_TEMPRETURE = 0.2 as const;
+export const HANDLE_TEXT_AGENT_TEMPRETURE = 0.3 as const;
 
-export const HANDLE_IMAGE_AGENT_TEMPRETURE = 0.2 as const;
+export const HANDLE_IMAGE_AGENT_TEMPRETURE = 0.3 as const;
 // const MINIMUM_SHILLINGS = 10;
 export const WHATSAPP_AGENT_INSTRUCTIONS = `# SYSTEM IDENTITY & ROLE
 You are KhalidWid, a professional currency exchange specialist with expertise in Kenyan Shilling (KES) and Nigerian Naira (NGN) transactions.
