@@ -1,8 +1,7 @@
 import { z } from "zod";
 import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
-import {  IMAGE_EXTRACTION_AI_MODEL_NORMAL, IMAGE_EXTRACTION_TEMPERATURE } from "../agents/agent-instructions";
-// import { sendDebugMessage } from "./utils";
+import { IMAGE_EXTRACTION_AI_MODEL_NORMAL, IMAGE_EXTRACTION_TEMPERATURE } from "../agents/agent-instructions";
 
 // API key setup
 const GOOGLE_GENERATIVE_AI_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
@@ -102,17 +101,6 @@ export async function analyzeImageDirectly(
 ): Promise<z.infer<typeof ocrSchema>> {
     const startTime = Date.now();
 
-    // Send debug message about function start
-    // if (phoneNumber) {
-    //     await sendDebugMessage(phoneNumber, 'DIRECT IMAGE ANALYSIS STARTED', {
-    //         imageUrl: imageUrl ? `${imageUrl.substring(0, 100)}...` : 'missing',
-    //         hasContext: !!context,
-    //         contextLength: context?.length || 0,
-    //         startTime: new Date(startTime).toISOString(),
-    //         operation: 'analyzeImageDirectly'
-    //     });
-    // }
-
     logInfo('Starting direct image analysis', {
         imageUrl: imageUrl ? 'provided' : 'missing',
         imageUrlLength: imageUrl?.length || 0,
@@ -127,13 +115,6 @@ export async function analyzeImageDirectly(
             operation: 'analyzeImageDirectly',
             errorType: 'validation_error'
         });
-
-        if (phoneNumber) {
-            // await sendDebugMessage(phoneNumber, 'VALIDATION ERROR', {
-            //     error: errorMsg,
-            //     type: 'Missing image URL'
-            // });
-        }
 
         throw new Error(errorMsg);
     }
@@ -171,16 +152,6 @@ Return the complete text and any transaction references found.`;
             operation: 'analyzeImageDirectly'
         });
 
-        // Send debug message about AI processing start
-        if (phoneNumber) {
-            // await sendDebugMessage(phoneNumber, 'AI PROCESSING STARTED', {
-            //     model: IMAGE_EXTRACTION_GEMINI_MODEL,
-            //     temperature: IMAGE_EXTRACTION_TEMPERATURE,
-            //     promptLength: analysisPrompt.length,
-            //     mimeType
-            // });
-        }
-
         // Use generateObject for structured outputs with AI SDK
         const result = await generateObject({
             model: google(IMAGE_EXTRACTION_AI_MODEL_NORMAL),
@@ -213,23 +184,6 @@ Return the complete text and any transaction references found.`;
             operation: 'analyzeImageDirectly'
         });
 
-        // // Send debug message with AI results
-        // if (phoneNumber) {
-        //     await sendDebugMessage(phoneNumber, 'AI PROCESSING COMPLETED', {
-        //         success: true,
-        //         executionTimeMs: executionTime,
-        //         textLength: analysisResult.rawText?.length || 0
-        //     });
-        // }
-
-        // Send extracted OCR results as debug message
-        if (phoneNumber && analysisResult.rawText) {
-            // await sendDebugMessage(phoneNumber, 'OCR EXTRACTION RESULTS', {
-            //     rawTextLength: analysisResult.rawText?.length || 0,
-            //     rawTextPreview: analysisResult.rawText
-            // });
-        }
-
         if (!analysisResult) {
             const errorMsg = 'AI failed to generate structured analysis. The vision model may not be processing the image correctly.';
             logError('AI failed to generate structured analysis', new Error('Empty analysis result'), {
@@ -238,13 +192,7 @@ Return the complete text and any transaction references found.`;
                 errorType: 'ai_processing_error'
             });
 
-            if (phoneNumber) {
-                // await sendDebugMessage(phoneNumber, 'AI PROCESSING FAILED', {
-                //     error: errorMsg,
-                //     executionTimeMs: executionTime,
-                //     type: 'Empty analysis result'
-                // });
-            }
+
 
             throw new Error(errorMsg);
         }
@@ -267,15 +215,6 @@ Return the complete text and any transaction references found.`;
             operation: 'analyzeImageDirectly'
         });
 
-        // // Send final success debug message
-        // if (phoneNumber) {
-        //     await sendDebugMessage(phoneNumber, 'DIRECT IMAGE ANALYSIS COMPLETED SUCCESSFULLY', {
-        //         totalExecutionTimeMs: executionTime,
-        //         hasExtractedText: !!analysisResult.rawText,
-        //         analysisComplete: true
-        //     });
-        // }
-
         return analysisResult;
 
     } catch (error) {
@@ -297,19 +236,6 @@ Return the complete text and any transaction references found.`;
                 isAuthError: errorMessage.includes('API key') || errorMessage.includes('auth')
             }
         });
-
-        // Send debug message about the error
-        // if (phoneNumber) {
-        //     await sendDebugMessage(phoneNumber, 'DIRECT IMAGE ANALYSIS ERROR', {
-        //         error: errorMessage,
-        //         errorType: error instanceof Error ? error.constructor.name : typeof error,
-        //         executionTimeMs: executionTime,
-        //         stack: error instanceof Error ? error.stack : undefined,
-        //         isGeminiError: errorMessage.includes('contents.parts must not be empty'),
-        //         isNetworkError: errorMessage.includes('network') || errorMessage.includes('fetch'),
-        //         isAuthError: errorMessage.includes('API key') || errorMessage.includes('auth')
-        //     });
-        // }
 
         // Return a structured error response instead of throwing
         return {

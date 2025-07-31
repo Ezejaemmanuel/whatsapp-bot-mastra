@@ -24,17 +24,6 @@ export const getCurrentRatesTool = createTool({
         const userId = runtimeContext?.get('userId') as string;
         const conversationId = runtimeContext?.get('conversationId') as string;
 
-        // Send debug message about tool start
-        if (phoneNumber) {
-            // await sendDebugMessage(phoneNumber, 'GET CURRENT RATES TOOL STARTED', {
-            //     toolId,
-            //     startTime: new Date(startTime).toISOString(),
-            //     operation: 'Fetching all exchange rates from database',
-            //     userId,
-            //     conversationId
-            // });
-        }
-
         logToolCall(toolId, {});
 
         try {
@@ -43,14 +32,6 @@ export const getCurrentRatesTool = createTool({
                 note: 'No currency pair filter applied - fetching all rates'
             });
 
-            // Send debug message about database query
-            if (phoneNumber) {
-                // await sendDebugMessage(phoneNumber, 'DATABASE QUERY STARTED', {
-                //     operation: 'api.exchangeRates.getCurrentRates',
-                //     parameters: 'No filters - fetching all rates'
-                // });
-            }
-
             // Always call without currencyPair to get all rates
             const rates = await fetchQuery(api.exchangeRates.getCurrentRates, {});
 
@@ -58,35 +39,12 @@ export const getCurrentRatesTool = createTool({
 
             const result = rates;
 
-            // Send debug message with results
-            if (phoneNumber) {
-                // await sendDebugMessage(phoneNumber, 'EXCHANGE RATES RETRIEVED', {
-                //     success: true,
-                //     totalRates: result.totalRates,
-                //     executionTimeMs: executionTime,
-                //     ratesPreview: Array.isArray(rates) ? rates.map(r => `${r.currencyPair}: ${r.currentMarketRate}`).slice(0, 5) : 'Single rate object'
-                // });
-
-                // // Send complete rates data
-                // await sendDebugMessage(phoneNumber, 'COMPLETE RATES DATA', rates);
-            }
-
             logToolResult(toolId, result, executionTime);
             return result;
 
         } catch (error) {
             const executionTime = Date.now() - startTime;
             const errorMessage = `Failed to get exchange rates: ${error instanceof Error ? error.message : 'Unknown error'}`;
-
-            // Send debug message about error
-            if (phoneNumber) {
-                // await sendDebugMessage(phoneNumber, 'GET RATES ERROR', {
-                //     error: errorMessage,
-                //     errorType: error instanceof Error ? error.constructor.name : typeof error,
-                //     executionTimeMs: executionTime,
-                //     stack: error instanceof Error ? error.stack : undefined
-                // });
-            }
 
             logError('Failed to get exchange rates', error as Error, {
                 executionTimeMs: executionTime,
@@ -114,14 +72,15 @@ export const manageTransactionTool = createTool({
         amountFrom: z.number().optional().describe('Amount to exchange from - required for creation'),
         amountTo: z.number().optional().describe('Amount to receive - required for creation'),
         negotiatedRate: z.number().optional().describe('Final negotiated rate - required for creation'),
-        
+        initialStatus: z.enum(["pending", "image_received_and_being_reviewed"]).optional().describe('Initial status for new transaction (default: pending)'),
+
         // For updates (required when updating existing transaction)
         transactionId: z.string().optional().describe('Transaction ID to update - required for updates'),
-        status: z.enum(["pending", "image_received", "confirmed", "cancelled", "failed"]).optional().describe('New status for the transaction'),
+        status: z.enum(["pending", "image_received_and_being_reviewed", "confirmed_and_money_sent_to_user", "cancelled", "failed"]).optional().describe('New status for the transaction'),
         paymentReference: z.string().optional().describe('Payment reference number'),
         receiptImageUrl: z.string().optional().describe('URL to receipt image'),
         extractedDetails: z.record(z.unknown()).optional().describe('OCR extracted details from receipt as key-value pairs'),
-        
+
         // Operation type
         operation: z.enum(["create", "update"]).describe('Whether to create a new transaction or update an existing one'),
     }),
@@ -159,7 +118,8 @@ export const manageTransactionTool = createTool({
                     operation: toolId
                 });
 
-                const transaction = await fetchMutation(api.transactions.createTransaction, {
+                // Create transaction with initial status
+                const transactionId = await fetchMutation(api.transactions.createTransaction, {
                     userId: userId as Id<"users">,
                     conversationId: conversationId as Id<"conversations">,
                     currencyFrom: context.currencyFrom,
@@ -169,17 +129,30 @@ export const manageTransactionTool = createTool({
                     negotiatedRate: context.negotiatedRate,
                 });
 
+                // If initialStatus is provided and not pending, update the status immediately
+                if (context.initialStatus && context.initialStatus !== 'pending') {
+                    await fetchMutation(api.transactions.updateTransactionStatus, {
+                        transactionId: transactionId as Id<"transactions">,
+                        status: context.initialStatus,
+                    });
+                }
+
                 const executionTime = Date.now() - startTime;
-                const result = { operation: 'create', transactionId: transaction };
+                const result = {
+                    operation: 'create',
+                    transactionId: transactionId,
+                    initialStatus: context.initialStatus || 'pending'
+                };
 
                 logSuccess('Transaction created successfully', {
-                    transactionId: transaction,
+                    transactionId: transactionId,
                     userId,
                     conversationId,
                     currencyPair: `${context.currencyFrom}_${context.currencyTo}`,
                     amountFrom: context.amountFrom,
                     amountTo: context.amountTo,
                     negotiatedRate: context.negotiatedRate,
+                    initialStatus: context.initialStatus || 'pending',
                     executionTimeMs: executionTime,
                     operation: toolId
                 });
@@ -233,26 +206,13 @@ export const manageTransactionTool = createTool({
                     return result;
                 }
 
-                // Map status if provided
-                let mappedStatus;
-                if (context.status) {
-                    const statusMapping = {
-                        'pending': 'pending' as const,
-                        'image_received': 'image_received_and_being_reviewed' as const,
-                        'confirmed': 'confirmed_and_money_sent_to_user' as const,
-                        'cancelled': 'cancelled' as const,
-                        'failed': 'failed' as const
-                    };
-                    mappedStatus = statusMapping[context.status];
-                    if (!mappedStatus) {
-                        throw new Error(`Invalid status: ${context.status}. Use 'pending', 'image_received', 'confirmed', 'cancelled', or 'failed'.`);
-                    }
-                }
+                // Use status directly (no mapping needed since we now use full status names)
+                const newStatus = context.status;
 
                 logInfo('Updating transaction status after validation', {
                     transactionId: context.transactionId,
                     currentStatus: transaction.status,
-                    newStatus: context.status,
+                    newStatus: newStatus,
                     hasPaymentReference: !!context.paymentReference,
                     hasReceiptImage: !!context.receiptImageUrl,
                     hasExtractedDetails: !!context.extractedDetails && Object.keys(context.extractedDetails).length > 0,
@@ -263,9 +223,9 @@ export const manageTransactionTool = createTool({
                 const updateData: any = {
                     transactionId: context.transactionId as Id<"transactions">,
                 };
-                
-                if (mappedStatus !== undefined) {
-                    updateData.status = mappedStatus;
+
+                if (newStatus !== undefined) {
+                    updateData.status = newStatus;
                 }
                 if (context.paymentReference !== undefined) {
                     updateData.paymentReference = context.paymentReference;
@@ -283,14 +243,13 @@ export const manageTransactionTool = createTool({
                 const result = {
                     operation: 'update',
                     transactionId: context.transactionId,
-                    status: mappedStatus
+                    status: newStatus
                 };
 
                 logSuccess('Transaction status updated successfully', {
                     transactionId: context.transactionId,
                     previousStatus: transaction.status,
-                    inputStatus: context.status,
-                    newStatus: mappedStatus,
+                    newStatus: newStatus,
                     paymentReference: context.paymentReference,
                     executionTimeMs: executionTime,
                     operation: toolId
