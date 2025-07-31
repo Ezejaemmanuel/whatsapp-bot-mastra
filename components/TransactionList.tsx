@@ -92,8 +92,8 @@ export const TransactionList: React.FC<TransactionListProps> = ({
     const typedTransaction = transaction as any;
     const matchesSearch = (typedTransaction.user?.profileName.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (transaction.user?.phoneNumber?.includes(searchQuery)) ||
-      transaction.currencyFrom.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.currencyTo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      transaction.currencyFrom?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      transaction.currencyTo?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       transaction.paymentReference?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       transaction._id.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -448,14 +448,14 @@ const TransactionCard: React.FC<TransactionCardProps> = ({
       <div className="glass-panel p-3 rounded-lg backdrop-blur-sm border border-whatsapp-border/30">
         <p className="text-xs text-whatsapp-text-muted mb-1">From</p>
         <p className="font-bold text-whatsapp-text-primary text-lg">
-          {formatCurrency(transaction.amountFrom, transaction.currencyFrom)}
+          {transaction.amountFrom ? formatCurrency(transaction.amountFrom, transaction.currencyFrom || '') : 'N/A'}
         </p>
         <p className="text-xs text-whatsapp-text-secondary">{transaction.currencyFrom}</p>
       </div>
       <div className="glass-panel p-3 rounded-lg backdrop-blur-sm border border-whatsapp-border/30">
         <p className="text-xs text-whatsapp-text-muted mb-1">To</p>
         <p className="font-bold text-whatsapp-primary text-lg">
-          {formatCurrency(transaction.amountTo, transaction.currencyTo)}
+          {transaction.amountTo ? formatCurrency(transaction.amountTo, transaction.currencyTo || '') : 'N/A'}
         </p>
         <p className="text-xs text-whatsapp-text-secondary">{transaction.currencyTo}</p>
       </div>
