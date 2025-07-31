@@ -159,10 +159,14 @@ export const manageTransactionTool = createTool({
 
                 const executionTime = Date.now() - startTime;
                 const result = { 
+                    success: true,
                     operation: 'create', 
                     transactionId: transactionId,
                     initialStatus: context.initialStatus || 'pending',
-                    fieldsProvided: Object.keys(createData).filter(key => !['userId', 'conversationId'].includes(key))
+                    fieldsProvided: Object.keys(createData).filter(key => !['userId', 'conversationId'].includes(key)),
+                    message: `Transaction ${transactionId} created successfully with status '${context.initialStatus || 'pending'}' and ${Object.keys(createData).filter(key => !['userId', 'conversationId'].includes(key)).length} fields provided.`,
+                    actionPerformed: 'Transaction created in database',
+                    nextSteps: context.initialStatus === 'image_received_and_being_reviewed' ? 'Transaction is being reviewed. Ask for customer bank details if not provided.' : 'Transaction created. Collect payment proof or update status as needed.'
                 };
 
                 logSuccess('Transaction created successfully with flexible fields', {
@@ -192,9 +196,13 @@ export const manageTransactionTool = createTool({
                 if (!isValidConvexId(context.transactionId)) {
                     const result = {
                         success: false,
+                        operation: 'update',
                         transactionId: context.transactionId,
+                        error: 'Invalid transaction ID format',
                         message: `Invalid transaction ID format: ${context.transactionId}. Expected a valid Convex document ID (16+ alphanumeric characters).`,
-                        suggestion: 'Use getLatestUserTransactionTool to get the most recent transaction ID, or use getUserTransactionsTool to see all available transaction IDs for this user.'
+                        suggestion: 'Use getLatestUserTransactionTool to get the most recent transaction ID, or use getUserTransactionsTool to see all available transaction IDs for this user.',
+                        actionPerformed: 'Validation failed - no database operation performed',
+                        nextSteps: 'Get a valid transaction ID and try again'
                     };
                     logToolResult(toolId, result, Date.now() - startTime);
                     return result;
@@ -208,9 +216,13 @@ export const manageTransactionTool = createTool({
                 if (!transaction) {
                     const result = {
                         success: false,
+                        operation: 'update',
                         transactionId: context.transactionId,
+                        error: 'Transaction not found',
                         message: `Transaction ID ${context.transactionId} does not exist in the database.`,
-                        suggestion: 'Use getUserTransactionsTool to get all user transactions, or getLatestUserTransactionTool to get the most recent transaction.'
+                        suggestion: 'Use getUserTransactionsTool to get all user transactions, or getLatestUserTransactionTool to get the most recent transaction.',
+                        actionPerformed: 'Database lookup failed - transaction does not exist',
+                        nextSteps: 'Verify the transaction ID or create a new transaction'
                     };
                     logToolResult(toolId, result, Date.now() - startTime);
                     return result;
@@ -220,9 +232,13 @@ export const manageTransactionTool = createTool({
                 if (transaction.userId !== userId) {
                     const result = {
                         success: false,
+                        operation: 'update',
                         transactionId: context.transactionId,
+                        error: 'Access denied',
                         message: `Transaction ID ${context.transactionId} exists but belongs to a different user.`,
-                        suggestion: 'Use getUserTransactionsTool to get transactions that belong to the current user.'
+                        suggestion: 'Use getUserTransactionsTool to get transactions that belong to the current user.',
+                        actionPerformed: 'Access validation failed - no update performed',
+                        nextSteps: 'Use a transaction ID that belongs to the current user'
                     };
                     logToolResult(toolId, result, Date.now() - startTime);
                     return result;
@@ -271,11 +287,17 @@ export const manageTransactionTool = createTool({
                 await fetchMutation(api.transactions.updateTransactionStatus, updateData);
 
                 const executionTime = Date.now() - startTime;
+                const fieldsUpdated = Object.keys(updateData).filter(key => key !== 'transactionId');
                 const result = {
+                    success: true,
                     operation: 'update',
                     transactionId: context.transactionId,
-                    status: newStatus,
-                    fieldsUpdated: Object.keys(updateData).filter(key => key !== 'transactionId')
+                    previousStatus: transaction.status,
+                    newStatus: newStatus,
+                    fieldsUpdated: fieldsUpdated,
+                    message: `Transaction ${context.transactionId} updated successfully. ${fieldsUpdated.length} fields modified: ${fieldsUpdated.join(', ')}.`,
+                    actionPerformed: `Updated transaction from '${transaction.status}' to '${newStatus || transaction.status}'`,
+                    nextSteps: newStatus === 'confirmed_and_money_sent_to_user' ? 'Transaction completed. Inform customer that payment has been sent.' : newStatus === 'image_received_and_being_reviewed' ? 'Transaction under review. Process the payment proof and update status.' : 'Transaction updated. Continue with next steps as needed.'
                 };
 
                 logSuccess('Transaction updated successfully with flexible fields', {
