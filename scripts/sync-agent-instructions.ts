@@ -24,7 +24,7 @@ const redis = new Redis({
 // Helper to extract the WHATSAPP_AGENT_INSTRUCTIONS string from agent-instructions.ts
 async function getAgentInstructionsFromFile(): Promise<string> {
     const file = await readFile(AGENT_INSTRUCTIONS_PATH, 'utf8');
-    const match = file.match(/export const WHATSAPP_AGENT_INSTRUCTIONS = `([\s\S]*?)`;/);
+    const match = file.match(/export const WHATSAPP_AGENT_INSTRUCTIONS = `([\s\S]*?)`/);
     if (!match) throw new Error('Could not find WHATSAPP_AGENT_INSTRUCTIONS in agent-instructions.ts');
     return match[1];
 }
@@ -33,8 +33,8 @@ async function getAgentInstructionsFromFile(): Promise<string> {
 async function setAgentInstructionsInFile(newInstructions: string): Promise<void> {
     const file = await readFile(AGENT_INSTRUCTIONS_PATH, 'utf8');
     const updated = file.replace(
-        /export const WHATSAPP_AGENT_INSTRUCTIONS = `([\s\S]*?)`;/,
-        `export const WHATSAPP_AGENT_INSTRUCTIONS = \`${newInstructions}\`;`
+        /export const WHATSAPP_AGENT_INSTRUCTIONS = `([\s\S]*?)`/,
+        `export const WHATSAPP_AGENT_INSTRUCTIONS = \`${newInstructions}\``
     );
     await writeFile(AGENT_INSTRUCTIONS_PATH, updated, 'utf8');
 }
@@ -73,4 +73,4 @@ async function main() {
 main().catch((err) => {
     console.error('Error:', err);
     process.exit(1);
-}); 
+});
