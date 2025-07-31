@@ -24,6 +24,17 @@ export const getCurrentRatesTool = createTool({
         const userId = runtimeContext?.get('userId') as string;
         const conversationId = runtimeContext?.get('conversationId') as string;
 
+        // Send debug message about tool start
+        if (phoneNumber) {
+            // await sendDebugMessage(phoneNumber, 'GET CURRENT RATES TOOL STARTED', {
+            //     toolId,
+            //     startTime: new Date(startTime).toISOString(),
+            //     operation: 'Fetching all exchange rates from database',
+            //     userId,
+            //     conversationId
+            // });
+        }
+
         logToolCall(toolId, {});
 
         try {
@@ -32,12 +43,45 @@ export const getCurrentRatesTool = createTool({
                 note: 'No currency pair filter applied - fetching all rates'
             });
 
+            // Send debug message about database query
+            if (phoneNumber) {
+                // await sendDebugMessage(phoneNumber, 'DATABASE QUERY STARTED', {
+                //     operation: 'api.exchangeRates.getCurrentRates',
+                //     parameters: 'No filters - fetching all rates'
+                // });
+            }
+
             // Always call without currencyPair to get all rates
             const rates = await fetchQuery(api.exchangeRates.getCurrentRates, {});
 
             const executionTime = Date.now() - startTime;
 
-            const result = rates;
+            const result = {
+                success: true,
+                data: rates,
+                totalRates: Array.isArray(rates) ? rates.length : 1,
+                message: 'All exchange rates retrieved successfully'
+            };
+
+            // Send debug message with results
+            if (phoneNumber) {
+                // await sendDebugMessage(phoneNumber, 'EXCHANGE RATES RETRIEVED', {
+                //     success: true,
+                //     totalRates: result.totalRates,
+                //     executionTimeMs: executionTime,
+                //     ratesPreview: Array.isArray(rates) ? rates.map(r => `${r.currencyPair}: ${r.currentMarketRate}`).slice(0, 5) : 'Single rate object'
+                // });
+
+                // // Send complete rates data
+                // await sendDebugMessage(phoneNumber, 'COMPLETE RATES DATA', rates);
+            }
+
+            logSuccess('All exchange rates retrieved successfully', {
+                totalRates: result.totalRates,
+                executionTimeMs: executionTime,
+                operation: toolId,
+                ratesData: rates
+            });
 
             logToolResult(toolId, result, executionTime);
             return result;
@@ -45,6 +89,16 @@ export const getCurrentRatesTool = createTool({
         } catch (error) {
             const executionTime = Date.now() - startTime;
             const errorMessage = `Failed to get exchange rates: ${error instanceof Error ? error.message : 'Unknown error'}`;
+
+            // Send debug message about error
+            if (phoneNumber) {
+                // await sendDebugMessage(phoneNumber, 'GET RATES ERROR', {
+                //     error: errorMessage,
+                //     errorType: error instanceof Error ? error.constructor.name : typeof error,
+                //     executionTimeMs: executionTime,
+                //     stack: error instanceof Error ? error.stack : undefined
+                // });
+            }
 
             logError('Failed to get exchange rates', error as Error, {
                 executionTimeMs: executionTime,
@@ -71,15 +125,6 @@ export const createTransactionTool = createTool({
         amountFrom: z.number().describe('Amount to exchange from'),
         amountTo: z.number().describe('Amount to receive'),
         negotiatedRate: z.number().describe('Final negotiated rate'),
-        estimatedRate: z.number().optional().describe('Initial estimated rate before negotiation'),
-        imageUrl: z.string().optional().describe('URL to any transaction-related image'),
-        notes: z.string().optional().describe('Additional transaction notes'),
-        customerBankName: z.string().optional().describe('Customer bank name'),
-        customerAccountNumber: z.string().optional().describe('Customer account number'),
-        customerAccountName: z.string().optional().describe('Customer account name'),
-        transactionBankName: z.string().optional().describe('Admin bank name for this transaction'),
-        transactionAccountNumber: z.string().optional().describe('Admin account number for this transaction'),
-        transactionAccountName: z.string().optional().describe('Admin account name for this transaction'),
     }),
     execute: async ({ context, runtimeContext }) => {
         const startTime = Date.now();
@@ -90,12 +135,51 @@ export const createTransactionTool = createTool({
         const userId = runtimeContext?.get('userId') as string;
         const conversationId = runtimeContext?.get('conversationId') as string;
 
+        // Send debug message about tool start
+        if (phoneNumber) {
+            // await sendDebugMessage(phoneNumber, 'CREATE TRANSACTION TOOL STARTED', {
+            //     toolId,
+            //     startTime: new Date(startTime).toISOString(),
+            //     currencyFrom: context.currencyFrom,
+            //     currencyTo: context.currencyTo,
+            //     amountFrom: context.amountFrom,
+            //     amountTo: context.amountTo,
+            //     negotiatedRate: context.negotiatedRate,
+            //     hasNegotiationHistory: !!context.negotiationHistory && context.negotiationHistory.length > 0,
+            //     userId,
+            //     conversationId
+            // });
+        }
+
         logToolCall(toolId, context);
 
         try {
             // Validate that we have the required context
             if (!userId || !conversationId) {
-                throw new Error('Unable to extract userId and conversationId from runtime context. Make sure the agent is called with proper context configuration.');
+                const errorMsg = 'Unable to extract userId and conversationId from runtime context. Make sure the agent is called with proper context configuration.';
+
+                if (phoneNumber) {
+                    // await sendDebugMessage(phoneNumber, 'CONTEXT EXTRACTION ERROR', {
+                    //     error: errorMsg,
+                    //     userId: userId || 'missing',
+                    //     conversationId: conversationId || 'missing',
+                    //     phoneNumber: phoneNumber || 'missing',
+                    //     runtimeContextKeys: runtimeContext ? Object.keys(runtimeContext) : 'No runtime context'
+                    // });
+                }
+
+                throw new Error(errorMsg);
+            }
+
+            // Send debug message about extracted context
+            if (phoneNumber) {
+                // await sendDebugMessage(phoneNumber, 'CONTEXT EXTRACTED SUCCESSFULLY', {
+                //     userId,
+                //     conversationId,
+                //     phoneNumber,
+                //     userIdType: typeof userId,
+                //     conversationIdType: typeof conversationId
+                // });
             }
 
             logInfo('Creating new transaction with extracted context', {
@@ -109,8 +193,24 @@ export const createTransactionTool = createTool({
                 operation: toolId
             });
 
-            // Build creation data
-            const createData: any = {
+            // Send debug message about database mutation
+            if (phoneNumber) {
+                // await sendDebugMessage(phoneNumber, 'DATABASE MUTATION STARTED', {
+                //     operation: 'api.transactions.createTransaction',
+                //     parameters: {
+                //         userId,
+                //         conversationId,
+                //         currencyFrom: context.currencyFrom,
+                //         currencyTo: context.currencyTo,
+                //         amountFrom: context.amountFrom,
+                //         amountTo: context.amountTo,
+                //         negotiatedRate: context.negotiatedRate,
+                //         negotiationHistoryLength: context.negotiationHistory?.length || 0
+                //     }
+                // });
+            }
+
+            const transaction = await fetchMutation(api.transactions.createTransaction, {
                 userId: userId as Id<"users">,
                 conversationId: conversationId as Id<"conversations">,
                 currencyFrom: context.currencyFrom,
@@ -118,20 +218,7 @@ export const createTransactionTool = createTool({
                 amountFrom: context.amountFrom,
                 amountTo: context.amountTo,
                 negotiatedRate: context.negotiatedRate,
-            };
-
-            // Add optional fields only if provided
-            if (context.estimatedRate) createData.estimatedRate = context.estimatedRate;
-            if (context.imageUrl) createData.imageUrl = context.imageUrl;
-            if (context.notes) createData.notes = context.notes;
-            if (context.customerBankName) createData.customerBankName = context.customerBankName;
-            if (context.customerAccountNumber) createData.customerAccountNumber = context.customerAccountNumber;
-            if (context.customerAccountName) createData.customerAccountName = context.customerAccountName;
-            if (context.transactionBankName) createData.transactionBankName = context.transactionBankName;
-            if (context.transactionAccountNumber) createData.transactionAccountNumber = context.transactionAccountNumber;
-            if (context.transactionAccountName) createData.transactionAccountName = context.transactionAccountName;
-
-            const transaction = await fetchMutation(api.transactions.createTransaction, createData);
+            });
 
             const executionTime = Date.now() - startTime;
 
@@ -140,8 +227,25 @@ export const createTransactionTool = createTool({
                 data: transaction,
                 transactionId: transaction,
                 message: `Transaction created successfully with ID: ${transaction}`,
-                workingMemoryUpdate: `IMPORTANT: Store this transaction ID in your working memory: ${transaction}. You will need this ID for all future updates to this transaction. Use this exact ID when calling updateTransactionTool or other transaction-related tools.`
+                workingMemoryUpdate: `IMPORTANT: Store this transaction ID in your working memory: ${transaction}. You will need this ID for all future updates to this transaction. Use this exact ID when calling updateTransactionStatusTool or other transaction-related tools.`
             };
+
+            // Send debug message with successful result
+            if (phoneNumber) {
+                // await sendDebugMessage(phoneNumber, 'TRANSACTION CREATED SUCCESSFULLY', {
+                //     success: true,
+                //     transactionId: transaction,
+                //     executionTimeMs: executionTime,
+                //     currencyPair: `${context.currencyFrom}_${context.currencyTo}`,
+                //     amountFrom: context.amountFrom,
+                //     amountTo: context.amountTo,
+                //     negotiatedRate: context.negotiatedRate,
+                //     workingMemoryUpdate: result.workingMemoryUpdate
+                // });
+
+                // // Send complete transaction result
+                // await sendDebugMessage(phoneNumber, 'COMPLETE TRANSACTION RESULT', result);
+            }
 
             logSuccess('Transaction created successfully', {
                 transactionId: transaction,
@@ -161,6 +265,24 @@ export const createTransactionTool = createTool({
         } catch (error) {
             const executionTime = Date.now() - startTime;
             const errorMessage = `Failed to create transaction for user ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+
+            // Send debug message about error
+            if (phoneNumber) {
+                // await sendDebugMessage(phoneNumber, 'CREATE TRANSACTION ERROR', {
+                //     error: errorMessage,
+                //     errorType: error instanceof Error ? error.constructor.name : typeof error,
+                //     executionTimeMs: executionTime,
+                //     userId,
+                //     conversationId,
+                //     transactionData: {
+                //         currencyFrom: context.currencyFrom,
+                //         currencyTo: context.currencyTo,
+                //         amountFrom: context.amountFrom,
+                //         negotiatedRate: context.negotiatedRate
+                //     },
+                //     stack: error instanceof Error ? error.stack : undefined
+                // });
+            }
 
             logError('Failed to create transaction', error as Error, {
                 userId,
@@ -184,49 +306,39 @@ export const createTransactionTool = createTool({
  * Tool to update transaction status with validation
  * Accepts simplified status values and maps them to proper enum types
  */
-export const updateTransactionTool = createTool({
-    id: 'update_transaction',
-    description: 'Update transaction status and other fields with validation. Use "pending" for pending transactions and "image_received" when user submits payment proof. This tool automatically validates the transaction ID and maps status values to proper enum types.',
+export const updateTransactionStatusTool = createTool({
+    id: 'update_transaction_status',
+    description: 'Update transaction status with simplified inputs. Use "pending" for pending transactions and "image_received" when user submits payment proof. This tool automatically validates the transaction ID and maps status values to proper enum types.',
     inputSchema: z.object({
         transactionId: z.string().describe('Transaction ID - must be a valid Convex document ID that belongs to the current user'),
-        status: z.enum(["pending", "image_received", "confirmed_and_money_sent_to_user", "cancelled", "failed"]).optional().describe('New status: "pending", "image_received" (maps to image_received_and_being_reviewed), "confirmed_and_money_sent_to_user", "cancelled", or "failed"'),
+        status: z.enum(["pending", "image_received"]).describe('Simplified status: "pending" (maps to pending) or "image_received" (maps to image_received_and_being_reviewed)'),
         paymentReference: z.string().optional().describe('Payment reference number'),
         receiptImageUrl: z.string().optional().describe('URL to receipt image'),
         extractedDetails: z.record(z.unknown()).optional().describe('OCR extracted details from receipt as key-value pairs'),
-        customerBankName: z.string().optional().describe('Customer bank name'),
-        customerAccountNumber: z.string().optional().describe('Customer account number'),
-        customerAccountName: z.string().optional().describe('Customer account name'),
-        transactionBankName: z.string().optional().describe('Admin bank name for this transaction'),
-        transactionAccountNumber: z.string().optional().describe('Admin account number for this transaction'),
-        transactionAccountName: z.string().optional().describe('Admin account name for this transaction'),
-        notes: z.string().optional().describe('Additional transaction notes'),
     }),
     execute: async ({ context, runtimeContext }) => {
         const startTime = Date.now();
-        const toolId = 'update_transaction';
+        const toolId = 'update_transaction_status';
 
         // Extract context data using new consistent naming
         const phoneNumber = runtimeContext?.get('phoneNumber') as string;
         const userId = runtimeContext?.get('userId') as string;
         const conversationId = runtimeContext?.get('conversationId') as string;
-        
-        // Status mapping for simplified inputs
         const statusMapping = {
             'pending': 'pending' as const,
-            'image_received': 'image_received_and_being_reviewed' as const,
-            'confirmed_and_money_sent_to_user': 'confirmed_and_money_sent_to_user' as const,
-            'cancelled': 'cancelled' as const,
-            'failed': 'failed' as const
+            'image_received': 'image_received_and_being_reviewed' as const
         };
         
-        const mappedStatus = context.status ? statusMapping[context.status] : undefined;
-        if (context.status && !mappedStatus) {
+        const mappedStatus = statusMapping[context.status];
+        if (!mappedStatus) {
+            // throw new Error(`Invalid status: ${context.status}. Use 'pending' or 'image_received'.`);
             return {
                 success: false,
-                message: `Invalid status: ${context.status}. Use 'pending', 'image_received', 'confirmed_and_money_sent_to_user', 'cancelled', or 'failed'.`,
-                suggestion: 'Use only the valid status values.'
+                message: `Invalid status: ${context.status}. Use 'pending' or 'image_received'.`,
+                suggestion: 'Use only the values "pending" or "image_received".'
             }
         }
+    
 
         logToolCall(toolId, context);
 
@@ -238,9 +350,13 @@ export const updateTransactionTool = createTool({
                     message: 'Unable to extract userId from runtime context. Make sure the agent is called with proper context configuration.',
                     suggestion: 'Check your agent context configuration.'
                 };
+
+              
+
                 logToolResult(toolId, result, Date.now() - startTime);
                 return result;
             }
+
 
             // First validate the transaction ID format
             if (!isValidConvexId(context.transactionId)) {
@@ -250,6 +366,8 @@ export const updateTransactionTool = createTool({
                     message: `Invalid transaction ID format: ${context.transactionId}. Expected a valid Convex document ID (16+ alphanumeric characters).`,
                     suggestion: 'Use validateTransactionTool to check the transaction ID, or use getLatestUserTransactionTool to get the most recent transaction ID, or use getUserTransactionsTool to see all available transaction IDs for this user.'
                 };
+
+
                 logToolResult(toolId, result, Date.now() - startTime);
                 return result;
             }
@@ -292,25 +410,13 @@ export const updateTransactionTool = createTool({
                 operation: toolId
             });
 
-            // Build update object with only provided fields
-            const updateData: any = {
+            await fetchMutation(api.transactions.updateTransactionStatus, {
                 transactionId: context.transactionId as Id<"transactions">,
-            };
-
-            // Add fields only if provided
-            if (mappedStatus !== undefined) updateData.status = mappedStatus;
-            if (context.paymentReference !== undefined) updateData.paymentReference = context.paymentReference;
-            if (context.receiptImageUrl !== undefined) updateData.receiptImageUrl = context.receiptImageUrl;
-            if (context.extractedDetails !== undefined) updateData.extractedDetails = context.extractedDetails;
-            if (context.customerBankName !== undefined) updateData.customerBankName = context.customerBankName;
-            if (context.customerAccountNumber !== undefined) updateData.customerAccountNumber = context.customerAccountNumber;
-            if (context.customerAccountName !== undefined) updateData.customerAccountName = context.customerAccountName;
-            if (context.transactionBankName !== undefined) updateData.transactionBankName = context.transactionBankName;
-            if (context.transactionAccountNumber !== undefined) updateData.transactionAccountNumber = context.transactionAccountNumber;
-            if (context.transactionAccountName !== undefined) updateData.transactionAccountName = context.transactionAccountName;
-            if (context.notes !== undefined) updateData.notes = context.notes;
-
-            await fetchMutation(api.transactions.updateTransactionStatus, updateData);
+                status: mappedStatus,
+                paymentReference: context.paymentReference,
+                receiptImageUrl: context.receiptImageUrl,
+                extractedDetails: context.extractedDetails,
+            });
 
             const executionTime = Date.now() - startTime;
 
@@ -320,10 +426,9 @@ export const updateTransactionTool = createTool({
                 previousStatus: transaction.status,
                 inputStatus: context.status,
                 newStatus: mappedStatus,
-                message: `Transaction ${context.transactionId} status updated from ${transaction.status} to ${mappedStatus || transaction.status} successfully${context.status ? ` (input: ${context.status})` : ''}.`,
-                workingMemoryUpdate: `Transaction ${context.transactionId} is now in ${mappedStatus || transaction.status} status. Keep this transaction ID in your working memory for future updates.`
+                message: `Transaction ${context.transactionId} status updated from ${transaction.status} to ${mappedStatus} successfully (input: ${context.status})`,
+                workingMemoryUpdate: `Transaction ${context.transactionId} is now in ${mappedStatus} status. Keep this transaction ID in your working memory for future updates.`
             };
-            
             logSuccess('Transaction status updated successfully', {
                 transactionId: context.transactionId,
                 previousStatus: transaction.status,

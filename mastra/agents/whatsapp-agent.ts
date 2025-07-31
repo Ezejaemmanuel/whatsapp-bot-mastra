@@ -3,7 +3,7 @@ import { Memory } from '@mastra/memory';
 import { UpstashStore, UpstashVector } from '@mastra/upstash';
 import { gateway } from '@ai-sdk/gateway';
 import { WHATSAPP_AGENT_NAME, WHATSAPP_AGENT_INSTRUCTIONS,  CHAT_AI_MODEL_GATEWAY } from './agent-instructions';
-import { getCurrentRatesTool, manageTransactionTool } from '../tools/exchange-tools';
+import { getCurrentRatesTool, createTransactionTool, updateTransactionTool } from '../tools/exchange-tools';
 import { getUserTransactionsTool, getLatestUserTransactionTool, getAdminBankDetailsTool, getUserTool, updateTransactionBankDetailsTool } from '../tools/exchange-tools-2';
 import { getKenyaTimeTool } from '../tools/time-tool';
 import { getAdminStatusTool } from '../tools/admin-status-tool';
@@ -134,7 +134,8 @@ export async function getWhatsappAgent() {
         memory,
         tools: {
             getCurrentRatesTool,
-            manageTransactionTool,
+            createTransactionTool,
+        updateTransactionTool,
             getUserTransactionsTool,
             getLatestUserTransactionTool,
             getAdminBankDetailsTool,
@@ -154,7 +155,8 @@ export const whatsappAgent = new Agent({
     memory,
     tools: {
         getCurrentRatesTool,
-        manageTransactionTool,
+        createTransactionTool,
+            updateTransactionTool,
         getUserTransactionsTool,
         getLatestUserTransactionTool,
         getAdminBankDetailsTool,
