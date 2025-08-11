@@ -27,6 +27,8 @@ import { MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { useMutation as useConvexMutation } from "convex/react";
 import { ImagePreviewDialog } from './ImagePreviewDialog';
+import { formatDateHeader, toDayKey } from '@/lib/utils';
+import { format } from 'date-fns';
 
 
 interface ChatViewProps {
@@ -41,6 +43,8 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
   const [imageForPreview, setImageForPreview] = useState<File | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const daySentinelsRef = useRef<Record<string, HTMLDivElement | null>>({});
+  const [stickyDateText, setStickyDateText] = useState<string>('');
 
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [showNewMessageIndicator, setShowNewMessageIndicator] = useState(false);
@@ -143,6 +147,38 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
     setIsAtBottom(atBottom);
     if (atBottom) {
       setShowNewMessageIndicator(false);
+    }
+    updateStickyDate();
+  };
+
+  const updateStickyDate = () => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const topOffset = 8; // match sticky top spacing
+    const currentTop = container.scrollTop + topOffset;
+    const entries = Object.entries(daySentinelsRef.current)
+      .filter(([, el]) => !!el)
+      .sort((a, b) => (a[1]!.offsetTop - b[1]!.offsetTop));
+
+    if (entries.length === 0) {
+      setStickyDateText('');
+      return;
+    }
+
+    let activeKey = entries[0][0];
+    for (const [key, el] of entries) {
+      if (!el) continue;
+      if (el.offsetTop <= currentTop) {
+        activeKey = key;
+      } else {
+        break;
+      }
+    }
+    if (activeKey) {
+      const d = new Date(activeKey + 'T00:00:00');
+      setStickyDateText(formatDateHeader(d));
+    } else {
+      setStickyDateText('');
     }
   };
 
@@ -274,6 +310,13 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
     });
   };
 
+  useEffect(() => {
+    // Update sticky date after messages render
+    const id = requestAnimationFrame(() => updateStickyDate());
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages.length]);
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -396,6 +439,14 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
 
         {/* Messages - Scrollable Area */}
         <div className="flex-1 overflow-y-auto whatsapp-scrollbar relative z-10" ref={scrollRef} onScroll={handleScroll}>
+          {/* Sticky date header */}
+          {stickyDateText && (
+            <div className="sticky top-2 z-20 flex justify-center pointer-events-none px-4">
+              <div className="text-xs text-center text-whatsapp-text-muted bg-whatsapp-panel-bg/60 rounded-full px-3 py-1 shadow-sm glass-panel">
+                {stickyDateText}
+              </div>
+            </div>
+          )}
           <div className="p-4 space-y-3">
 
             <div ref={loadMoreRef} className="h-1" />
@@ -423,6 +474,9 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
               const isOwn = msg.senderRole === 'admin' || msg.senderRole === 'bot';
               const isConsecutive = prevMsg && prevMsg.senderRole === msg.senderRole;
               const showTime = !isConsecutive || (prevMsg && new Date(msg.timestamp).getTime() - new Date(prevMsg.timestamp).getTime() > 300000); // 5 minutes
+              const currentDate = new Date(msg.timestamp);
+              const currentDayKey = toDayKey(currentDate);
+              const shouldShowDateHeader = !prevMsg || toDayKey(new Date(prevMsg.timestamp)) !== currentDayKey;
 
               const getBubbleClasses = () => {
                 let classes = 'message-bubble transition-all duration-300 hover:scale-105 ';
@@ -437,7 +491,18 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
               };
 
               return (
-                <div key={msg._id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'} ${isConsecutive && !showTime ? 'mt-1' : 'mt-4'}`}>
+                <React.Fragment key={msg._id}>
+                  {shouldShowDateHeader && (
+                    <>
+                      <div ref={(el) => { daySentinelsRef.current[currentDayKey] = el; }} className="h-0" aria-hidden />
+                      <div className="flex justify-center my-2">
+                        <div className="text-xs text-center text-whatsapp-text-muted bg-whatsapp-panel-bg/60 rounded-full px-3 py-1 shadow-sm glass-panel">
+                          {formatDateHeader(currentDate)}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} ${isConsecutive && !showTime ? 'mt-1' : 'mt-4'}`}>
                   <div className={getBubbleClasses()}>
                     {!isOwn && !isConsecutive && (
                       <p className="text-xs font-semibold text-whatsapp-primary mb-1">{msg.senderName}</p>
@@ -476,7 +541,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
                       )}
                       <div className="flex items-center justify-end mt-1 gap-1">
                         <span className={`text-xs opacity-70 font-medium ${isOwn ? 'text-white' : 'text-whatsapp-text-muted'}`}>
-                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {format(new Date(msg.timestamp), 'p')}
                         </span>
                         {isOwn && (
                           <div className="message-status">
@@ -488,7 +553,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
                       </div>
                     </div>
                   </div>
-                </div>
+                </React.Fragment>
               );
             })}
           </div>
