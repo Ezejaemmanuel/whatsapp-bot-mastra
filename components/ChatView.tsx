@@ -553,6 +553,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
                       </div>
                     </div>
                   </div>
+                  </div>
                 </React.Fragment>
               );
             })}
@@ -588,6 +589,8 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
             onChange={handleFileChange}
             className="hidden"
             accept="image/*"
+            aria-label="Attach image"
+            title="Attach image"
           />
 
           <div className="flex-1 relative">
