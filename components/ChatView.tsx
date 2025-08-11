@@ -140,17 +140,6 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
     prevMessagesLength.current = messages.length;
   }, [messages, isAtBottom]);
 
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    const atBottom = scrollHeight - scrollTop - clientHeight < 10;
-    setIsAtBottom(atBottom);
-    if (atBottom) {
-      setShowNewMessageIndicator(false);
-    }
-    updateStickyDate();
-  };
-
   const updateStickyDate = () => {
     const container = scrollRef.current;
     if (!container) return;
@@ -181,6 +170,24 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
       setStickyDateText('');
     }
   };
+
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    const atBottom = scrollHeight - scrollTop - clientHeight < 10;
+    setIsAtBottom(atBottom);
+    if (atBottom) {
+      setShowNewMessageIndicator(false);
+    }
+    updateStickyDate();
+  };
+
+  // Update sticky date after messages render
+  useEffect(() => {
+    const id = requestAnimationFrame(() => updateStickyDate());
+    return () => cancelAnimationFrame(id);
+  }, [messages.length]);
+
 
 
   if (!chatId) {
@@ -310,12 +317,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ chatId, onBack, isMobile = f
     });
   };
 
-  useEffect(() => {
-    // Update sticky date after messages render
-    const id = requestAnimationFrame(() => updateStickyDate());
-    return () => cancelAnimationFrame(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages.length]);
+  
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
