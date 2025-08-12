@@ -250,24 +250,64 @@ Need help? Just ask! 😊`;
                     runtimeContext.set('conversationId', conversation._id);
                     runtimeContext.set('phoneNumber', messageInfo.from);
 
-                    // Process image with exchange agent for receipt analysis
+                    // Process image with exchange agent for receipt analysis (retry up to 3 times if text is empty)
                     // const agent = mastra.getAgent('whatsappAgent');
                     const agent = await getWhatsappAgent();
-                    const agentResponse = await agent.generate([
-                        {
-                            role: 'user',
-                            content: agentContent,
-                        }
-                    ], {
-                        memory: {
-                            thread: `whatsapp-${messageInfo.from}`,
-                            resource: messageInfo.from,
-                        },
-                        runtimeContext,
-                        temperature: HANDLE_IMAGE_AGENT_TEMPRETURE,
-                    });
+                    let agentResponse: any;
+                    const maxRetries = 3;
+                    for (let i = 0; i < maxRetries; i++) {
+                        agentResponse = await agent.generate([
+                            {
+                                role: 'user',
+                                content: agentContent,
+                            }
+                        ], {
+                            memory: {
+                                thread: `whatsapp-${messageInfo.from}`,
+                                resource: messageInfo.from,
+                            },
+                            runtimeContext,
+                            temperature: HANDLE_IMAGE_AGENT_TEMPRETURE,
+                        });
 
-                    response = agentResponse.text || 'Got your receipt! 📸 Let me analyze the details...';
+                        if (agentResponse?.text && agentResponse.text.trim().length > 0) {
+                            break; // Exit loop if response is not empty
+                        }
+
+                        logWarning(`Agent generated an empty response on attempt ${i + 1}`, {
+                            messageId: messageInfo.id,
+                            from: messageInfo.from,
+                            threadId: `whatsapp-${messageInfo.from}`,
+                            operation: 'handleMediaMessage',
+                        });
+
+                        if (i < maxRetries - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 1000)); // wait 1s before retrying
+                        }
+                    }
+
+                    if (agentResponse?.text && agentResponse.text.trim().length > 0) {
+                        response = agentResponse.text;
+                    } else {
+                        const emptyResponseError = new Error(`Agent returned an empty response after ${maxRetries} attempts.`);
+                        logWarning('Agent generated an empty response after multiple retries', {
+                            messageId: messageInfo.id,
+                            from: messageInfo.from,
+                            threadId: `whatsapp-${messageInfo.from}`,
+                            operation: 'handleMediaMessage',
+                        });
+                        response = formatErrorForTestMode(emptyResponseError, {
+                            operation: 'handleMediaMessage',
+                            messageId: messageInfo.id,
+                            from: messageInfo.from,
+                            errorType: 'agent_empty_response_media',
+                        });
+                        if (!TEST_MODE) {
+                            response = imageUrl ?
+                                'I received your receipt image but had trouble analyzing it. Could you try sending it again or provide the transaction details as text?' :
+                                'I had trouble processing your image. Could you try sending it again or send me the transaction details as text?';
+                        }
+                    }
 
                     logInfo('Generated exchange agent response for image', {
                         messageId: messageInfo.id,

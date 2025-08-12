@@ -25,14 +25,27 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Generate response using the agent
-        const response = await agent.generate(message, {
-            runtimeContext: new RuntimeContext<{
-                userId: string;
-                conversationId: string;
-                phoneNumber: string;
-            }>(),
-        });
+        // Generate response using the agent with retry if empty
+        let response: any;
+        const maxRetries = 3;
+        for (let i = 0; i < maxRetries; i++) {
+            response = await agent.generate(message, {
+                runtimeContext: new RuntimeContext<{
+                    userId: string;
+                    conversationId: string;
+                    phoneNumber: string;
+                }>(),
+            });
+
+            if (response?.text && response.text.trim().length > 0) {
+                break;
+            }
+
+            // no logger here; keep API route minimal
+            if (i < maxRetries - 1) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
 
         return NextResponse.json({
             message: response.text,
@@ -71,8 +84,18 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // Generate response using the agent
-        const response = await agent.generate(message);
+        // Generate response using the agent with retry if empty
+        let response: any;
+        const maxRetries = 3;
+        for (let i = 0; i < maxRetries; i++) {
+            response = await agent.generate(message);
+            if (response?.text && response.text.trim().length > 0) {
+                break;
+            }
+            if (i < maxRetries - 1) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
 
         return NextResponse.json({
             message: response.text,
