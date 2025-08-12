@@ -20,7 +20,7 @@ import { processStatusUpdate } from './status-handlers';
 import { markMessageAsRead } from './response-sender';
 import { sendErrorResponse } from './error-handler';
 import { isMediaMessage } from './media-processor';
-import { sendDebugMessage } from '@/mastra/tools/utils';
+// Debug helpers migrated off Mastra; no-op import removed
 import { handleMediaMessage } from './handleMediaMessage';
 import { handleTextMessage } from './handleTextMessage';
 
@@ -115,20 +115,7 @@ export async function processIncomingMessage(
     try {
         const botPhoneNumber = process.env.WHATSAPP_PHONE_NUMBER;
 
-        try {
-            await sendDebugMessage(message.from, 'DEBUG: processIncomingMessage', {
-                messageId: message.id,
-                from: message.from,
-                type: message.type,
-                botPhoneNumber,
-                fullMessage: message
-            });
-        } catch (debugError) {
-            logWarning('Failed to send debug message (non-critical)', {
-                error: debugError instanceof Error ? debugError.message : String(debugError),
-                operation: 'processIncomingMessage:debug_message'
-            });
-        }
+        // debug removed
 
         if (message.from === botPhoneNumber) {
             logInfo('Ignoring outgoing message received by webhook', {

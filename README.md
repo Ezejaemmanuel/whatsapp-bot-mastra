@@ -290,7 +290,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🆘 Support
 
 - **WhatsApp Cloud API**: [Official Documentation](https://developers.facebook.com/docs/whatsapp/cloud-api)
-- **Mastra Framework**: [Mastra Documentation](https://mastra.ai)
+- AI backend now uses Convex Agent component. See `convex/agent.ts` and `convex/ai.ts`.
 - **Next.js**: [Next.js Documentation](https://nextjs.org/docs)
 
 ## 🙏 Acknowledgments

@@ -3,10 +3,9 @@ import { DatabaseService } from '@/lib/database-service';
 import { MediaUploadService } from '@/lib/media-upload-service';
 import { WhatsAppCloudApiClient } from '@/whatsapp/whatsapp-client';
 import { Id } from '@/convex/_generated/dataModel';
-import { mastra } from '@/mastra';
-import { RuntimeContext } from '@mastra/core/runtime-context';
+import { fetchAction } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
 import { TEST_MODE } from '@/constant';
-import { HANDLE_IMAGE_AGENT_TEMPRETURE, HANDLE_TEXT_AGENT_TEMPRETURE } from '@/mastra/agents/agent-instructions';
 import {
     logInfo,
     logError,
@@ -21,7 +20,7 @@ import {
     formatErrorForTestMode,
     sendErrorResponse
 } from './error-handler';
-import { getWhatsappAgent } from '@/mastra/agents/whatsapp-agent';
+// Mastra removed
 
 
 /**
@@ -56,59 +55,17 @@ export async function handleTextMessage(
             const userName = user.profileName || user.phoneNumber || messageInfo.from;
             const conversation = await databaseService.getOrCreateConversation(user._id, userName);
 
-            // Create runtime context with memory context for tools
-            const runtimeContext = new RuntimeContext<{
-                userId: string;
-                conversationId: string;
-                phoneNumber: string;
-            }>();
-            runtimeContext.set('userId', user._id);
-            runtimeContext.set('conversationId', conversation._id);
-            runtimeContext.set('phoneNumber', messageInfo.from);
+            // Generate via Convex Agent action
+            const result = await fetchAction(api.ai.generateReply, {
+                userId: user._id,
+                conversationId: conversation._id,
+                prompt: messageText,
+            });
 
-            // const agent = mastra.getAgent('whatsappAgent');
-            const agent = await getWhatsappAgent();
-            // Use the enhanced WhatsApp Exchange Agent to generate a response
-            let agentResponse;
-            const maxRetries = 3;
-            for (let i = 0; i < maxRetries; i++) {
-                agentResponse = await agent.generate(
-                    [
-                        {
-                            role: 'user' as const,
-                            content: messageText || 'Hello',
-                        },
-                    ],
-                    {
-                        temperature: HANDLE_TEXT_AGENT_TEMPRETURE,
-                        memory: {
-                            thread: `whatsapp-${messageInfo.from}`,
-                            resource: messageInfo.from,
-                        },
-                        runtimeContext,
-                    }
-                );
-
-                if (agentResponse?.text) {
-                    break; // Exit loop if response is not empty
-                }
-
-                logWarning(`Agent generated an empty response on attempt ${i + 1}`, {
-                    messageId: messageInfo.id,
-                    from: messageInfo.from,
-                    threadId: `whatsapp-${messageInfo.from}`,
-                    operation: 'handleTextMessage',
-                });
-
-                if (i < maxRetries - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 1000)); // wait 1s before retrying
-                }
-            }
-
-            if (agentResponse?.text) {
-                response = agentResponse.text;
+            if (result?.text) {
+                response = result.text;
             } else {
-                const emptyResponseError = new Error(`Agent returned an empty response after ${maxRetries} attempts.`);
+                const emptyResponseError = new Error(`Agent returned an empty response.`);
                 logWarning('Agent generated an empty response after multiple retries', {
                     messageId: messageInfo.id,
                     from: messageInfo.from,
@@ -131,8 +88,8 @@ export async function handleTextMessage(
                 from: messageInfo.from,
                 responseLength: response.length,
                 threadId: `whatsapp-${messageInfo.from}`,
-                hasToolCalls: agentResponse?.toolCalls && agentResponse?.toolCalls.length > 0,
-                toolCallsCount: agentResponse?.toolCalls?.length || 0,
+                hasToolCalls: false,
+                toolCallsCount: 0,
                 messageTextLength: messageText.length,
                 operation: 'handleTextMessage',
             });

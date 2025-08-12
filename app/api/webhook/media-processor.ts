@@ -2,8 +2,7 @@ import { WebhookMessage } from './types';
 import { MediaUploadService } from '@/lib/media-upload-service';
 import { Id } from '@/convex/_generated/dataModel';
 import { logInfo, logError, logSuccess, logWarning } from './utils';
-import { analyzeImageDirectly } from '@/mastra/tools/image-analysis-tool';
-import { sendDebugMessage } from '@/mastra/tools/utils';
+import { analyzeImageDirectly } from '@/convex-ai/tools/image-analysis-tool';
 
 /**
  * Check if message is a media message
@@ -145,11 +144,6 @@ export async function processImageAnalysis(
             operation: 'processImageAnalysis'
         });
 
-        await sendDebugMessage(userPhoneNumber, 'STARTING DIRECT IMAGE ANALYSIS FOR OCR PROCESSING', {
-            messageId,
-            from: userPhoneNumber,
-            operation: 'processImageAnalysis'
-        });
 
         const imageAnalysisResults = await analyzeImageDirectly(
             imageUrl,
@@ -157,13 +151,7 @@ export async function processImageAnalysis(
             `Image from WhatsApp message. ${caption ? `User caption: ${caption}` : 'No caption provided.'}`
         );
 
-        await sendDebugMessage(userPhoneNumber, 'DIRECT IMAGE ANALYSIS COMPLETED SUCCESSFULLY', {
-            messageId,
-            from: userPhoneNumber,
-            imageUrl,
-            imageAnalysisResults,
-            operation: 'processImageAnalysis'
-        });
+     
 
         logSuccess('Direct image analysis completed successfully', {
             messageId,
@@ -182,11 +170,7 @@ export async function processImageAnalysis(
             operation: 'processImageAnalysis'
         });
 
-        await sendDebugMessage(userPhoneNumber, 'DIRECT IMAGE ANALYSIS FAILED', {
-            messageId,
-            from: userPhoneNumber,
-            operation: 'processImageAnalysis'
-        });
+     
 
         return { success: false, error: analysisError instanceof Error ? analysisError.message : 'Unknown analysis error' };
     }
@@ -200,7 +184,7 @@ export function generateImageAgentContent(
     imageAnalysisResults: unknown | null,
     caption?: string | null
 ): string {
-    const results = imageAnalysisResults as any;
+    const results = imageAnalysisResults as { rawText?: string; transactionReference?: string } | null;
     if (imageUrl && results?.rawText) {
         let content = `The user sent an image. I have analyzed it and extracted the following text:
 

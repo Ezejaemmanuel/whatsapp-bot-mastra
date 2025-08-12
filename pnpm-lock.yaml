@@ -14,6 +14,12 @@ importers:
       '@ai-sdk/google':
         specifier: 2.0.0-beta.18
         version: 2.0.0-beta.18(zod@3.25.67)
+      '@ai-sdk/openai':
+        specifier: ^2.0.10
+        version: 2.0.10(zod@3.25.67)
+      '@convex-dev/agent':
+        specifier: ^0.1.17
+        version: 0.1.17(ai@5.0.0-beta.33(zod@3.25.67))(convex-helpers@0.1.95(@standard-schema/spec@1.0.0)(convex@1.25.4(react@19.1.0))(hono@4.8.10)(react@19.1.0)(typescript@5.8.3)(zod@3.25.67))(convex@1.25.4(react@19.1.0))(react@19.1.0)
       '@convex-dev/react-query':
         specifier: 0.0.0-alpha.11
         version: 0.0.0-alpha.11(@standard-schema/spec@1.0.0)(@tanstack/react-query@5.81.5(react@19.1.0))(convex@1.25.4(react@19.1.0))(hono@4.8.10)(react@19.1.0)(typescript@5.8.3)(zod@3.25.67)
@@ -23,18 +29,6 @@ importers:
       '@hookform/resolvers':
         specifier: ^3.9.0
         version: 3.10.0(react-hook-form@7.59.0(react@19.1.0))
-      '@mastra/core':
-        specifier: 0.0.0-ai-v5-20250729181825
-        version: 0.0.0-ai-v5-20250729181825(openapi-types@12.1.3)(zod@3.25.67)
-      '@mastra/loggers':
-        specifier: 0.0.0-ai-v5-20250729181825
-        version: 0.0.0-ai-v5-20250729181825(@mastra/core@0.0.0-ai-v5-20250729181825(openapi-types@12.1.3)(zod@3.25.67))
-      '@mastra/memory':
-        specifier: 0.0.0-ai-v5-20250729181825
-        version: 0.0.0-ai-v5-20250729181825(@mastra/core@0.0.0-ai-v5-20250729181825(openapi-types@12.1.3)(zod@3.25.67))
-      '@mastra/upstash':
-        specifier: 0.0.0-ai-v5-20250729181825
-        version: 0.0.0-ai-v5-20250729181825(@mastra/core@0.0.0-ai-v5-20250729181825(openapi-types@12.1.3)(zod@3.25.67))
       '@radix-ui/react-accordion':
         specifier: ^1.2.0
         version: 1.2.11(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -312,6 +306,12 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4
 
+  '@ai-sdk/openai@2.0.10':
+    resolution: {integrity: sha512-vnB6Jk2Qb245fajaWjG3q6N0QQy/uej7kZ0QR9xxq09x++3Tx/UPOcgAKMhFFA2fnuGpkFSRKoiDCyp/E3RARQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4
+
   '@ai-sdk/provider-utils@2.2.8':
     resolution: {integrity: sha512-fqhG+4sCVv8x7nFzYnFo19ryhAa3w096Kmc3hWxMQfW/TubPOmt3A6tYZhl4mUfQWWQMsuSkLrtjlWuXBVSGQA==}
     engines: {node: '>=18'}
@@ -336,8 +336,18 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4
 
+  '@ai-sdk/provider-utils@3.0.1':
+    resolution: {integrity: sha512-/iP1sKc6UdJgGH98OCly7sWJKv+J9G47PnTjIj40IJMUQKwDrUMyf7zOOfRtPwSuNifYhSoJQ4s1WltI65gJ/g==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4
+
   '@ai-sdk/provider@1.1.3':
     resolution: {integrity: sha512-qZMxYJ0qqX/RfnuIaab+zp8UAeJn/ygXXAffR5I4N0n1IrvA6qBsjc8hXLmBiMV2zoXlifkacF7sEFnYnjBcqg==}
+    engines: {node: '>=18'}
+
+  '@ai-sdk/provider@2.0.0':
+    resolution: {integrity: sha512-6o7Y2SeO9vFKB8lArHXehNuusnpddKPk7xqL7T2/b+OvXMRIXUO1rR4wcv1hAFUAT9avGZshty3Wlua/XA7TvA==}
     engines: {node: '>=18'}
 
   '@ai-sdk/provider@2.0.0-beta.1':
@@ -638,6 +648,17 @@ packages:
   '@colors/colors@1.5.0':
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
     engines: {node: '>=0.1.90'}
+
+  '@convex-dev/agent@0.1.17':
+    resolution: {integrity: sha512-/JxIGwcYC0Pnqk2iNh/HE85mSmqk0O5/EUns76AI7FFyBu6zXb9tk/Wz7vsKyG5sI36jrQSQYLlUf+wbksbpgw==}
+    peerDependencies:
+      ai: ^4.3.16
+      convex: ^1.23.0
+      convex-helpers: ^0.1.100
+      react: ^18.3.1 || ^19.0.0
+    peerDependenciesMeta:
+      react:
+        optional: true
 
   '@convex-dev/auth@0.0.83':
     resolution: {integrity: sha512-KJPI9x3U1KcHNE/7pA7B92sVsHWpAfg6vWuO005OWNF359eRJ3ZP3W+iNfuMajZLqywudR2+oVoGDnBIFrM63A==}
@@ -1562,11 +1583,6 @@ packages:
       '@mastra/core': 0.0.0-ai-v5-20250729181825
       zod: ^3.0.0
 
-  '@mastra/memory@0.0.0-ai-v5-20250729181825':
-    resolution: {integrity: sha512-PaoBePyMdw65IYmpaPU1kuMtYiwykvpzUes/FyRKPZpSHw5tf+aScVmUV7Ty/6TTdH93QgSobXuzSZ/ySZv7XA==}
-    peerDependencies:
-      '@mastra/core': 0.0.0-ai-v5-20250729181825
-
   '@mastra/schema-compat@0.0.0-ai-v5-20250729181825':
     resolution: {integrity: sha512-X0IXWB0vQEYmr8mpgQ7WW/a3ENExEapoKSK0Lmq6lUGxJ7+uzX7UjGfRmCAjCsBlfmHCxfjCnEXIcOo89nkPZA==}
     peerDependencies:
@@ -1578,11 +1594,6 @@ packages:
     peerDependencies:
       '@mastra/core': 0.0.0-ai-v5-20250729181825
       zod: ^3.0.0
-
-  '@mastra/upstash@0.0.0-ai-v5-20250729181825':
-    resolution: {integrity: sha512-HF0lvSAFCaOtc4riphV1w4UCcxVPw7ic8x/IdMCucRrTrsqdl8izTFbR/4WaDWR9cRGwMc2343Gcv4nN8+vbAg==}
-    peerDependencies:
-      '@mastra/core': 0.0.0-ai-v5-20250729181825
 
   '@modelcontextprotocol/sdk@1.13.2':
     resolution: {integrity: sha512-Vx7qOcmoKkR3qhaQ9qf3GxiVKCEu+zfJddHv6x3dY/9P6+uIwJnmuAur5aB+4FDXf41rRrDnOEGkviX5oYZ67w==}
@@ -3383,34 +3394,6 @@ packages:
   '@radix-ui/rect@1.1.1':
     resolution: {integrity: sha512-HPwpGIzkl28mWyZqG52jiqDJ12waP11Pa1lGoiyUkIEuMLBP0oeK/C89esbXrxsky5we7dfd8U58nm0SgAWpVw==}
 
-  '@redis/bloom@5.6.1':
-    resolution: {integrity: sha512-5/22U76IMEfn6TeZ+uvjXspHw+ykBF0kpBa8xouzeHaQMXs/auqBUOEYzU2VKYDvnd2RSpPTyIg82oB7PpUgLg==}
-    engines: {node: '>= 18'}
-    peerDependencies:
-      '@redis/client': ^5.6.1
-
-  '@redis/client@5.6.1':
-    resolution: {integrity: sha512-bWHmSFIJ5w1Y4aHsYs46XMDHKQsBHFRhNcllYaBxz2Zl+lu+gbm5yI9BqxvKh48bLTs/Wx1Kns0gN2WIasE8MA==}
-    engines: {node: '>= 18'}
-
-  '@redis/json@5.6.1':
-    resolution: {integrity: sha512-cTggVzPIVuiFeXcEcnTRiUzV7rmUvM9KUYxWiHyjsAVACTEUe4ifKkvzrij0H/z3ammU5tfGACffDB3olBwtVA==}
-    engines: {node: '>= 18'}
-    peerDependencies:
-      '@redis/client': ^5.6.1
-
-  '@redis/search@5.6.1':
-    resolution: {integrity: sha512-+eOjx8O2YoKygjqkLpTHqcAq0zKLjior+ee2tRBx/3RSf1+OHxiC9Y6NstshQpvB1XHqTw9n7+f0+MsRJZrp0g==}
-    engines: {node: '>= 18'}
-    peerDependencies:
-      '@redis/client': ^5.6.1
-
-  '@redis/time-series@5.6.1':
-    resolution: {integrity: sha512-sd3q4jMJdoSO2akw1L9NrdFI1JJ6zeMgMUoTh4a34p9sY3AnOI4aDLCecy8L2IcPAP1oNR3TbLFJiCJDQ35QTA==}
-    engines: {node: '>= 18'}
-    peerDependencies:
-      '@redis/client': ^5.6.1
-
   '@remix-run/router@1.23.0':
     resolution: {integrity: sha512-O3rHJzAQKamUz1fvE0Qaw0xSFqsA/yafi2iqeE0pvdFtCO1viYx8QL6f3Ln/aCCTLxs68SLf0KPM9eSeM8yBnA==}
     engines: {node: '>=14.0.0'}
@@ -4174,14 +4157,8 @@ packages:
   '@upstash/redis@1.35.0':
     resolution: {integrity: sha512-WUm0Jz1xN4DBDGeJIi2Y0kVsolWRB2tsVds4SExaiLg4wBdHFMB+8IfZtBWr+BP0FvhuBr5G1/VLrJ9xzIWHsg==}
 
-  '@upstash/redis@1.35.2':
-    resolution: {integrity: sha512-QlEI77M/qfSA7G6yioKrUiKCueewONb7P0Xe4Pr42RSJHs8S+UkBwY2unEiTWtONC4L6ngKjbtQJgpXzxbnRpw==}
-
   '@upstash/vector@1.2.1':
     resolution: {integrity: sha512-xKA9qTgbnPsxym/ymgwmaJbJHSTA6b5B1SNyTqJerV8322xn6eJM+p3xZPxKJYDPfSea7RgVxsTkhE9I/mOaOw==}
-
-  '@upstash/vector@1.2.2':
-    resolution: {integrity: sha512-ptQ9xnxtKqmpNK52PCcHCszlPOLxIBfjsv7ty8RoF95pkjctS9rSjTQ3Pl9bx5VFbpDj+0dMXw88WLt6swDkgQ==}
 
   '@webcontainer/env@1.1.1':
     resolution: {integrity: sha512-6aN99yL695Hi9SuIk1oC88l9o0gmxL1nGWWQ/kNy81HigJ0FoaoTXpytCj6ItzgyCEwA9kF1wixsTuv5cjsgng==}
@@ -4307,9 +4284,6 @@ packages:
   async-function@1.0.0:
     resolution: {integrity: sha512-hsU18Ae8CDTR6Kgu9DYf0EbCr/a5iGL0rytQDobUcdpYOKokk8LEjVphnXkDkgpi0wYVsqrXuP0bZxJaTqdgoA==}
     engines: {node: '>= 0.4'}
-
-  async-mutex@0.5.0:
-    resolution: {integrity: sha512-1A94B18jkJ3DYq284ohPxoXbfTA5HsQ7/Mf4DEhcyLx3Bz27Rh59iScbB6EPiP+B+joue6YCxcMXSbFC1tZKwA==}
 
   async@2.6.4:
     resolution: {integrity: sha512-mzo5dfJYwAn29PeiJ0zvwTo04zj8HDJj0Mn8TD7sno7q12prdbnasKJHhkm2c1LgrhlJ0teaea8860oxi51mGA==}
@@ -4512,10 +4486,6 @@ packages:
   clsx@2.1.1:
     resolution: {integrity: sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==}
     engines: {node: '>=6'}
-
-  cluster-key-slot@1.1.2:
-    resolution: {integrity: sha512-RMr0FhtfXemyinomL4hrWcYJxmX6deFdCxpJzhDttxgO1+bcCnkk+9drydLVDmAMG7NE6aN/fl4F7ucU/90gAA==}
-    engines: {node: '>=0.10.0'}
 
   cmdk@1.1.1:
     resolution: {integrity: sha512-Vsv7kFaXm+ptHDMZ7izaRsP70GgrW9NBNGswt9OZaVBLlE0SNpDq8eu/VGXyF9r7M0azK3Wy7OlYXsuyYLFzHg==}
@@ -6436,20 +6406,9 @@ packages:
   perfect-debounce@1.0.0:
     resolution: {integrity: sha512-xCy9V055GLEqoFaHoC1SoLIaLmWctgCUaBaWxDZ7/Zx4CTyX7cJQLJOok/orfjZAh9kEYpjJa4d0KcJmCbctZA==}
 
-  pg-cloudflare@1.2.7:
-    resolution: {integrity: sha512-YgCtzMH0ptvZJslLM1ffsY4EuGaU0cx4XSdXLRFae8bPP4dS5xL1tNB3k2o/N64cHJpwU7dxKli/nZ2lUa5fLg==}
-
-  pg-connection-string@2.9.1:
-    resolution: {integrity: sha512-nkc6NpDcvPVpZXxrreI/FOtX3XemeLl8E0qFr6F2Lrm/I8WOnaWNhIPK2Z7OHpw7gh5XJThi6j6ppgNoaT1w4w==}
-
   pg-int8@1.0.1:
     resolution: {integrity: sha512-WCtabS6t3c8SkpDBUlb1kjOs7l66xsGdKpIPZsg4wR+B3+u9UAum2odSsF9tnvxg80h4ZxLWMy4pRjOsFIqQpw==}
     engines: {node: '>=4.0.0'}
-
-  pg-pool@3.10.1:
-    resolution: {integrity: sha512-Tu8jMlcX+9d8+QVzKIvM/uJtp07PKr82IUOYEphaWcoBhIYkoHpLXN3qO59nAI11ripznDsEzEv8nUxBVWajGg==}
-    peerDependencies:
-      pg: '>=8.0'
 
   pg-protocol@1.10.3:
     resolution: {integrity: sha512-6DIBgBQaTKDJyxnXaLiLR8wBpQQcGWuAESkRBX/t6OwA8YsqP+iVSiond2EDy6Y/dsGk8rh/jtax3js5NeV7JQ==}
@@ -6457,18 +6416,6 @@ packages:
   pg-types@2.2.0:
     resolution: {integrity: sha512-qTAAlrEsl8s4OiEQY69wDvcMIdQN6wdz5ojQiOy6YRMuynxenON0O5oCpJI6lshc6scgAY8qvJ2On/p+CXY0GA==}
     engines: {node: '>=4'}
-
-  pg@8.16.3:
-    resolution: {integrity: sha512-enxc1h0jA/aq5oSDMvqyW3q89ra6XIIDZgCX9vkMrnz5DFTw/Ny3Li2lFQ+pt3L6MCgm/5o2o8HW9hiJji+xvw==}
-    engines: {node: '>= 16.0.0'}
-    peerDependencies:
-      pg-native: '>=3.0.1'
-    peerDependenciesMeta:
-      pg-native:
-        optional: true
-
-  pgpass@1.0.5:
-    resolution: {integrity: sha512-FdW9r/jQZhSeohs1Z3sI1yxFQNFvMcnmfuj4WBMUTxOrAyLMaTcE1aAMBiTlbMNaXvBCQuVi0R7hd8udDSP7ug==}
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
@@ -6581,10 +6528,6 @@ packages:
   postgres-interval@1.2.0:
     resolution: {integrity: sha512-9ZhXKM/rw350N1ovuWHbGxnGh/SNJ4cnxHiM0rxE4VN41wsg8P8zWn9hv/buK00RP4WvlOyr/RBDiptyxVbkZQ==}
     engines: {node: '>=0.10.0'}
-
-  postgres@3.4.7:
-    resolution: {integrity: sha512-Jtc2612XINuBjIl/QTWsV5UvE8UHuNblcO3vVADSrKsrc6RqGX6lOW1cEo3CM2v0XG4Nat8nI+YM7/f26VxXLw==}
-    engines: {node: '>=12'}
 
   posthog-node@4.18.0:
     resolution: {integrity: sha512-XROs1h+DNatgKh/AlIlCtDxWzwrKdYDb2mOs58n4yN8BkGN9ewqeQwG5ApS4/IzwCb7HPttUkOVulkYatd2PIw==}
@@ -6819,10 +6762,6 @@ packages:
     peerDependencies:
       react: ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-
-  redis@5.6.1:
-    resolution: {integrity: sha512-O9DwAvcBm/lrlkGE0A6gNBtUdA8J9oD9njeLYlLzmm+MGTR7nd7VkpspfXqeXFg3gm89zldDqckyaHhXfhY80g==}
-    engines: {node: '>= 18'}
 
   reflect.getprototypeof@1.0.10:
     resolution: {integrity: sha512-00o4I+DVrefhv+nX0ulyi3biSHCPDe+yLv5o/p6d/UVlirijB8E16FtfwSAi4g3tcqrQ4lRAqQSoFEZJehYEcw==}
@@ -7581,9 +7520,6 @@ packages:
     resolution: {integrity: sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==}
     engines: {node: '>=0.4'}
 
-  xxhash-wasm@1.1.0:
-    resolution: {integrity: sha512-147y/6YNh+tlp6nd/2pWq38i9h6mz/EuQ6njIrmW8D1BS5nCqs0P6DG+m6zTGnNz5I+uhZ0SHxBs9BsPrwcKDA==}
-
   y18n@5.0.8:
     resolution: {integrity: sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==}
     engines: {node: '>=10'}
@@ -7692,6 +7628,12 @@ snapshots:
       '@ai-sdk/provider-utils': 3.0.0-beta.9(zod@3.25.67)
       zod: 3.25.67
 
+  '@ai-sdk/openai@2.0.10(zod@3.25.67)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.0
+      '@ai-sdk/provider-utils': 3.0.1(zod@3.25.67)
+      zod: 3.25.67
+
   '@ai-sdk/provider-utils@2.2.8(zod@3.25.67)':
     dependencies:
       '@ai-sdk/provider': 1.1.3
@@ -7723,7 +7665,19 @@ snapshots:
       zod: 3.25.67
       zod-to-json-schema: 3.24.6(zod@3.25.67)
 
+  '@ai-sdk/provider-utils@3.0.1(zod@3.25.67)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.0
+      '@standard-schema/spec': 1.0.0
+      eventsource-parser: 3.0.3
+      zod: 3.25.67
+      zod-to-json-schema: 3.24.6(zod@3.25.67)
+
   '@ai-sdk/provider@1.1.3':
+    dependencies:
+      json-schema: 0.4.0
+
+  '@ai-sdk/provider@2.0.0':
     dependencies:
       json-schema: 0.4.0
 
@@ -8375,6 +8329,14 @@ snapshots:
       sisteransi: 1.0.5
 
   '@colors/colors@1.5.0': {}
+
+  '@convex-dev/agent@0.1.17(ai@5.0.0-beta.33(zod@3.25.67))(convex-helpers@0.1.95(@standard-schema/spec@1.0.0)(convex@1.25.4(react@19.1.0))(hono@4.8.10)(react@19.1.0)(typescript@5.8.3)(zod@3.25.67))(convex@1.25.4(react@19.1.0))(react@19.1.0)':
+    dependencies:
+      ai: 5.0.0-beta.33(zod@3.25.67)
+      convex: 1.25.4(react@19.1.0)
+      convex-helpers: 0.1.95(@standard-schema/spec@1.0.0)(convex@1.25.4(react@19.1.0))(hono@4.8.10)(react@19.1.0)(typescript@5.8.3)(zod@3.25.67)
+    optionalDependencies:
+      react: 19.1.0
 
   '@convex-dev/auth@0.0.83(@auth/core@0.37.4)(convex@1.25.4(react@19.1.0))(react@19.1.0)':
     dependencies:
@@ -9156,24 +9118,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@mastra/memory@0.0.0-ai-v5-20250729181825(@mastra/core@0.0.0-ai-v5-20250729181825(openapi-types@12.1.3)(zod@3.25.67))':
-    dependencies:
-      '@mastra/core': 0.0.0-ai-v5-20250729181825(openapi-types@12.1.3)(zod@3.25.67)
-      '@upstash/redis': 1.35.2
-      ai: 5.0.0-beta.14(zod@3.25.67)
-      async-mutex: 0.5.0
-      js-tiktoken: 1.0.20
-      json-schema: 0.4.0
-      pg: 8.16.3
-      pg-pool: 3.10.1(pg@8.16.3)
-      postgres: 3.4.7
-      redis: 5.6.1
-      xxhash-wasm: 1.1.0
-      zod: 3.25.67
-      zod-to-json-schema: 3.24.6(zod@3.25.67)
-    transitivePeerDependencies:
-      - pg-native
-
   '@mastra/schema-compat@0.0.0-ai-v5-20250729181825(ai@5.0.0-beta.14(zod@3.25.67))(zod@3.25.67)':
     dependencies:
       ai: 5.0.0-beta.14(zod@3.25.67)
@@ -9186,12 +9130,6 @@ snapshots:
     dependencies:
       '@mastra/core': 0.0.0-ai-v5-20250729181825(openapi-types@12.1.3)(zod@3.25.67)
       zod: 3.25.67
-
-  '@mastra/upstash@0.0.0-ai-v5-20250729181825(@mastra/core@0.0.0-ai-v5-20250729181825(openapi-types@12.1.3)(zod@3.25.67))':
-    dependencies:
-      '@mastra/core': 0.0.0-ai-v5-20250729181825(openapi-types@12.1.3)(zod@3.25.67)
-      '@upstash/redis': 1.35.2
-      '@upstash/vector': 1.2.2
 
   '@modelcontextprotocol/sdk@1.13.2':
     dependencies:
@@ -11411,26 +11349,6 @@ snapshots:
 
   '@radix-ui/rect@1.1.1': {}
 
-  '@redis/bloom@5.6.1(@redis/client@5.6.1)':
-    dependencies:
-      '@redis/client': 5.6.1
-
-  '@redis/client@5.6.1':
-    dependencies:
-      cluster-key-slot: 1.1.2
-
-  '@redis/json@5.6.1(@redis/client@5.6.1)':
-    dependencies:
-      '@redis/client': 5.6.1
-
-  '@redis/search@5.6.1(@redis/client@5.6.1)':
-    dependencies:
-      '@redis/client': 5.6.1
-
-  '@redis/time-series@5.6.1(@redis/client@5.6.1)':
-    dependencies:
-      '@redis/client': 5.6.1
-
   '@remix-run/router@1.23.0': {}
 
   '@rollup/plugin-alias@5.1.1(rollup@4.44.2)':
@@ -12296,13 +12214,7 @@ snapshots:
     dependencies:
       uncrypto: 0.1.3
 
-  '@upstash/redis@1.35.2':
-    dependencies:
-      uncrypto: 0.1.3
-
   '@upstash/vector@1.2.1': {}
-
-  '@upstash/vector@1.2.2': {}
 
   '@webcontainer/env@1.1.1': {}
 
@@ -12451,10 +12363,6 @@ snapshots:
   ast-types-flow@0.0.8: {}
 
   async-function@1.0.0: {}
-
-  async-mutex@0.5.0:
-    dependencies:
-      tslib: 2.8.1
 
   async@2.6.4:
     dependencies:
@@ -12674,8 +12582,6 @@ snapshots:
   clone@2.1.2: {}
 
   clsx@2.1.1: {}
-
-  cluster-key-slot@1.1.2: {}
 
   cmdk@1.1.1(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0):
     dependencies:
@@ -15020,16 +14926,7 @@ snapshots:
 
   perfect-debounce@1.0.0: {}
 
-  pg-cloudflare@1.2.7:
-    optional: true
-
-  pg-connection-string@2.9.1: {}
-
   pg-int8@1.0.1: {}
-
-  pg-pool@3.10.1(pg@8.16.3):
-    dependencies:
-      pg: 8.16.3
 
   pg-protocol@1.10.3: {}
 
@@ -15040,20 +14937,6 @@ snapshots:
       postgres-bytea: 1.0.0
       postgres-date: 1.0.7
       postgres-interval: 1.2.0
-
-  pg@8.16.3:
-    dependencies:
-      pg-connection-string: 2.9.1
-      pg-pool: 3.10.1(pg@8.16.3)
-      pg-protocol: 1.10.3
-      pg-types: 2.2.0
-      pgpass: 1.0.5
-    optionalDependencies:
-      pg-cloudflare: 1.2.7
-
-  pgpass@1.0.5:
-    dependencies:
-      split2: 4.2.0
 
   picocolors@1.1.1: {}
 
@@ -15174,8 +15057,6 @@ snapshots:
   postgres-interval@1.2.0:
     dependencies:
       xtend: 4.0.2
-
-  postgres@3.4.7: {}
 
   posthog-node@4.18.0:
     dependencies:
@@ -15423,14 +15304,6 @@ snapshots:
       recharts-scale: 0.4.5
       tiny-invariant: 1.3.3
       victory-vendor: 36.9.2
-
-  redis@5.6.1:
-    dependencies:
-      '@redis/bloom': 5.6.1(@redis/client@5.6.1)
-      '@redis/client': 5.6.1
-      '@redis/json': 5.6.1(@redis/client@5.6.1)
-      '@redis/search': 5.6.1(@redis/client@5.6.1)
-      '@redis/time-series': 5.6.1(@redis/client@5.6.1)
 
   reflect.getprototypeof@1.0.10:
     dependencies:
@@ -16459,8 +16332,6 @@ snapshots:
   xstate@5.20.1: {}
 
   xtend@4.0.2: {}
-
-  xxhash-wasm@1.1.0: {}
 
   y18n@5.0.8: {}
 

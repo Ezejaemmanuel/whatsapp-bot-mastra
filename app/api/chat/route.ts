@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mastra } from '@/mastra';
-import { RuntimeContext } from '@mastra/core/runtime-context';
-import { getWhatsappAgent } from '@/mastra/agents/whatsapp-agent';
+import { fetchAction, fetchQuery, fetchMutation } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 
 export async function POST(request: NextRequest) {
     try {
@@ -14,44 +14,29 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Get the WhatsApp agent from Mastra
-        // const agent = mastra.getAgent('whatsappAgent');
-        const agent = await getWhatsappAgent();
-
-        if (!agent) {
-            return NextResponse.json(
-                { error: 'WhatsApp agent not found' },
-                { status: 500 }
-            );
+        const user = await fetchMutation(api.users.getOrCreateUser, { whatsappId: 'web-demo' });
+        if (!user) {
+            return NextResponse.json({ error: 'Failed to init user' }, { status: 500 });
+        }
+        const existing = await fetchQuery(api.conversations.getConversationByUserId, { userId: user._id as Id<'users'> });
+        let conversationId: Id<'conversations'>;
+        if (existing?._id) {
+            conversationId = existing._id as Id<'conversations'>;
+        } else {
+            const created = await fetchMutation(api.conversations.getOrCreateConversation, { userId: user._id as Id<'users'>, userName: user.profileName || 'Web Demo' });
+            if (!created) {
+                return NextResponse.json({ error: 'Failed to create conversation' }, { status: 500 });
+            }
+            conversationId = created._id;
         }
 
-        // Generate response using the agent with retry if empty
-        let response: any;
-        const maxRetries = 3;
-        for (let i = 0; i < maxRetries; i++) {
-            response = await agent.generate(message, {
-                runtimeContext: new RuntimeContext<{
-                    userId: string;
-                    conversationId: string;
-                    phoneNumber: string;
-                }>(),
-            });
-
-            if (response?.text && response.text.trim().length > 0) {
-                break;
-            }
-
-            
-            // no logger here; keep API route minimal
-            if (i < maxRetries - 1) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-        }
-
-        return NextResponse.json({
-            message: response.text,
-            success: true
+        const result = await fetchAction(api.ai.generateReply, {
+            userId: user._id as Id<'users'>,
+            conversationId,
+            prompt: message,
         });
+
+        return NextResponse.json({ message: result.text, success: true });
 
     } catch (error) {
         console.error('Chat API error:', error);
@@ -74,34 +59,29 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        // Get the WhatsApp agent from Mastra   
-        // const agent = mastra.getAgent('whatsappAgent');
-        const agent = await getWhatsappAgent();
-
-        if (!agent) {
-            return NextResponse.json(
-                { error: 'WhatsApp agent not found' },
-                { status: 500 }
-            );
+        const user = await fetchMutation(api.users.getOrCreateUser, { whatsappId: 'web-demo' });
+        if (!user) {
+            return NextResponse.json({ error: 'Failed to init user' }, { status: 500 });
+        }
+        const existing = await fetchQuery(api.conversations.getConversationByUserId, { userId: user._id as Id<'users'> });
+        let conversationId: Id<'conversations'>;
+        if (existing?._id) {
+            conversationId = existing._id as Id<'conversations'>;
+        } else {
+            const created = await fetchMutation(api.conversations.getOrCreateConversation, { userId: user._id as Id<'users'>, userName: user.profileName || 'Web Demo' });
+            if (!created) {
+                return NextResponse.json({ error: 'Failed to create conversation' }, { status: 500 });
+            }
+            conversationId = created._id;
         }
 
-        // Generate response using the agent with retry if empty
-        let response: any;
-        const maxRetries = 3;
-        for (let i = 0; i < maxRetries; i++) {
-            response = await agent.generate(message);
-            if (response?.text && response.text.trim().length > 0) {
-                break;
-            }
-            if (i < maxRetries - 1) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-        }
-
-        return NextResponse.json({
-            message: response.text,
-            success: true
+        const result = await fetchAction(api.ai.generateReply, {
+            userId: user._id as Id<'users'>,
+            conversationId,
+            prompt: message,
         });
+
+        return NextResponse.json({ message: result.text, success: true });
 
     } catch (error) {
         console.error('Chat API error:', error);

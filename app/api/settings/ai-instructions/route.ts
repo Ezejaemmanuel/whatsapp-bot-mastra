@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Redis } from '@upstash/redis';
-import { WHATSAPP_AGENT_INSTRUCTIONS } from '@/mastra/agents/agent-instructions';
+import { WHATSAPP_AGENT_INSTRUCTIONS } from '@/convex-ai/agents/agent-instructions';
 import { PROMPT_KEY } from '@/constant';
 
 const redis = new Redis({

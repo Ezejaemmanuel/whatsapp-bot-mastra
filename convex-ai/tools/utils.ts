@@ -1,11 +1,14 @@
 import { WHATSAPP_TEST_MODE } from '@/constant';
 import { WhatsAppClientService } from '@/whatsapp/whatsapp-client-service';
-import { google } from '@ai-sdk/google';
 
 /**
  * Send debug message via WhatsApp when TEST_MODE is enabled
  */
-export async function sendDebugMessage(phoneNumber: string, title: string, data: any): Promise<void> {
+export async function sendDebugMessage(
+  phoneNumber: string,
+  title: string,
+  data: unknown,
+): Promise<void> {
     if (!WHATSAPP_TEST_MODE) return;
 
     try {
@@ -71,9 +74,9 @@ export function isValidConvexId(id: string): boolean {
  * Enhanced logging utility for exchange tools with detailed tool call tracking
  */
 export function logExchangeEvent(
-    level: 'INFO' | 'ERROR' | 'WARN' | 'SUCCESS',
-    message: string,
-    data?: Record<string, any>
+  level: 'INFO' | 'ERROR' | 'WARN' | 'SUCCESS',
+  message: string,
+  data?: Record<string, unknown>
 ): void {
     const timestamp = new Date().toISOString();
     const logEntry = {
@@ -98,7 +101,7 @@ export function logExchangeEvent(
     }
 }
 
-export function logToolCall(toolId: string, parameters: any): void {
+export function logToolCall(toolId: string, parameters: unknown): void {
     logExchangeEvent('INFO', `🚀 TOOL CALL STARTED: ${toolId}`, {
         toolId,
         parameters: JSON.stringify(parameters, null, 2),
@@ -106,7 +109,7 @@ export function logToolCall(toolId: string, parameters: any): void {
     });
 }
 
-export function logToolResult(toolId: string, result: any, executionTimeMs: number): void {
+export function logToolResult(toolId: string, result: unknown, executionTimeMs: number): void {
     logExchangeEvent('SUCCESS', `✅ TOOL CALL COMPLETED: ${toolId}`, {
         toolId,
         result: JSON.stringify(result, null, 2),
@@ -115,7 +118,7 @@ export function logToolResult(toolId: string, result: any, executionTimeMs: numb
     });
 }
 
-export function logToolError(toolId: string, error: Error, executionTimeMs: number, parameters?: any): void {
+export function logToolError(toolId: string, error: Error, executionTimeMs: number, parameters?: unknown): void {
     logExchangeEvent('ERROR', `❌ TOOL CALL FAILED: ${toolId}`, {
         toolId,
         error: error.message,
@@ -126,11 +129,11 @@ export function logToolError(toolId: string, error: Error, executionTimeMs: numb
     });
 }
 
-export function logSuccess(message: string, data?: Record<string, any>): void {
+export function logSuccess(message: string, data?: Record<string, unknown>): void {
     logExchangeEvent('SUCCESS', message, data);
 }
 
-export function logError(message: string, error?: Error | string, data?: Record<string, any>): void {
+export function logError(message: string, error?: Error | string, data?: Record<string, unknown>): void {
     const errorData = {
         ...data,
         error: error instanceof Error ? error.message : error,
@@ -139,7 +142,7 @@ export function logError(message: string, error?: Error | string, data?: Record<
     logExchangeEvent('ERROR', message, errorData);
 }
 
-export function logInfo(message: string, data?: Record<string, any>): void {
+export function logInfo(message: string, data?: Record<string, unknown>): void {
     logExchangeEvent('INFO', message, data);
 }
 

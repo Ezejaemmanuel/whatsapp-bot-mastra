@@ -19,7 +19,7 @@ import {
     createSuccessResponse
 } from './utils';
 import { handleIncomingMessage, initializeWhatsAppService } from './whatsapp-service';
-import { sendDebugMessage } from '@/mastra/tools/utils';
+// Debug helper removed with Mastra
 
 // Environment variables for webhook configuration
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || 'your-verify-token-here';
@@ -208,9 +208,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                                 return currentTimestamp > latestTimestamp ? current : latest;
                             });
 
-                            await sendDebugMessage(latestMessage.from, 'DEBUG: New message received', {
-                                message: latestMessage
-                            });
+                            // debug removed
 
                             // Get contact name from the webhook contacts array
                             let contactName: string | undefined;
@@ -225,9 +223,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                         // Case 2: Handle message status updates
                         else if (change.value.statuses && change.value.statuses.length > 0) {
                             for (const status of change.value.statuses) {
-                                await sendDebugMessage(status.recipient_id, `DEBUG: Status update received: ${status.status}`, {
-                                    status: status
-                                });
+                                // debug removed
 
                                 // Explicitly ignore 'sent', 'delivered', 'read', and 'failed' statuses to prevent loops
                                 if (['sent', 'delivered', 'read', 'failed'].includes(status.status)) {

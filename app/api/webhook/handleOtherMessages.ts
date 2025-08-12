@@ -3,10 +3,8 @@ import { DatabaseService } from '@/lib/database-service';
 import { MediaUploadService } from '@/lib/media-upload-service';
 import { WhatsAppCloudApiClient } from '@/whatsapp/whatsapp-client';
 import { Id } from '@/convex/_generated/dataModel';
-import { mastra } from '@/mastra';
-import { RuntimeContext } from '@mastra/core/runtime-context';
 import { TEST_MODE } from '@/constant';
-import { HANDLE_IMAGE_AGENT_TEMPRETURE, HANDLE_TEXT_AGENT_TEMPRETURE } from '@/mastra/agents/agent-instructions';
+// Removed Mastra dependencies
 import {
     logInfo,
     logError,
