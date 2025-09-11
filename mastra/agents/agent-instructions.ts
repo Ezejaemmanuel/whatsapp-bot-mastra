@@ -1,4 +1,4 @@
-export const CHAT_AI_MODEL_GATEWAY = "openai/gpt-5-mini" as const;
+export const CHAT_AI_MODEL_GATEWAY = "zai/glm-4.5" as const;
 export const CHAT_AI_MODEL_NORMAL = "gemini-2.5-pro" as const;
 
 export const IMAGE_EXTRACTION_AI_MODEL_NORMAL = "gemini-2.5-pro" as const;
